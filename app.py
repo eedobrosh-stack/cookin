@@ -15,6 +15,9 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 PORT = int(os.environ.get("PORT", "10000"))
 DATA_DIR = os.environ.get("DATA_DIR", "/var/data")
 SITE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
+ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+GAME_PATH = os.path.join(ASSETS, "lielmali.html")
+SUMMER_PATH = os.path.join(ASSETS, "ilsummer.html")
 VIDEOS_DIR = os.path.join(DATA_DIR, "videos")
 STATE_PATH = os.path.join(DATA_DIR, "family.json")
 LOCK = threading.Lock()
@@ -30,6 +33,58 @@ GA_SNIPPET = (
     "function gtag(){dataLayer.push(arguments);}"
     "gtag('js',new Date());gtag('config','" + GA_ID + "');</script>"
 )
+
+SUMMER_PREFIX = (
+    "<!doctype html>\n"
+    '<meta charset="utf-8">\n'
+    '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+    '<link rel="icon" href="data:image/svg+xml,'
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>"
+    "<text y='.9em' font-size='90'>&#9728;&#65039;</text></svg>\">\n"
+)
+
+JARCUD_LANDING = """<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarcud</title>
+<style>
+  body { margin:0; min-height:100vh; display:flex; align-items:center;
+         justify-content:center; background:#241c12; color:#f6ecd8;
+         font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  h1 { font-size:clamp(30px,7vw,58px); letter-spacing:.12em; margin:0;
+       text-transform:uppercase; text-align:center; padding:0 16px; }
+</style>
+<h1>Jarcud is King &#128081;</h1>
+"""
+
+JARCUD_ARTIFACTS = """<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarcud Artifacts</title>
+<style>
+  body { margin:0; min-height:100vh; display:flex; flex-direction:column;
+         align-items:center; justify-content:center; gap:14px;
+         background:#241c12; color:#f6ecd8;
+         font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  h1 { font-size:clamp(28px,6vw,44px); letter-spacing:.14em; margin:0 0 10px;
+       text-transform:uppercase; }
+  a.card { display:flex; align-items:center; gap:14px; width:min(420px,86vw);
+      padding:18px 22px; border-radius:14px; text-decoration:none;
+      background:rgba(246,236,216,.07); border:1px solid rgba(246,236,216,.22);
+      color:#f6ecd8; font-size:18px; font-weight:600; }
+  a.card:hover { background:rgba(246,236,216,.14); }
+  a.card span.e { font-size:26px; }
+  a.card small { display:block; font-weight:400; font-size:13px; color:rgba(246,236,216,.65); }
+  a.home { margin-top:14px; color:rgba(246,236,216,.55); text-decoration:none;
+           font-size:14px; letter-spacing:.06em; }
+  a.home:hover { color:#f6ecd8; }
+</style>
+<h1>Artifacts</h1>
+<a class="card" href="https://cookin.jarcud.com"><span class="e">&#127859;</span><span>Cookin<small>ספר המתכונים המשפחתי</small></span></a>
+<a class="card" href="/ilsummer"><span class="e">&#9728;&#65039;</span><span>IL Summer<small>How much summer is left?</small></span></a>
+<a class="card" href="/lielmali"><span class="e">&#128373;&#65039;</span><span>Where in the World are Liel &amp; Mali?<small>The detective game</small></span></a>
+<a class="home" href="/">&#128081; Jarcud</a>
+"""
 
 
 class _LimitedFile:
@@ -128,12 +183,28 @@ class Handler(SimpleHTTPRequestHandler):
         host = (self.headers.get("Host") or "").split(":")[0].lower()
         return host == "jarcud.com" or host.endswith(".jarcud.com")
 
+    def _is_main_host(self):
+        host = (self.headers.get("Host") or "").split(":")[0].lower()
+        return host in ("jarcud.com", "www.jarcud.com")
+
     def _ga(self, body):
         if not self._inject_ga():
             return body
         snip = GA_SNIPPET.encode("utf-8")
         i = body.rfind(b"</body>")
         return body[:i] + snip + body[i:] if i != -1 else body + snip
+
+    def _html(self, body, cache_control=None):
+        if isinstance(body, str):
+            body = body.encode("utf-8")
+        body = self._ga(body)
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        if cache_control:
+            self.send_header("Cache-Control", cache_control)
+        self.end_headers()
+        self.wfile.write(body)
 
     # --- HTTP Range support (required by Safari/iOS for <video>) ---
     def send_head(self):
@@ -178,11 +249,34 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         p = self.path.split("?")[0]
+        if self._is_main_host() and p == "/":
+            self._html(JARCUD_LANDING)
+            return
+        if self._is_main_host() and p in ("/artifacts", "/artifacts/"):
+            self._html(JARCUD_ARTIFACTS)
+            return
+        if self._is_main_host() and p in ("/game", "/game/", "/lielmali", "/lielmali/"):
+            try:
+                with open(GAME_PATH, "rb") as f:
+                    self._html(f.read())
+            except OSError:
+                self._json({"error": "game not found"}, 404)
+            return
+        if self._is_main_host() and p in ("/summer", "/summer/", "/ilsummer", "/ilsummer/"):
+            try:
+                with open(SUMMER_PATH, encoding="utf-8") as f:
+                    self._html(SUMMER_PREFIX + f.read(), "no-store")
+            except OSError:
+                self._json({"error": "summer page not found"}, 404)
+            return
         # legacy path: the site used to be mounted at /cookin/ on jarcud.com
         if p == "/cookin" or p.startswith("/cookin/"):
             target = self.path[len("/cookin"):] or "/"
+            if self._is_main_host():
+                target = "https://cookin.jarcud.com" + target
             self.send_response(301)
             self.send_header("Location", target)
+            self.send_header("Content-Length", "0")
             self.end_headers()
             return
         if p == "/healthz":
