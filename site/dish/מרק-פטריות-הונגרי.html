@@ -16,12 +16,12 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,"Segoe UI",
 .back{display:inline-block;background:var(--chip);border-radius:999px;padding:9px 20px;font-weight:700;
 color:var(--ink);text-decoration:none;margin-bottom:16px}
 .back:hover{background:#eadfce}
-.dish{background:var(--card);border-radius:20px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden}
-.dhero{display:flex;flex-wrap:wrap}
-.dimg{flex:0 0 340px;max-width:100%}
-.dimg img{width:100%;height:100%;object-fit:cover;display:block;min-height:260px;max-height:460px}
-.dimg video{width:100%;height:100%;object-fit:contain;background:#111;display:block;min-height:260px;max-height:500px}
-.dhead{flex:1;min-width:260px;padding:26px 28px;display:flex;flex-direction:column;gap:12px}
+.dish{background:var(--card);border-radius:20px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column}
+.dimg{width:100%}
+.dimg img{width:100%;object-fit:cover;display:block;min-height:260px;max-height:460px}
+.dimg video{width:100%;object-fit:contain;background:#111;display:block;min-height:260px;max-height:480px}
+.dmain{display:flex;flex-direction:column;min-width:0}
+.dhead{padding:24px 28px;display:flex;flex-direction:column;gap:12px}
 h1{font-size:1.6rem;line-height:1.3}
 .dsub{color:var(--muted);font-size:.95rem}
 .badge{display:inline-block;background:var(--chip);border-radius:6px;padding:2px 10px;font-size:.8rem;color:#6b5d4f;margin-inline-end:6px}
@@ -45,24 +45,38 @@ color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85r
 .tips b{color:var(--amber)}
 .origlink{margin-top:22px;padding-top:14px;border-top:1px dashed var(--line);font-size:.85rem;color:var(--muted);line-height:1.5;word-break:break-all}
 .origlink a{color:var(--accent-dark)}
+/* Desktop "cockpit": everything locked to one viewport — video = full-height
+   side rail, slim header, ingredients & steps scroll inside their columns */
+@media(min-width:1020px){
+html,body{height:100%;overflow:hidden}
+body{padding:14px 18px}
+.wrap{max-width:1360px;height:100%;display:flex;flex-direction:column}
+.back{margin-bottom:10px;align-self:flex-start}
+.dish{flex:1;min-height:0;display:grid;grid-template-columns:auto minmax(0,1fr)}
+.dimg{width:clamp(280px,44vh,440px);height:100%;border-inline-end:1px solid var(--line)}
+.dimg video,.dimg img{height:100%;max-height:none;min-height:0}
+.dmain{min-height:0}
+.dhead{flex:0 0 auto;padding:18px 26px 14px;gap:8px}
+h1{font-size:1.45rem}
+.dbody{flex:1;min-height:0}
+.ingcol,.stepcol{overflow-y:auto;scrollbar-width:thin}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
   <a class="back" href="../">→ חזרה לכל המתכונים 🍳</a>
   <div class="dish">
-    <div class="dhero">
-      <div class="dimg"><video controls playsinline preload="metadata" poster="../images/48304.jpg" src="../videos/48304.mp4"></video></div>
+    <div class="dimg"><video controls playsinline preload="metadata" poster="../images/48304.jpg" src="../videos/48304.mp4"></video></div>
+    <div class="dmain">
       <div class="dhead">
         <h1>מרק פטריות הונגרי</h1>
         <div class="dsub">מאת Chhaya Joshi · 4 מנות · ⏱ 40 דק'</div>
         <div><span class="badge diet-veg">🥦 צמחוני</span><span class="badge">מרקים ורטבים</span></div>
         <div class="dnote">מרק הפטריות מספר הבישול הצמחוני Moosewood: שמיר, פפריקה מתוקה וסויה — קרמי ומחמם.</div>
-        <div class="dsub">▶️ הסרטון מוטמע כאן — לחצו נגן</div>
       </div>
-    </div>
-    <div class="dbody">
-      <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>4 כפות חמאה</li>
+      <div class="dbody">
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>4 כפות חמאה</li>
 <li>1.5 כוסות בצל לבן קצוץ</li>
 <li>450 גרם פטריות פרוסות</li>
 <li>2 כפיות שמיר יבש + 1 כפית טימין יבש</li>
@@ -72,13 +86,14 @@ color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85r
 <li>2 כפות סויה</li>
 <li>3 כפות קמח + 1 כוס חלב או מחצה-על-מחצה</li>
 <li>1/3 כוס שמנת חמוצה (אופציונלי) + 3 כפות פטרוזיליה</li></ul></div>
-      <div class="stepcol">
-        <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>ממיסים חמאה בסיר, מטגנים את הבצל כמה דקות ומוסיפים את הפטריות. מבשלים 8-10 דקות על אש בינונית.</span></li>
+        <div class="stepcol">
+          <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>ממיסים חמאה בסיר, מטגנים את הבצל כמה דקות ומוסיפים את הפטריות. מבשלים 8-10 דקות על אש בינונית.</span></li>
 <li><span>מוסיפים שמיר, טימין, פפריקה, שום ומיץ לימון ל-2 דקות. מוסיפים ציר וסויה ומבשלים כמה דקות.</span></li>
 <li><span>טורפים את הקמח בחלב ללא גושים ומוסיפים תוך בחישה. מבשלים עד הסמכה — לא מרתיחים!</span></li>
 <li><span>מסיימים בשמנת חמוצה (אופציונלי), פטרוזיליה, ולחם חם ליד.</span></li></ol>
-        <div class="tips"><b>💡 טיפים מהקהילה:</b> מהתגובות: לקלות את הפטריות בתנור (200 מעלות, 30 דק') עם שאלוט, חמאה חומה ויין לבן = עומק כפול.</div>
-        <div class="origlink">🎬 הסרטון המקורי: <a href="https://www.facebook.com/reel/857035817371044" target="_blank" rel="noopener">facebook.com/reel/857035817371044</a> (מאת Chhaya Joshi)</div>
+          <div class="tips"><b>💡 טיפים מהקהילה:</b> מהתגובות: לקלות את הפטריות בתנור (200 מעלות, 30 דק') עם שאלוט, חמאה חומה ויין לבן = עומק כפול.</div>
+          <div class="origlink">🎬 הסרטון המקורי: <a href="https://www.facebook.com/reel/857035817371044" target="_blank" rel="noopener">facebook.com/reel/857035817371044</a> (מאת Chhaya Joshi)</div>
+        </div>
       </div>
     </div>
   </div>

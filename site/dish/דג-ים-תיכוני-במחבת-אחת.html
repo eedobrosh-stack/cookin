@@ -16,12 +16,12 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,"Segoe UI",
 .back{display:inline-block;background:var(--chip);border-radius:999px;padding:9px 20px;font-weight:700;
 color:var(--ink);text-decoration:none;margin-bottom:16px}
 .back:hover{background:#eadfce}
-.dish{background:var(--card);border-radius:20px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden}
-.dhero{display:flex;flex-wrap:wrap}
-.dimg{flex:0 0 340px;max-width:100%}
-.dimg img{width:100%;height:100%;object-fit:cover;display:block;min-height:260px;max-height:460px}
-.dimg video{width:100%;height:100%;object-fit:contain;background:#111;display:block;min-height:260px;max-height:500px}
-.dhead{flex:1;min-width:260px;padding:26px 28px;display:flex;flex-direction:column;gap:12px}
+.dish{background:var(--card);border-radius:20px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column}
+.dimg{width:100%}
+.dimg img{width:100%;object-fit:cover;display:block;min-height:260px;max-height:460px}
+.dimg video{width:100%;object-fit:contain;background:#111;display:block;min-height:260px;max-height:480px}
+.dmain{display:flex;flex-direction:column;min-width:0}
+.dhead{padding:24px 28px;display:flex;flex-direction:column;gap:12px}
 h1{font-size:1.6rem;line-height:1.3}
 .dsub{color:var(--muted);font-size:.95rem}
 .badge{display:inline-block;background:var(--chip);border-radius:6px;padding:2px 10px;font-size:.8rem;color:#6b5d4f;margin-inline-end:6px}
@@ -45,24 +45,38 @@ color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85r
 .tips b{color:var(--amber)}
 .origlink{margin-top:22px;padding-top:14px;border-top:1px dashed var(--line);font-size:.85rem;color:var(--muted);line-height:1.5;word-break:break-all}
 .origlink a{color:var(--accent-dark)}
+/* Desktop "cockpit": everything locked to one viewport — video = full-height
+   side rail, slim header, ingredients & steps scroll inside their columns */
+@media(min-width:1020px){
+html,body{height:100%;overflow:hidden}
+body{padding:14px 18px}
+.wrap{max-width:1360px;height:100%;display:flex;flex-direction:column}
+.back{margin-bottom:10px;align-self:flex-start}
+.dish{flex:1;min-height:0;display:grid;grid-template-columns:auto minmax(0,1fr)}
+.dimg{width:clamp(280px,44vh,440px);height:100%;border-inline-end:1px solid var(--line)}
+.dimg video,.dimg img{height:100%;max-height:none;min-height:0}
+.dmain{min-height:0}
+.dhead{flex:0 0 auto;padding:18px 26px 14px;gap:8px}
+h1{font-size:1.45rem}
+.dbody{flex:1;min-height:0}
+.ingcol,.stepcol{overflow-y:auto;scrollbar-width:thin}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
   <a class="back" href="../">→ חזרה לכל המתכונים 🍳</a>
   <div class="dish">
-    <div class="dhero">
-      <div class="dimg"><video controls playsinline preload="metadata" poster="../images/10397.jpg" src="../videos/10397.mp4"></video></div>
+    <div class="dimg"><video controls playsinline preload="metadata" poster="../images/10397.jpg" src="../videos/10397.mp4"></video></div>
+    <div class="dmain">
       <div class="dhead">
         <h1>דג ים-תיכוני במחבת אחת</h1>
         <div class="dsub">מאת Chef Tom Walton · 4 מנות · ⏱ 30 דק'</div>
         <div><span class="badge diet-fish">🐟 דגים</span><span class="badge">דגים</span></div>
         <div class="dnote">ראגו עגבניות-צלפים-זיתים שמתבשל מתחת לדג. מגישים עם לחם קראסטי, תפו"א או אורז.</div>
-        <div class="dsub">▶️ הסרטון מוטמע כאן — לחצו נגן</div>
       </div>
-    </div>
-    <div class="dbody">
-      <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>500 גרם פילה דג לבן מוצק (מוסר/לברק/בקלה)</li>
+      <div class="dbody">
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>500 גרם פילה דג לבן מוצק (מוסר/לברק/בקלה)</li>
 <li>מלח, פלפל, 3 כפות שמן זית (מחולק)</li>
 <li>1 בצל קצוץ דק</li>
 <li>2 שיני שום קצוצות גס</li>
@@ -72,15 +86,16 @@ color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85r
 <li>1/2 כוס זיתי קלמטה מגולענים (מחולק)</li>
 <li>1/2 כוס רצועות פלפל קלוי</li>
 <li>חופן עלי פטרוזיליה + פלחי לימון להגשה</li></ul></div>
-      <div class="stepcol">
-        <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מתבלים את הדג במלח ופלפל, מזלפים חצי מהשמן ומעסים בעדינות. מניחים בצד.</span></li>
+        <div class="stepcol">
+          <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מתבלים את הדג במלח ופלפל, מזלפים חצי מהשמן ומעסים בעדינות. מניחים בצד.</span></li>
 <li><span>במחבת גדולה על אש בינונית-גבוהה: יתרת השמן, בצל, שום וקורט מלח — 3 דקות לריכוך.</span></li>
 <li><span>מוסיפים חצי מהצלפים, את השרי והאורגנו. מנמיכים ומבשלים עד שהעגבניות מתפוצצות — מועכים במזלג לראגו סמיך, ומערבבים פנימה חצי מהזיתים.</span></li>
 <li><span>משכיבים את הדג בתוך הראגו ומפזרים מעל את הפלפל הקלוי.</span></li>
 <li><span>מכסים ומבשלים על אש נמוכה 10-12 דקות עד שהדג בדיוק מבושל.</span></li>
 <li><span>מגישים עם יתרת הצלפים והזיתים, פטרוזיליה ולימון.</span></li></ol>
-        <div class="tips"><b>💡 טיפים מהקהילה:</b> מהתגובות: כמו פוטנסקה — הרוטב מעולה גם על פסטה; שלוק יין לבן משדרג; למחרת זה אפילו טעים יותר.</div>
-        <div class="origlink">🎬 הסרטון המקורי: <a href="https://www.facebook.com/reel/1619723202917852" target="_blank" rel="noopener">facebook.com/reel/1619723202917852</a> (מאת Chef Tom Walton)</div>
+          <div class="tips"><b>💡 טיפים מהקהילה:</b> מהתגובות: כמו פוטנסקה — הרוטב מעולה גם על פסטה; שלוק יין לבן משדרג; למחרת זה אפילו טעים יותר.</div>
+          <div class="origlink">🎬 הסרטון המקורי: <a href="https://www.facebook.com/reel/1619723202917852" target="_blank" rel="noopener">facebook.com/reel/1619723202917852</a> (מאת Chef Tom Walton)</div>
+        </div>
       </div>
     </div>
   </div>
