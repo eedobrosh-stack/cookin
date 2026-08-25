@@ -50,7 +50,7 @@
   <div class="chips" id="chips"></div>
   <form class="searchrow" id="cf" style="margin-top:14px">
     <select id="country">
-      <option value="">Country — top-5 podcasts…</option>
+      <option value="">Country — top-20 podcasts…</option>
     </select>
     <button id="topbtn">Top podcasts</button>
   </form>
@@ -91,7 +91,7 @@ function epRow(ep, i){
 async function topSearch(){
   const cc = countryEl.value; if(!cc) return;
   const cname = countryEl.options[countryEl.selectedIndex].text;
-  status_.className=''; status_.textContent='Fetching the top-5 podcasts in '+cname+'…';
+  status_.className=''; status_.textContent='Fetching the top-20 podcasts in '+cname+'…';
   results.innerHTML=''; batchbar.style.display='none'; topbtn.disabled=true;
   try{
     const r = await fetch('/api/vidsum/top?country='+cc);
@@ -110,7 +110,7 @@ async function topSearch(){
       }
       pod.episodes.forEach(ep=>{ const i=episodes.push(ep)-1; results.appendChild(epRow(ep,i)); shown++; });
     });
-    status_.textContent = 'Top-5 podcasts in '+cname+' — last 3 episodes each ('+shown+' entries):';
+    status_.textContent = 'Top-20 podcasts in '+cname+' — last 3 episodes each ('+shown+' entries):';
     batchbar.style.display = shown? 'block':'none';
   }catch(e){ status_.className='err'; status_.textContent='❌ '+e.message; }
   topbtn.disabled=false;

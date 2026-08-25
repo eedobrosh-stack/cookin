@@ -83,22 +83,24 @@ def _vidsum_get_json(url):
 
 
 def vidsum_top(country):
-    """Top-5 podcasts for a country (iTunes chart RSS) + last 3 episodes each."""
+    """Top-20 podcasts for a country (iTunes chart RSS) + last 3 episodes each.
+    Episode lookups run in parallel threads (21 upstream calls otherwise)."""
     chart = _vidsum_get_json(
-        f"https://itunes.apple.com/{country}/rss/toppodcasts/limit=5/json")
+        f"https://itunes.apple.com/{country}/rss/toppodcasts/limit=20/json")
     pods = []
     for e in chart.get("feed", {}).get("entry", []) or []:
         pods.append({"pid": e["id"]["attributes"]["im:id"],
                      "name": e["im:name"]["label"],
                      "artist": e["im:artist"]["label"]})
-    for pod in pods:
+
+    def fill(pod):
         pod["episodes"] = []
         try:
             look = _vidsum_get_json(
                 "https://itunes.apple.com/lookup?id=" + pod["pid"]
                 + "&entity=podcastEpisode&limit=3")
         except Exception:
-            continue
+            return
         for it in look.get("results", []):
             if it.get("wrapperType") != "podcastEpisode" or not it.get("episodeUrl"):
                 continue
@@ -111,6 +113,12 @@ def vidsum_top(country):
                 "mp3": it.get("episodeUrl"),
                 "page": it.get("trackViewUrl") or "",
             })
+
+    threads = [threading.Thread(target=fill, args=(p,)) for p in pods]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=30)
     return pods
 
 DEFAULT = {"members": [], "votes": {}, "decision": None, "tieCounter": None, "history": []}
