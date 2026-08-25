@@ -185,6 +185,9 @@ VIDSUM_DBG = []
 
 def _vidsum_search_ids(query, pattern, deadline):
     """Search engines in order for `query`; stop at the deadline (epoch secs)."""
+    # a bare "-" acts as an exclusion operator on DDG and kills results
+    query = re.sub(r"\s-+(?=\s|\w)", " ", query).replace("|", " ")
+    query = re.sub(r"\s+", " ", query).strip()
     for eng in ("https://search.brave.com/search?q=",
                 "https://lite.duckduckgo.com/lite/?q=",
                 "https://html.duckduckgo.com/html/?q="):
