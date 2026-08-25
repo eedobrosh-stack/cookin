@@ -18,6 +18,8 @@ SITE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 GAME_PATH = os.path.join(ASSETS, "lielmali.html")
 SUMMER_PATH = os.path.join(ASSETS, "ilsummer.html")
+VIDSUM_PATH = os.path.join(ASSETS, "vidsum.html")
+BARRACE_PATH = os.path.join(ASSETS, "barrace.html")
 VIDEOS_DIR = os.path.join(DATA_DIR, "videos")
 STATE_PATH = os.path.join(DATA_DIR, "family.json")
 LOCK = threading.Lock()
@@ -42,6 +44,10 @@ SUMMER_PREFIX = (
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>"
     "<text y='.9em' font-size='90'>&#9728;&#65039;</text></svg>\">\n"
 )
+
+# Same wrapper for the other artifact-style assets, different favicon.
+VIDSUM_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127916;")
+BARRACE_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127937;")
 
 JARCUD_LANDING = """<!doctype html>
 <meta charset="utf-8">
@@ -83,6 +89,8 @@ JARCUD_ARTIFACTS = """<!doctype html>
 <a class="card" href="https://cookin.jarcud.com"><span class="e">&#127859;</span><span>Cookin<small>ספר המתכונים המשפחתי</small></span></a>
 <a class="card" href="/ilsummer"><span class="e">&#9728;&#65039;</span><span>IL Summer<small>How much summer is left?</small></span></a>
 <a class="card" href="/lielmali"><span class="e">&#128373;&#65039;</span><span>Where in the World are Liel &amp; Mali?<small>The detective game</small></span></a>
+<a class="card" href="/barrace"><span class="e">&#127937;</span><span>Bar Race<small>7-color racing game</small></span></a>
+<a class="card" href="/vidsum"><span class="e">&#127916;</span><span dir="rtl">&#1489;&#1503; &#1492;-22 &#1513;&#1502;&#1488;&#1495;&#1493;&#1512;&#1497; &#1502;&#1506;&#1489;&#1491;&#1514; &#1492;-AI<small>&#1505;&#1497;&#1499;&#1493;&#1501; &#1492;&#1508;&#1512;&#1511; &#1506;&#1501; &#1490;&#1500;&#1506;&#1491; &#1500;&#1493;&#1497; (TrashTech)</small></span></a>
 <a class="home" href="/">&#128081; Jarcud</a>
 """
 
@@ -268,6 +276,20 @@ class Handler(SimpleHTTPRequestHandler):
                     self._html(SUMMER_PREFIX + f.read(), "no-store")
             except OSError:
                 self._json({"error": "summer page not found"}, 404)
+            return
+        if self._is_main_host() and p in ("/vidsum", "/vidsum/", "/ailab", "/ailab/"):
+            try:
+                with open(VIDSUM_PATH, encoding="utf-8") as f:
+                    self._html(VIDSUM_PREFIX + f.read(), "no-store")
+            except OSError:
+                self._json({"error": "summary not found"}, 404)
+            return
+        if self._is_main_host() and p in ("/barrace", "/barrace/", "/race", "/race/"):
+            try:
+                with open(BARRACE_PATH, encoding="utf-8") as f:
+                    self._html(BARRACE_PREFIX + f.read(), "no-store")
+            except OSError:
+                self._json({"error": "bar race not found"}, 404)
             return
         # legacy path: the site used to be mounted at /cookin/ on jarcud.com
         if p == "/cookin" or p.startswith("/cookin/"):
