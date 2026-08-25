@@ -186,7 +186,8 @@ VIDSUM_DBG = []
 def _vidsum_search_ids(query, pattern):
     """Search Brave then DDG-lite for `query`, return regex matches in order."""
     for eng in ("https://search.brave.com/search?q=",
-                "https://lite.duckduckgo.com/lite/?q="):
+                "https://lite.duckduckgo.com/lite/?q=",
+                "https://html.duckduckgo.com/html/?q="):
         try:
             h = _vidsum_get_text(eng + urllib.parse.quote(query), timeout=6)
             ids = list(dict.fromkeys(re.findall(pattern, urllib.parse.unquote(h))))
