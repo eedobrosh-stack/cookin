@@ -16,6 +16,10 @@
   input[type=text] { flex:1; padding:11px 13px; border-radius:9px; border:1px solid var(--line);
           background:var(--card); color:var(--ink); font-size:.95rem; }
   input[type=text]:focus { outline:none; border-color:var(--accent); }
+  select { flex:1; padding:11px 13px; border-radius:9px; border:1px solid var(--line);
+           background:var(--card); color:var(--ink); font-size:.95rem; }
+  .podhead { margin:20px 0 8px; font-size:1rem; font-weight:700; }
+  .podhead small { color:var(--muted); font-weight:400; margin-inline-start:8px; }
   button { padding:11px 18px; border:0; border-radius:9px; background:var(--accent);
            color:#fff; font-size:.92rem; font-weight:700; cursor:pointer; }
   button:disabled { opacity:.45; cursor:default; }
@@ -44,6 +48,12 @@
     <button id="searchbtn">Search</button>
   </form>
   <div class="chips" id="chips"></div>
+  <form class="searchrow" id="cf" style="margin-top:14px">
+    <select id="country">
+      <option value="">Country — top-5 podcasts…</option>
+    </select>
+    <button id="topbtn">Top podcasts</button>
+  </form>
   <p id="status"></p>
   <div id="results"></div>
   <div class="batchbar" id="batchbar" style="display:none">
@@ -56,10 +66,55 @@ const chips = document.getElementById('chips'), topicEl = document.getElementByI
       results = document.getElementById('results'), status_ = document.getElementById('status'),
       batchbar = document.getElementById('batchbar'), queuebtn = document.getElementById('queuebtn'),
       searchbtn = document.getElementById('searchbtn');
+const COUNTRIES = [["il","Israel"],["us","United States"],["gb","United Kingdom"],["de","Germany"],
+  ["fr","France"],["it","Italy"],["es","Spain"],["nl","Netherlands"],["se","Sweden"],["no","Norway"],
+  ["dk","Denmark"],["pl","Poland"],["br","Brazil"],["mx","Mexico"],["ar","Argentina"],["ca","Canada"],
+  ["au","Australia"],["jp","Japan"],["kr","South Korea"],["in","India"],["ae","UAE"],["za","South Africa"]];
+const countryEl = document.getElementById('country'), topbtn = document.getElementById('topbtn');
+COUNTRIES.forEach(([cc,name])=>{ const o=document.createElement('option'); o.value=cc; o.textContent=name; countryEl.appendChild(o); });
 let episodes = [];
 PRESETS.forEach(t => { const c = document.createElement('span'); c.className='chip'; c.textContent=t;
   c.onclick = () => { topicEl.value = t; search(); }; chips.appendChild(c); });
 document.getElementById('sf').addEventListener('submit', e => { e.preventDefault(); search(); });
+document.getElementById('cf').addEventListener('submit', e => { e.preventDefault(); topSearch(); });
+countryEl.addEventListener('change', () => { if(countryEl.value) topSearch(); });
+
+function epRow(ep, i){
+  const d = document.createElement('label'); d.className='ep';
+  d.innerHTML = '<input type="checkbox" data-i="'+i+'"><div>'+
+    '<div class="t">'+esc(ep.title)+'</div>'+
+    '<div class="m">'+esc(ep.show)+' · '+esc(ep.date)+' · '+fmtDur(ep.duration_ms)+
+    (ep.page? ' · <a href="'+esc(ep.page)+'" target="_blank" rel="noopener">open ↗</a>':'')+'</div></div>';
+  return d;
+}
+
+async function topSearch(){
+  const cc = countryEl.value; if(!cc) return;
+  const cname = countryEl.options[countryEl.selectedIndex].text;
+  status_.className=''; status_.textContent='Fetching the top-5 podcasts in '+cname+'…';
+  results.innerHTML=''; batchbar.style.display='none'; topbtn.disabled=true;
+  try{
+    const r = await fetch('/api/vidsum/top?country='+cc);
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'chart failed');
+    episodes = [];
+    let shown = 0;
+    j.podcasts.forEach((pod,rank)=>{
+      const h = document.createElement('div'); h.className='podhead';
+      h.innerHTML = '#'+(rank+1)+' '+esc(pod.name)+'<small>'+esc(pod.artist)+'</small>';
+      results.appendChild(h);
+      if(!pod.episodes.length){
+        const m=document.createElement('div'); m.className='ep';
+        m.innerHTML='<div class="m">no fetchable episodes (exclusive feed)</div>';
+        results.appendChild(m); return;
+      }
+      pod.episodes.forEach(ep=>{ const i=episodes.push(ep)-1; results.appendChild(epRow(ep,i)); shown++; });
+    });
+    status_.textContent = 'Top-5 podcasts in '+cname+' — last 3 episodes each ('+shown+' entries):';
+    batchbar.style.display = shown? 'block':'none';
+  }catch(e){ status_.className='err'; status_.textContent='❌ '+e.message; }
+  topbtn.disabled=false;
+}
 
 function fmtDur(ms){ if(!ms) return ''; const m = Math.round(ms/60000); return m + ' min'; }
 
@@ -74,14 +129,7 @@ async function search(){
     episodes = j.episodes;
     if(!episodes.length){ status_.textContent='No episodes from the last 30 days for “'+topic+'”. Try another phrasing.'; return; }
     status_.textContent = episodes.length + ' episodes from the last 30 days:';
-    episodes.forEach((ep,i)=>{
-      const d = document.createElement('label'); d.className='ep';
-      d.innerHTML = '<input type="checkbox" data-i="'+i+'"><div>'+
-        '<div class="t">'+esc(ep.title)+'</div>'+
-        '<div class="m">'+esc(ep.show)+' · '+esc(ep.date)+' · '+fmtDur(ep.duration_ms)+
-        (ep.page? ' · <a href="'+esc(ep.page)+'" target="_blank" rel="noopener">open ↗</a>':'')+'</div></div>';
-      results.appendChild(d);
-    });
+    episodes.forEach((ep,i)=>results.appendChild(epRow(ep,i)));
     batchbar.style.display='block';
   }catch(e){ status_.className='err'; status_.textContent='❌ '+e.message; }
   searchbtn.disabled=false;

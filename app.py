@@ -75,6 +75,44 @@ def vidsum_search(topic):
     eps.sort(key=lambda e: e["date"], reverse=True)
     return eps[:100]
 
+
+def _vidsum_get_json(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "jarcud-vidsum/1.0"})
+    with urllib.request.urlopen(req, timeout=25) as r:
+        return json.load(r)
+
+
+def vidsum_top(country):
+    """Top-5 podcasts for a country (iTunes chart RSS) + last 3 episodes each."""
+    chart = _vidsum_get_json(
+        f"https://itunes.apple.com/{country}/rss/toppodcasts/limit=5/json")
+    pods = []
+    for e in chart.get("feed", {}).get("entry", []) or []:
+        pods.append({"pid": e["id"]["attributes"]["im:id"],
+                     "name": e["im:name"]["label"],
+                     "artist": e["im:artist"]["label"]})
+    for pod in pods:
+        pod["episodes"] = []
+        try:
+            look = _vidsum_get_json(
+                "https://itunes.apple.com/lookup?id=" + pod["pid"]
+                + "&entity=podcastEpisode&limit=3")
+        except Exception:
+            continue
+        for it in look.get("results", []):
+            if it.get("wrapperType") != "podcastEpisode" or not it.get("episodeUrl"):
+                continue
+            pod["episodes"].append({
+                "id": str(it.get("trackId") or it.get("episodeUrl")),
+                "title": it.get("trackName", ""),
+                "show": pod["name"],
+                "date": (it.get("releaseDate") or "")[:10],
+                "duration_ms": it.get("trackTimeMillis") or 0,
+                "mp3": it.get("episodeUrl"),
+                "page": it.get("trackViewUrl") or "",
+            })
+    return pods
+
 DEFAULT = {"members": [], "votes": {}, "decision": None, "tieCounter": None, "history": []}
 
 # Google Analytics (GA4) — property "Jarcud". Injected into HTML responses for
@@ -344,6 +382,17 @@ class Handler(SimpleHTTPRequestHandler):
                 self._json({"ok": True, "episodes": vidsum_search(topic)})
             except Exception as e:
                 self._json({"ok": False, "error": f"search failed: {e}"}, 502)
+            return
+        if p == "/api/vidsum/top":
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            country = (qs.get("country", [""])[0] or "").strip().lower()
+            if not re.fullmatch(r"[a-z]{2}", country):
+                self._json({"ok": False, "error": "bad country code"}, 400)
+                return
+            try:
+                self._json({"ok": True, "podcasts": vidsum_top(country)})
+            except Exception as e:
+                self._json({"ok": False, "error": f"chart failed: {e}"}, 502)
             return
         if p == "/api/vidsum/queue":
             with VIDSUM_LOCK:
