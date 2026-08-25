@@ -182,6 +182,52 @@ def _word_overlap(a, b):
 
 VIDSUM_DBG = []
 
+# Optional official Spotify API (exact episode links): set SPOTIFY_CLIENT_ID /
+# SPOTIFY_CLIENT_SECRET env vars on Render (free app at developer.spotify.com).
+_SPOTIFY_TOK = {"tok": None, "exp": 0}
+
+
+def _spotify_token():
+    cid = os.environ.get("SPOTIFY_CLIENT_ID")
+    sec = os.environ.get("SPOTIFY_CLIENT_SECRET")
+    if not cid or not sec:
+        return None
+    if _SPOTIFY_TOK["tok"] and time.time() < _SPOTIFY_TOK["exp"]:
+        return _SPOTIFY_TOK["tok"]
+    import base64
+    req = urllib.request.Request(
+        "https://accounts.spotify.com/api/token",
+        data=b"grant_type=client_credentials",
+        headers={"Authorization": "Basic " + base64.b64encode(
+            f"{cid}:{sec}".encode()).decode(),
+            "Content-Type": "application/x-www-form-urlencoded"})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        d = json.load(r)
+    _SPOTIFY_TOK["tok"] = d["access_token"]
+    _SPOTIFY_TOK["exp"] = time.time() + int(d.get("expires_in", 3600)) - 60
+    return _SPOTIFY_TOK["tok"]
+
+
+def _spotify_api_search(show, title):
+    tok = _spotify_token()
+    if not tok:
+        return None
+    q = urllib.parse.quote(f"{show} {title}"[:100])
+    req = urllib.request.Request(
+        f"https://api.spotify.com/v1/search?type=episode&limit=5&q={q}",
+        headers={"Authorization": "Bearer " + tok})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        d = json.load(r)
+    best = None
+    for it in (d.get("episodes", {}).get("items") or []):
+        if not it:
+            continue
+        score = _word_overlap(title, it.get("name", ""))
+        if best is None or score > best[0]:
+            best = (score, it["external_urls"]["spotify"])
+    VIDSUM_DBG.append(f"sp-api best={best[0] if best else None}")
+    return best[1] if best and best[0] >= 0.5 else None
+
 
 def _vidsum_search_ids(query, pattern, deadline):
     """Search engines in order for `query`; stop at the deadline (epoch secs)."""
@@ -261,6 +307,13 @@ def vidsum_resolve(kind, show, title):
         return None
     if kind == "sp":
         t0 = time.time()
+        # 0) official API when credentials are configured (exact + fast)
+        try:
+            url = _spotify_api_search(show, title)
+            if url:
+                return url
+        except Exception as e:
+            VIDSUM_DBG.append(f"sp-api ERR {e}")
         # 1) search-engine-indexed episode page, verified via Spotify oEmbed title
         ids = _vidsum_search_ids(f"site:open.spotify.com/episode {title}",
                                  r"open\.spotify\.com/episode/([A-Za-z0-9]{22})",
