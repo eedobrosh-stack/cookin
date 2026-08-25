@@ -180,6 +180,48 @@ def _word_overlap(a, b):
     return len(wa & wb) / max(1, len(wa))
 
 
+def _vidsum_search_ids(query, pattern):
+    """Search Brave then DDG-lite for `query`, return regex matches in order."""
+    for eng in ("https://search.brave.com/search?q=",
+                "https://lite.duckduckgo.com/lite/?q="):
+        try:
+            h = _vidsum_get_text(eng + urllib.parse.quote(query))
+            ids = list(dict.fromkeys(re.findall(pattern, urllib.parse.unquote(h))))
+            if ids:
+                return ids
+        except Exception:
+            continue
+    return []
+
+
+VIDSUM_LINKS_PATH = os.path.join(DATA_DIR, "vidsum_links.json")
+
+
+def vidsum_resolve_cached(kind, show, title):
+    key = kind + "|" + title[:200]
+    with VIDSUM_LOCK:
+        try:
+            cache = json.load(open(VIDSUM_LINKS_PATH, encoding="utf-8"))
+        except Exception:
+            cache = {}
+        if key in cache:
+            return cache[key]
+    url = vidsum_resolve(kind, show, title)
+    if url:
+        with VIDSUM_LOCK:
+            try:
+                cache = json.load(open(VIDSUM_LINKS_PATH, encoding="utf-8"))
+            except Exception:
+                cache = {}
+            cache[key] = url
+            if len(cache) > 3000:
+                cache = dict(list(cache.items())[-2000:])
+            tmp = VIDSUM_LINKS_PATH + ".tmp"
+            json.dump(cache, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
+            os.replace(tmp, VIDSUM_LINKS_PATH)
+    return url
+
+
 def vidsum_resolve(kind, show, title):
     """Resolve an episode to its actual YouTube / Spotify URL. Returns url or None."""
     query = f"{show} {title}".strip()
@@ -191,21 +233,19 @@ def vidsum_resolve(kind, show, title):
             h)[:6]
         best = None
         for vid, vtitle in pairs:
-            score = _word_overlap(title, vtitle.encode().decode("unicode_escape", "ignore"))
+            # titles come through as JSON-escaped text; \uXXXX only where non-literal
+            unesc = re.sub(r"\\u([0-9a-fA-F]{4})",
+                           lambda m: chr(int(m.group(1), 16)), vtitle).replace('\\"', '"')
+            score = max(_word_overlap(title, vtitle), _word_overlap(title, unesc))
             if best is None or score > best[0]:
                 best = (score, vid)
         if best and best[0] >= 0.35:
             return "https://www.youtube.com/watch?v=" + best[1]
         return None
     if kind == "sp":
-        # 1) Brave-indexed episode page, verified via Spotify oEmbed title
-        try:
-            h = _vidsum_get_text("https://search.brave.com/search?q="
-                                 + urllib.parse.quote(f"site:open.spotify.com/episode {title}"))
-            ids = list(dict.fromkeys(re.findall(
-                r"open\.spotify\.com/episode/([A-Za-z0-9]{22})", urllib.parse.unquote(h))))
-        except Exception:
-            ids = []
+        # 1) search-engine-indexed episode page, verified via Spotify oEmbed title
+        ids = _vidsum_search_ids(f"site:open.spotify.com/episode {title}",
+                                 r"open\.spotify\.com/episode/([A-Za-z0-9]{22})")
         for eid in ids[:3]:
             try:
                 oe = _vidsum_get_json("https://open.spotify.com/oembed?url="
@@ -216,10 +256,8 @@ def vidsum_resolve(kind, show, title):
                 continue
         # 2) show page -> embed carries the LATEST episode; use it if it matches
         try:
-            h = _vidsum_get_text("https://search.brave.com/search?q="
-                                 + urllib.parse.quote(f"site:open.spotify.com/show {show}"))
-            sids = re.findall(r"open\.spotify\.com/show/([A-Za-z0-9]{22})",
-                              urllib.parse.unquote(h))
+            sids = _vidsum_search_ids(f"site:open.spotify.com/show {show}",
+                                      r"open\.spotify\.com/show/([A-Za-z0-9]{22})")
             if sids:
                 emb = _vidsum_get_text("https://open.spotify.com/embed/show/" + sids[0])
                 m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', emb, re.S)
@@ -698,7 +736,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self._json({"ok": False, "error": "bad request"}, 400)
                 return
             try:
-                url = vidsum_resolve(kind, show, title)
+                url = vidsum_resolve_cached(kind, show, title)
             except Exception:
                 url = None
             self._json({"ok": bool(url), "url": url})
