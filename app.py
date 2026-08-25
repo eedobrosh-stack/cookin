@@ -29,8 +29,11 @@ LOCK = threading.Lock()
 # queue on the persistent disk, processed later from the owner's Mac.
 VIDSUM_PAGE_PATH = os.path.join(ASSETS, "vidsum_discover.html")
 VIDSUM_QUEUE_PATH = os.path.join(DATA_DIR, "vidsum_queue.json")
+VIDSUM_FOLLOWS_PATH = os.path.join(DATA_DIR, "vidsum_follows.json")
 VIDSUM_LOCK = threading.Lock()
 VIDSUM_MAX_PENDING = 100
+# Countries whose chart titles are NOT translated (English-speaking + Hebrew per user)
+VIDSUM_NO_TRANSLATE = {"us", "gb", "ca", "au", "in", "za", "il"}
 
 
 def vidsum_load_queue():
@@ -71,9 +74,34 @@ def vidsum_search(topic):
             "duration_ms": it.get("trackTimeMillis") or 0,
             "mp3": it.get("episodeUrl"),
             "page": it.get("trackViewUrl") or "",
+            "desc": (it.get("description") or it.get("shortDescription") or "")[:1500],
         })
     eps.sort(key=lambda e: e["date"], reverse=True)
     return eps[:100]
+
+
+def _vidsum_fill_episodes(pod):
+    """Fetch a podcast's last 3 episodes into pod['episodes'] (iTunes lookup)."""
+    pod["episodes"] = []
+    try:
+        look = _vidsum_get_json(
+            "https://itunes.apple.com/lookup?id=" + str(pod["pid"])
+            + "&entity=podcastEpisode&limit=3")
+    except Exception:
+        return
+    for it in look.get("results", []):
+        if it.get("wrapperType") != "podcastEpisode" or not it.get("episodeUrl"):
+            continue
+        pod["episodes"].append({
+            "id": str(it.get("trackId") or it.get("episodeUrl")),
+            "title": it.get("trackName", ""),
+            "show": pod["name"],
+            "date": (it.get("releaseDate") or "")[:10],
+            "duration_ms": it.get("trackTimeMillis") or 0,
+            "mp3": it.get("episodeUrl"),
+            "page": it.get("trackViewUrl") or "",
+            "desc": (it.get("description") or it.get("shortDescription") or "")[:1500],
+        })
 
 
 def _vidsum_get_json(url):
@@ -82,9 +110,62 @@ def _vidsum_get_json(url):
         return json.load(r)
 
 
+def vidsum_translate(texts):
+    """Translate a list of strings to English in ONE request (batched — per-string
+    calls get 429'd). Tries gtx (newline batch), then clients5 (multi-q).
+    Same-length result; originals on failure."""
+    texts = [str(t or "").replace("\n", " ").strip() for t in texts]
+    try:
+        q = "\n".join(texts)
+        u = ("https://translate.googleapis.com/translate_a/single"
+             "?client=gtx&sl=auto&tl=en&dt=t&q=" + urllib.parse.quote(q))
+        data = _vidsum_get_json(u)
+        joined = "".join(seg[0] for seg in data[0] if seg and seg[0])
+        lines = [l.strip() for l in joined.split("\n")]
+        if len(lines) == len(texts):
+            return [l or t for l, t in zip(lines, texts)]
+    except Exception:
+        pass
+    try:
+        u = ("https://clients5.google.com/translate_a/t?client=dict-chrome-ex"
+             "&sl=auto&tl=en&" + "&".join("q=" + urllib.parse.quote(t) for t in texts))
+        data = _vidsum_get_json(u)
+        # returns ["translation", ...] or [["translation","lang"], ...]
+        out = [d[0] if isinstance(d, list) else d for d in data]
+        if len(out) == len(texts):
+            return [str(o).strip() or t for o, t in zip(out, texts)]
+    except Exception:
+        pass
+    return texts
+
+
+_VIDSUM_TOP_CACHE = {}  # country -> (epoch, pods)
+
+
+def vidsum_load_follows():
+    try:
+        with open(VIDSUM_FOLLOWS_PATH, encoding="utf-8") as f:
+            d = json.load(f)
+        d.setdefault("shows", [])
+        return d
+    except Exception:
+        return {"shows": []}
+
+
+def vidsum_save_follows(d):
+    tmp = VIDSUM_FOLLOWS_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, VIDSUM_FOLLOWS_PATH)
+
+
 def vidsum_top(country):
     """Top-20 podcasts for a country (iTunes chart RSS) + last 3 episodes each.
-    Episode lookups run in parallel threads (21 upstream calls otherwise)."""
+    Episode lookups (and title translation for non-English countries) run in
+    parallel threads. 10-min per-country cache (protects the translate quota)."""
+    hit = _VIDSUM_TOP_CACHE.get(country)
+    if hit and time.time() - hit[0] < 600:
+        return hit[1]
     chart = _vidsum_get_json(
         f"https://itunes.apple.com/{country}/rss/toppodcasts/limit=20/json")
     pods = []
@@ -92,33 +173,38 @@ def vidsum_top(country):
         pods.append({"pid": e["id"]["attributes"]["im:id"],
                      "name": e["im:name"]["label"],
                      "artist": e["im:artist"]["label"]})
-
-    def fill(pod):
-        pod["episodes"] = []
-        try:
-            look = _vidsum_get_json(
-                "https://itunes.apple.com/lookup?id=" + pod["pid"]
-                + "&entity=podcastEpisode&limit=3")
-        except Exception:
-            return
-        for it in look.get("results", []):
-            if it.get("wrapperType") != "podcastEpisode" or not it.get("episodeUrl"):
-                continue
-            pod["episodes"].append({
-                "id": str(it.get("trackId") or it.get("episodeUrl")),
-                "title": it.get("trackName", ""),
-                "show": pod["name"],
-                "date": (it.get("releaseDate") or "")[:10],
-                "duration_ms": it.get("trackTimeMillis") or 0,
-                "mp3": it.get("episodeUrl"),
-                "page": it.get("trackViewUrl") or "",
-            })
-
-    threads = [threading.Thread(target=fill, args=(p,)) for p in pods]
+    threads = [threading.Thread(target=_vidsum_fill_episodes, args=(p,))
+               for p in pods]
     for t in threads:
         t.start()
     for t in threads:
-        t.join(timeout=30)
+        t.join(timeout=45)
+    if country not in VIDSUM_NO_TRANSLATE:
+        # ONE batched gtx call for all show + episode titles of this chart
+        texts, slots = [], []
+        for p in pods:
+            texts.append(p["name"]); slots.append((p, "name_en"))
+            for e in p["episodes"]:
+                texts.append(e["title"]); slots.append((e, "title_en"))
+        tr = vidsum_translate(texts)
+        for (obj, key), val in zip(slots, tr):
+            obj[key] = val
+        for p in pods:
+            for e in p["episodes"]:
+                e["show"] = p.get("name_en") or p["name"]
+    _VIDSUM_TOP_CACHE[country] = (time.time(), pods)
+    return pods
+
+
+def vidsum_myfeed():
+    """Latest 3 episodes for each followed show."""
+    pods = [dict(s) for s in vidsum_load_follows()["shows"]][:60]
+    threads = [threading.Thread(target=_vidsum_fill_episodes, args=(p,))
+               for p in pods]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=45)
     return pods
 
 DEFAULT = {"members": [], "votes": {}, "decision": None, "tieCounter": None, "history": []}
@@ -402,6 +488,16 @@ class Handler(SimpleHTTPRequestHandler):
             except Exception as e:
                 self._json({"ok": False, "error": f"chart failed: {e}"}, 502)
             return
+        if p == "/api/vidsum/myfeed":
+            try:
+                self._json({"ok": True, "podcasts": vidsum_myfeed()})
+            except Exception as e:
+                self._json({"ok": False, "error": f"myfeed failed: {e}"}, 502)
+            return
+        if p == "/api/vidsum/follows":
+            with VIDSUM_LOCK:
+                self._json({"ok": True, **vidsum_load_follows()})
+            return
         if p == "/api/vidsum/queue":
             with VIDSUM_LOCK:
                 self._json({"ok": True, **vidsum_load_queue()})
@@ -452,7 +548,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path.split("?")[0]
-        if p not in ("/api/family", "/api/vidsum/queue", "/api/vidsum/complete"):
+        if p not in ("/api/family", "/api/vidsum/queue", "/api/vidsum/complete",
+                     "/api/vidsum/follows"):
             self._json({"error": "not found"}, 404)
             return
         try:
@@ -473,18 +570,21 @@ class Handler(SimpleHTTPRequestHandler):
                 known = {j.get("ep_id") for j in q["jobs"]}
                 added = 0
                 for ep in eps[:50]:
-                    if not isinstance(ep, dict) or not ep.get("mp3"):
+                    # accept either a direct MP3 (discovered episode) or a raw
+                    # video/episode url (the "paste a link" option)
+                    if not isinstance(ep, dict) or not (ep.get("mp3") or ep.get("url")):
                         continue
-                    ep_id = str(ep.get("id") or ep.get("mp3"))
+                    ep_id = str(ep.get("id") or ep.get("mp3") or ep.get("url"))
                     if ep_id in known or len(pending) + added >= VIDSUM_MAX_PENDING:
                         continue
                     q["jobs"].append({
                         "ep_id": ep_id, "status": "pending", "topic": topic,
-                        "title": str(ep.get("title") or "")[:300],
+                        "title": str(ep.get("title") or ep.get("url") or "")[:300],
                         "show": str(ep.get("show") or "")[:200],
                         "date": str(ep.get("date") or "")[:10],
                         "duration_ms": int(ep.get("duration_ms") or 0),
-                        "mp3": str(ep.get("mp3"))[:2000],
+                        "mp3": str(ep.get("mp3") or "")[:2000],
+                        "url": str(ep.get("url") or "")[:2000],
                         "page": str(ep.get("page") or "")[:2000],
                         "queued_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                     })
@@ -493,6 +593,25 @@ class Handler(SimpleHTTPRequestHandler):
                 vidsum_save_queue(q)
                 pend = sum(1 for j in q["jobs"] if j["status"] == "pending")
             self._json({"ok": True, "added": added, "pending": pend})
+            return
+        if p == "/api/vidsum/follows":
+            shows = req.get("shows")
+            if not isinstance(shows, list):
+                self._json({"ok": False, "error": "no shows"}, 400)
+                return
+            mode = req.get("mode") if req.get("mode") in ("replace", "merge") else "merge"
+            clean = [{"pid": str(s.get("pid"))[:20], "name": str(s.get("name") or "")[:200],
+                      "source": str(s.get("source") or "")[:40]}
+                     for s in shows[:200]
+                     if isinstance(s, dict) and str(s.get("pid") or "").isdigit()]
+            with VIDSUM_LOCK:
+                d = vidsum_load_follows() if mode == "merge" else {"shows": []}
+                have = {s["pid"] for s in d["shows"]}
+                d["shows"].extend(s for s in clean if s["pid"] not in have)
+                d["shows"] = d["shows"][:200]
+                vidsum_save_follows(d)
+                n = len(d["shows"])
+            self._json({"ok": True, "total": n})
             return
         if p == "/api/vidsum/complete":
             ids = req.get("ids") or []

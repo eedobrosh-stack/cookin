@@ -11,15 +11,19 @@
          font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
   .wrap { max-width:760px; margin:0 auto; padding:34px 18px 70px; }
   h1 { margin:0 0 4px; font-size:1.5rem; }
-  p.sub { margin:0 0 20px; color:var(--muted); font-size:.9rem; line-height:1.5; }
+  p.sub { margin:0 0 18px; color:var(--muted); font-size:.9rem; line-height:1.5; }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 18px; }
+  .tab { padding:9px 15px; border-radius:10px; border:1px solid var(--line);
+         background:var(--card); color:var(--muted); font-size:.88rem; font-weight:600;
+         cursor:pointer; }
+  .tab.on { border-color:var(--accent); color:var(--ink); background:#20304d; }
+  .pane { display:none; } .pane.on { display:block; }
   .searchrow { display:flex; gap:10px; }
-  input[type=text] { flex:1; padding:11px 13px; border-radius:9px; border:1px solid var(--line);
-          background:var(--card); color:var(--ink); font-size:.95rem; }
-  input[type=text]:focus { outline:none; border-color:var(--accent); }
+  input[type=text], input[type=url] { flex:1; padding:11px 13px; border-radius:9px;
+          border:1px solid var(--line); background:var(--card); color:var(--ink); font-size:.95rem; }
+  input:focus { outline:none; border-color:var(--accent); }
   select { flex:1; padding:11px 13px; border-radius:9px; border:1px solid var(--line);
            background:var(--card); color:var(--ink); font-size:.95rem; }
-  .podhead { margin:20px 0 8px; font-size:1rem; font-weight:700; }
-  .podhead small { color:var(--muted); font-weight:400; margin-inline-start:8px; }
   button { padding:11px 18px; border:0; border-radius:9px; background:var(--accent);
            color:#fff; font-size:.92rem; font-weight:700; cursor:pointer; }
   button:disabled { opacity:.45; cursor:default; }
@@ -29,31 +33,67 @@
   .chip:hover { border-color:var(--accent); color:var(--ink); }
   #status { margin:16px 0 8px; font-size:.88rem; color:var(--muted); min-height:1.2em; }
   #status.err { color:var(--err); } #status.ok { color:var(--ok); }
-  .ep { display:flex; gap:12px; align-items:flex-start; padding:13px 14px; margin:0 0 10px;
-        background:var(--card); border:1px solid var(--line); border-radius:12px; }
-  .ep input { margin-top:4px; width:16px; height:16px; accent-color:var(--accent); }
+  .podhead { margin:20px 0 8px; font-size:1rem; font-weight:700; }
+  .podhead small { color:var(--muted); font-weight:400; margin-inline-start:8px; }
+  .ep { padding:13px 14px; margin:0 0 10px; background:var(--card);
+        border:1px solid var(--line); border-radius:12px; }
+  .eprow { display:flex; gap:12px; align-items:flex-start; cursor:pointer; }
+  .eprow input { margin-top:4px; width:16px; height:16px; accent-color:var(--accent); flex:none; }
   .ep .t { font-weight:600; font-size:.95rem; line-height:1.35; }
   .ep .m { color:var(--muted); font-size:.8rem; margin-top:3px; }
   .ep a { color:var(--accent); text-decoration:none; }
-  .batchbar { position:sticky; bottom:0; padding:12px 0 6px; background:linear-gradient(transparent, var(--bg) 30%); }
+  .exp { flex:none; width:26px; height:26px; border-radius:7px; border:1px solid var(--line);
+         background:transparent; color:var(--muted); font-size:1rem; font-weight:700;
+         line-height:1; padding:0; margin-left:auto; }
+  .exp:hover { border-color:var(--accent); color:var(--ink); }
+  .detail { display:none; margin:10px 0 0 28px; padding:10px 12px; border-radius:8px;
+            background:#161a22; color:#c6ccda; font-size:.85rem; line-height:1.55;
+            white-space:pre-wrap; }
+  .detail.on { display:block; }
+  .detail .orig { color:var(--muted); font-size:.78rem; margin-bottom:6px; }
+  .batchbar { position:sticky; bottom:0; padding:12px 0 6px;
+              background:linear-gradient(transparent, var(--bg) 30%); }
   .batchbar button { width:100%; padding:14px; font-size:1rem; }
 </style>
 <div class="wrap">
   <h1>&#127916; Vidsum Discover</h1>
-  <p class="sub">Pick a topic, get podcast &amp; video-podcast episodes from the last 30 days
-  (Spotify shows included via their public feeds), check the ones you want, and queue them
-  for summarization.</p>
-  <form class="searchrow" id="sf">
-    <input type="text" id="topic" placeholder="Topic — e.g. AI, Israeli politics, cybersecurity…" required>
-    <button id="searchbtn">Search</button>
-  </form>
-  <div class="chips" id="chips"></div>
-  <form class="searchrow" id="cf" style="margin-top:14px">
-    <select id="country">
-      <option value="">Country — top-20 podcasts…</option>
-    </select>
-    <button id="topbtn">Top podcasts</button>
-  </form>
+  <p class="sub">Find episodes four ways, check the ones you want, and queue them for
+  summarization.</p>
+  <div class="tabs">
+    <span class="tab on" data-pane="link">&#128279; Link</span>
+    <span class="tab" data-pane="topic">&#128269; Topic</span>
+    <span class="tab" data-pane="geo">&#127757; Popular by GEO</span>
+    <span class="tab" data-pane="mine">&#11088; My Podcasts</span>
+  </div>
+
+  <div class="pane on" id="pane-link">
+    <form class="searchrow" id="lf">
+      <input type="url" id="link" placeholder="Paste a YouTube / Spotify / Zoom link…" required>
+      <button id="linkbtn">Queue link</button>
+    </form>
+  </div>
+
+  <div class="pane" id="pane-topic">
+    <form class="searchrow" id="sf">
+      <input type="text" id="topic" placeholder="Topic — e.g. AI, Israeli politics, cybersecurity…" required>
+      <button id="searchbtn">Search</button>
+    </form>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="pane" id="pane-geo">
+    <form class="searchrow" id="cf">
+      <select id="country"><option value="">Country — top-20 podcasts…</option></select>
+      <button id="topbtn">Top podcasts</button>
+    </form>
+  </div>
+
+  <div class="pane" id="pane-mine">
+    <form class="searchrow" id="mf">
+      <button id="minebtn" style="width:100%">Show latest episodes of my followed podcasts</button>
+    </form>
+  </div>
+
   <p id="status"></p>
   <div id="results"></div>
   <div class="batchbar" id="batchbar" style="display:none">
@@ -62,95 +102,157 @@
 </div>
 <script>
 const PRESETS = ["AI","Israeli politics","Cybersecurity","Startups","Economy","Science","History","Football"];
-const chips = document.getElementById('chips'), topicEl = document.getElementById('topic'),
-      results = document.getElementById('results'), status_ = document.getElementById('status'),
-      batchbar = document.getElementById('batchbar'), queuebtn = document.getElementById('queuebtn'),
-      searchbtn = document.getElementById('searchbtn');
-const COUNTRIES = [["il","Israel"],["us","United States"],["gb","United Kingdom"],["de","Germany"],
-  ["fr","France"],["it","Italy"],["es","Spain"],["nl","Netherlands"],["se","Sweden"],["no","Norway"],
-  ["dk","Denmark"],["pl","Poland"],["br","Brazil"],["mx","Mexico"],["ar","Argentina"],["ca","Canada"],
-  ["au","Australia"],["jp","Japan"],["kr","South Korea"],["in","India"],["ae","UAE"],["za","South Africa"]];
-const countryEl = document.getElementById('country'), topbtn = document.getElementById('topbtn');
-COUNTRIES.forEach(([cc,name])=>{ const o=document.createElement('option'); o.value=cc; o.textContent=name; countryEl.appendChild(o); });
+const COUNTRIES = [
+  ["il","🇮🇱 Israel"],["us","🇺🇸 United States"],
+  ["gb","🇬🇧 United Kingdom"],["de","🇩🇪 Germany"],
+  ["fr","🇫🇷 France"],["it","🇮🇹 Italy"],
+  ["es","🇪🇸 Spain"],["nl","🇳🇱 Netherlands"],
+  ["se","🇸🇪 Sweden"],["no","🇳🇴 Norway"],
+  ["dk","🇩🇰 Denmark"],["pl","🇵🇱 Poland"],
+  ["br","🇧🇷 Brazil"],["mx","🇲🇽 Mexico"],
+  ["ar","🇦🇷 Argentina"],["ca","🇨🇦 Canada"],
+  ["au","🇦🇺 Australia"],["jp","🇯🇵 Japan"],
+  ["kr","🇰🇷 South Korea"],["in","🇮🇳 India"],
+  ["ae","🇦🇪 UAE"],["za","🇿🇦 South Africa"]];
+const $ = id => document.getElementById(id);
+const results = $('results'), status_ = $('status'), batchbar = $('batchbar');
 let episodes = [];
-PRESETS.forEach(t => { const c = document.createElement('span'); c.className='chip'; c.textContent=t;
-  c.onclick = () => { topicEl.value = t; search(); }; chips.appendChild(c); });
-document.getElementById('sf').addEventListener('submit', e => { e.preventDefault(); search(); });
-document.getElementById('cf').addEventListener('submit', e => { e.preventDefault(); topSearch(); });
-countryEl.addEventListener('change', () => { if(countryEl.value) topSearch(); });
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on'); $('pane-'+t.dataset.pane).classList.add('on');
+  results.innerHTML=''; status_.textContent=''; status_.className='';
+  batchbar.style.display='none'; episodes=[];
+});
+PRESETS.forEach(t => { const c=document.createElement('span'); c.className='chip'; c.textContent=t;
+  c.onclick=()=>{ $('topic').value=t; search(); }; $('chips').appendChild(c); });
+COUNTRIES.forEach(([cc,name])=>{ const o=document.createElement('option'); o.value=cc;
+  o.textContent=name; $('country').appendChild(o); });
+
+$('sf').addEventListener('submit', e=>{ e.preventDefault(); search(); });
+$('cf').addEventListener('submit', e=>{ e.preventDefault(); topSearch(); });
+$('country').addEventListener('change', ()=>{ if($('country').value) topSearch(); });
+$('mf').addEventListener('submit', e=>{ e.preventDefault(); myFeed(); });
+$('lf').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const url = $('link').value.trim(); if(!url) return;
+  $('linkbtn').disabled = true; status_.className=''; status_.textContent='Queuing link…';
+  try{
+    const r = await fetch('/api/vidsum/queue', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({topic:'link', episodes:[{id:url, url:url, title:url}]})});
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'queue failed');
+    status_.className='ok';
+    status_.textContent = j.added ? '✅ Link queued — '+j.pending+' job(s) now pending.'
+                                  : 'Already in the queue ('+j.pending+' pending).';
+    $('link').value='';
+  }catch(err){ status_.className='err'; status_.textContent='❌ '+err.message; }
+  $('linkbtn').disabled = false;
+});
+
+function fmtDur(ms){ if(!ms) return ''; return Math.round(ms/60000)+' min'; }
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function epRow(ep, i){
-  const d = document.createElement('label'); d.className='ep';
-  d.innerHTML = '<input type="checkbox" data-i="'+i+'"><div>'+
-    '<div class="t">'+esc(ep.title)+'</div>'+
-    '<div class="m">'+esc(ep.show)+' · '+esc(ep.date)+' · '+fmtDur(ep.duration_ms)+
-    (ep.page? ' · <a href="'+esc(ep.page)+'" target="_blank" rel="noopener">open ↗</a>':'')+'</div></div>';
+  const d = document.createElement('div'); d.className='ep';
+  const shownTitle = ep.title_en || ep.title;
+  const orig = (ep.title_en && ep.title_en !== ep.title) ? ep.title : '';
+  d.innerHTML =
+    '<label class="eprow"><input type="checkbox" data-i="'+i+'"><div style="flex:1">'+
+      '<div class="t">'+esc(shownTitle)+'</div>'+
+      '<div class="m">'+esc(ep.show)+' · '+esc(ep.date)+' · '+fmtDur(ep.duration_ms)+'</div>'+
+    '</div><button type="button" class="exp" title="Show details">+</button></label>'+
+    '<div class="detail">'+
+      (orig ? '<div class="orig">Original: '+esc(orig)+'</div>' : '')+
+      esc(ep.desc || 'No description available.')+
+      (ep.page ? '\n\n' : '')+
+      (ep.page ? '<a href="'+esc(ep.page)+'" target="_blank" rel="noopener">Apple page ↗</a>' : '')+
+    '</div>';
+  const btn = d.querySelector('.exp'), det = d.querySelector('.detail');
+  btn.onclick = e => { e.preventDefault(); e.stopPropagation();
+    det.classList.toggle('on'); btn.textContent = det.classList.contains('on') ? '−' : '+'; };
   return d;
 }
 
-async function topSearch(){
-  const cc = countryEl.value; if(!cc) return;
-  const cname = countryEl.options[countryEl.selectedIndex].text;
-  status_.className=''; status_.textContent='Fetching the top-20 podcasts in '+cname+'…';
-  results.innerHTML=''; batchbar.style.display='none'; topbtn.disabled=true;
-  try{
-    const r = await fetch('/api/vidsum/top?country='+cc);
-    const j = await r.json();
-    if(!j.ok) throw new Error(j.error||'chart failed');
-    episodes = [];
-    let shown = 0;
-    j.podcasts.forEach((pod,rank)=>{
-      const h = document.createElement('div'); h.className='podhead';
-      h.innerHTML = '#'+(rank+1)+' '+esc(pod.name)+'<small>'+esc(pod.artist)+'</small>';
-      results.appendChild(h);
-      if(!pod.episodes.length){
-        const m=document.createElement('div'); m.className='ep';
-        m.innerHTML='<div class="m">no fetchable episodes (exclusive feed)</div>';
-        results.appendChild(m); return;
-      }
-      pod.episodes.forEach(ep=>{ const i=episodes.push(ep)-1; results.appendChild(epRow(ep,i)); shown++; });
-    });
-    status_.textContent = 'Top-20 podcasts in '+cname+' — last 3 episodes each ('+shown+' entries):';
-    batchbar.style.display = shown? 'block':'none';
-  }catch(e){ status_.className='err'; status_.textContent='❌ '+e.message; }
-  topbtn.disabled=false;
+function renderPodcasts(pods, headline){
+  episodes = []; let shown = 0;
+  pods.forEach((pod,rank)=>{
+    const h = document.createElement('div'); h.className='podhead';
+    const nm = pod.name_en || pod.name;
+    h.innerHTML = '#'+(rank+1)+' '+esc(nm)+'<small>'+esc(pod.artist||'')+
+      (pod.name_en && pod.name_en!==pod.name ? ' · '+esc(pod.name) : '')+'</small>';
+    results.appendChild(h);
+    if(!pod.episodes || !pod.episodes.length){
+      const m=document.createElement('div'); m.className='ep';
+      m.innerHTML='<div class="m">no fetchable episodes (exclusive feed)</div>';
+      results.appendChild(m); return;
+    }
+    pod.episodes.forEach(ep=>{ const i=episodes.push(ep)-1; results.appendChild(epRow(ep,i)); shown++; });
+  });
+  status_.textContent = headline+' ('+shown+' entries):';
+  batchbar.style.display = shown ? 'block' : 'none';
 }
 
-function fmtDur(ms){ if(!ms) return ''; const m = Math.round(ms/60000); return m + ' min'; }
-
 async function search(){
-  const topic = topicEl.value.trim(); if(!topic) return;
+  const topic = $('topic').value.trim(); if(!topic) return;
   status_.className=''; status_.textContent='Searching the last 30 days for “'+topic+'”…';
-  results.innerHTML=''; batchbar.style.display='none'; searchbtn.disabled=true;
+  results.innerHTML=''; batchbar.style.display='none'; $('searchbtn').disabled=true;
   try{
     const r = await fetch('/api/vidsum/search?topic='+encodeURIComponent(topic));
     const j = await r.json();
     if(!j.ok) throw new Error(j.error||'search failed');
     episodes = j.episodes;
     if(!episodes.length){ status_.textContent='No episodes from the last 30 days for “'+topic+'”. Try another phrasing.'; return; }
-    status_.textContent = episodes.length + ' episodes from the last 30 days:';
+    status_.textContent = episodes.length+' episodes from the last 30 days:';
     episodes.forEach((ep,i)=>results.appendChild(epRow(ep,i)));
     batchbar.style.display='block';
   }catch(e){ status_.className='err'; status_.textContent='❌ '+e.message; }
-  searchbtn.disabled=false;
+  $('searchbtn').disabled=false;
 }
 
-queuebtn.addEventListener('click', async ()=>{
-  const sel = [...results.querySelectorAll('input:checked')].map(cb=>episodes[+cb.dataset.i]);
+async function topSearch(){
+  const cc = $('country').value; if(!cc) return;
+  const cname = $('country').options[$('country').selectedIndex].text;
+  status_.className=''; status_.textContent='Fetching the top-20 podcasts in '+cname+'…';
+  results.innerHTML=''; batchbar.style.display='none'; $('topbtn').disabled=true;
+  try{
+    const r = await fetch('/api/vidsum/top?country='+cc);
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'chart failed');
+    renderPodcasts(j.podcasts, 'Top-20 podcasts in '+cname+' — last 3 episodes each');
+  }catch(e){ status_.className='err'; status_.textContent='❌ '+e.message; }
+  $('topbtn').disabled=false;
+}
+
+async function myFeed(){
+  status_.className=''; status_.textContent='Fetching your followed podcasts…';
+  results.innerHTML=''; batchbar.style.display='none'; $('minebtn').disabled=true;
+  try{
+    const r = await fetch('/api/vidsum/myfeed');
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'myfeed failed');
+    if(!j.podcasts.length){ status_.textContent='No followed podcasts imported yet — ask Claude to import them from Spotify / Apple Podcasts.'; return; }
+    renderPodcasts(j.podcasts, 'Your '+j.podcasts.length+' followed podcasts — last 3 episodes each');
+  }catch(e){ status_.className='err'; status_.textContent='❌ '+e.message; }
+  $('minebtn').disabled=false;
+}
+
+$('queuebtn').addEventListener('click', async ()=>{
+  const sel = [...results.querySelectorAll('.eprow input:checked')].map(cb=>episodes[+cb.dataset.i]);
   if(!sel.length){ status_.className='err'; status_.textContent='Nothing selected.'; return; }
-  queuebtn.disabled=true; status_.className=''; status_.textContent='Queuing '+sel.length+'…';
+  $('queuebtn').disabled=true; status_.className=''; status_.textContent='Queuing '+sel.length+'…';
   try{
     const r = await fetch('/api/vidsum/queue', {method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({topic: topicEl.value.trim(), episodes: sel})});
+      body: JSON.stringify({topic: 'discover', episodes: sel})});
     const j = await r.json();
     if(!j.ok) throw new Error(j.error||'queue failed');
     status_.className='ok';
     status_.textContent='✅ Queued '+j.added+' episode(s) — '+j.pending+' now pending. They will be summarized on the next processing run.';
-    results.querySelectorAll('input:checked').forEach(cb=>cb.checked=false);
+    results.querySelectorAll('.eprow input:checked').forEach(cb=>cb.checked=false);
   }catch(e){ status_.className='err'; status_.textContent='❌ '+e.message; }
-  queuebtn.disabled=false;
+  $('queuebtn').disabled=false;
 });
-
-function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 </script>
