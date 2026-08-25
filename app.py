@@ -139,6 +139,22 @@ def vidsum_translate(texts):
     return texts
 
 
+def vidsum_translate_text(text):
+    """Translate one free-form text (may contain newlines) to English via gtx;
+    returns the original on failure."""
+    text = str(text or "")[:2000]
+    try:
+        u = ("https://translate.googleapis.com/translate_a/single"
+             "?client=gtx&sl=auto&tl=en&dt=t&q=" + urllib.parse.quote(text))
+        data = _vidsum_get_json(u)
+        tr = "".join(seg[0] for seg in data[0] if seg and seg[0])
+        if tr.strip():
+            return tr
+    except Exception:
+        pass
+    return text
+
+
 _VIDSUM_TOP_CACHE = {}  # country -> (epoch, pods)
 
 
@@ -192,6 +208,7 @@ def vidsum_top(country):
         for p in pods:
             for e in p["episodes"]:
                 e["show"] = p.get("name_en") or p["name"]
+                e["tr"] = True  # client may request description translation
     _VIDSUM_TOP_CACHE[country] = (time.time(), pods)
     return pods
 
@@ -549,7 +566,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         p = self.path.split("?")[0]
         if p not in ("/api/family", "/api/vidsum/queue", "/api/vidsum/complete",
-                     "/api/vidsum/follows"):
+                     "/api/vidsum/follows", "/api/vidsum/translate"):
             self._json({"error": "not found"}, 404)
             return
         try:
@@ -593,6 +610,13 @@ class Handler(SimpleHTTPRequestHandler):
                 vidsum_save_queue(q)
                 pend = sum(1 for j in q["jobs"] if j["status"] == "pending")
             self._json({"ok": True, "added": added, "pending": pend})
+            return
+        if p == "/api/vidsum/translate":
+            text = str(req.get("text") or "").strip()
+            if not text:
+                self._json({"ok": False, "error": "no text"}, 400)
+                return
+            self._json({"ok": True, "text": vidsum_translate_text(text)})
             return
         if p == "/api/vidsum/follows":
             shows = req.get("shows")

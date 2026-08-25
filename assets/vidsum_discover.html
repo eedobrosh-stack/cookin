@@ -171,8 +171,28 @@ function epRow(ep, i){
       (ep.page ? '<a href="'+esc(ep.page)+'" target="_blank" rel="noopener">Apple page ↗</a>' : '')+
     '</div>';
   const btn = d.querySelector('.exp'), det = d.querySelector('.detail');
-  btn.onclick = e => { e.preventDefault(); e.stopPropagation();
-    det.classList.toggle('on'); btn.textContent = det.classList.contains('on') ? '−' : '+'; };
+  btn.onclick = async e => { e.preventDefault(); e.stopPropagation();
+    det.classList.toggle('on'); btn.textContent = det.classList.contains('on') ? '−' : '+';
+    // translate the description on first expand for non-English charts
+    if (det.classList.contains('on') && ep.tr && ep.desc && !ep.desc_en && !ep._translating) {
+      ep._translating = true;
+      const span = document.createElement('div');
+      span.className='orig'; span.textContent='Translating…';
+      det.insertBefore(span, det.firstChild);
+      try {
+        const r = await fetch('/api/vidsum/translate', {method:'POST',
+          headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: ep.desc})});
+        const j = await r.json();
+        if (j.ok && j.text) {
+          ep.desc_en = j.text;
+          const link = det.querySelector('a');
+          det.innerHTML = '<div class="orig">Original: '+esc(ep.title)+'</div>'+esc(ep.desc_en)+
+            (link ? '\n\n'+link.outerHTML : '');
+        } else { span.remove(); }
+      } catch(_) { span.remove(); }
+      ep._translating = false;
+    }
+  };
   return d;
 }
 
