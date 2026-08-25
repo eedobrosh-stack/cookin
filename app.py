@@ -165,12 +165,12 @@ def vidsum_translate_text(text):
     return text
 
 
-def _vidsum_get_text(url):
+def _vidsum_get_text(url, timeout=12):
     req = urllib.request.Request(url, headers={
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                       "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9"})
-    with urllib.request.urlopen(req, timeout=12) as r:
+    with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read().decode("utf-8", "replace")
 
 
@@ -188,7 +188,7 @@ def _vidsum_search_ids(query, pattern):
     for eng in ("https://search.brave.com/search?q=",
                 "https://lite.duckduckgo.com/lite/?q="):
         try:
-            h = _vidsum_get_text(eng + urllib.parse.quote(query))
+            h = _vidsum_get_text(eng + urllib.parse.quote(query), timeout=6)
             ids = list(dict.fromkeys(re.findall(pattern, urllib.parse.unquote(h))))
             VIDSUM_DBG.append(f"{eng[8:20]}: len={len(h)} ids={len(ids)}")
             if ids:
@@ -251,7 +251,10 @@ def vidsum_resolve(kind, show, title):
         # 1) search-engine-indexed episode page, verified via Spotify oEmbed title
         ids = _vidsum_search_ids(f"site:open.spotify.com/episode {title}",
                                  r"open\.spotify\.com/episode/([A-Za-z0-9]{22})")
+        t0 = time.time()
         for eid in ids[:3]:
+            if time.time() - t0 > 10:
+                break
             try:
                 oe = _vidsum_get_json("https://open.spotify.com/oembed?url="
                                       "https://open.spotify.com/episode/" + eid)
