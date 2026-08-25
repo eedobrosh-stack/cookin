@@ -62,6 +62,9 @@
   .flag:hover { transform:translate(-50%,-50%) scale(1.9); z-index:6; }
   .flag.on { transform:translate(-50%,-50%) scale(1.6); z-index:5;
              text-shadow:0 0 10px var(--accent); }
+  .srcs { display:inline-flex; gap:8px; margin-inline-start:8px; vertical-align:-2px; }
+  .srcs a { display:inline-flex; opacity:.75; }
+  .srcs a:hover { opacity:1; }
   .maphint { color:var(--muted); font-size:.82rem; margin:8px 2px 0; }
   .batchbar { position:sticky; bottom:0; padding:12px 0 6px;
               background:linear-gradient(transparent, var(--bg) 30%); }
@@ -173,6 +176,20 @@ $('lf').addEventListener('submit', async e=>{
 function fmtDur(ms){ if(!ms) return ''; return Math.round(ms/60000)+' min'; }
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+function srcLinks(ep){
+  const q = encodeURIComponent((ep.show?ep.show+' ':'')+ep.title);
+  const yt = 'https://www.youtube.com/results?search_query='+q;
+  const sp = 'https://open.spotify.com/search/'+q;
+  return '<span class="srcs">'+
+    '<a href="'+yt+'" target="_blank" rel="noopener" title="Find on YouTube" onclick="event.stopPropagation()">'+
+      '<svg width="17" height="12" viewBox="0 0 28 20"><rect width="28" height="20" rx="5" fill="#FF0000"/>'+
+      '<path d="M11 5.5v9l8-4.5z" fill="#fff"/></svg></a>'+
+    '<a href="'+sp+'" target="_blank" rel="noopener" title="Find on Spotify" onclick="event.stopPropagation()">'+
+      '<svg width="14" height="14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#1DB954"/>'+
+      '<path d="M6.2 9.7c3.7-1.1 8.2-.8 11.4 1.1M6.8 12.8c3.1-.9 6.8-.6 9.5 1M7.4 15.7c2.5-.7 5.3-.5 7.5.8" '+
+      'stroke="#000" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg></a></span>';
+}
+
 function epRow(ep, i){
   const d = document.createElement('div'); d.className='ep';
   const shownTitle = ep.title_en || ep.title;
@@ -180,7 +197,7 @@ function epRow(ep, i){
   d.innerHTML =
     '<label class="eprow"><input type="checkbox" data-i="'+i+'"><div style="flex:1">'+
       '<div class="t">'+esc(shownTitle)+'</div>'+
-      '<div class="m">'+esc(ep.show)+' · '+esc(ep.date)+' · '+fmtDur(ep.duration_ms)+'</div>'+
+      '<div class="m">'+esc(ep.show)+' · '+esc(ep.date)+' · '+fmtDur(ep.duration_ms)+srcLinks(ep)+'</div>'+
     '</div><button type="button" class="exp" title="Show details">+</button></label>'+
     '<div class="detail">'+
       (orig ? '<div class="orig">Original: '+esc(orig)+'</div>' : '')+
