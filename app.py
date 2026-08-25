@@ -183,13 +183,18 @@ def _word_overlap(a, b):
 VIDSUM_DBG = []
 
 
-def _vidsum_search_ids(query, pattern):
-    """Search Brave then DDG-lite for `query`, return regex matches in order."""
+def _vidsum_search_ids(query, pattern, deadline):
+    """Search engines in order for `query`; stop at the deadline (epoch secs)."""
     for eng in ("https://search.brave.com/search?q=",
                 "https://lite.duckduckgo.com/lite/?q=",
                 "https://html.duckduckgo.com/html/?q="):
+        left = deadline - time.time()
+        if left < 2:
+            VIDSUM_DBG.append("search: out of time")
+            break
         try:
-            h = _vidsum_get_text(eng + urllib.parse.quote(query), timeout=6)
+            h = _vidsum_get_text(eng + urllib.parse.quote(query),
+                                 timeout=min(6, left))
             ids = list(dict.fromkeys(re.findall(pattern, urllib.parse.unquote(h))))
             VIDSUM_DBG.append(f"{eng[8:20]}: len={len(h)} ids={len(ids)}")
             if ids:
@@ -237,6 +242,7 @@ def vidsum_resolve(kind, show, title):
         pairs = re.findall(
             r'"videoRenderer":\{"videoId":"([\w-]{11})".*?"title":\{"runs":\[\{"text":"(.*?)"\}',
             h)[:6]
+        VIDSUM_DBG.append(f"yt pairs={len(pairs)}")
         best = None
         for vid, vtitle in pairs:
             # titles come through as JSON-escaped text; \uXXXX only where non-literal
@@ -249,12 +255,13 @@ def vidsum_resolve(kind, show, title):
             return "https://www.youtube.com/watch?v=" + best[1]
         return None
     if kind == "sp":
+        t0 = time.time()
         # 1) search-engine-indexed episode page, verified via Spotify oEmbed title
         ids = _vidsum_search_ids(f"site:open.spotify.com/episode {title}",
-                                 r"open\.spotify\.com/episode/([A-Za-z0-9]{22})")
-        t0 = time.time()
+                                 r"open\.spotify\.com/episode/([A-Za-z0-9]{22})",
+                                 t0 + 9)
         for eid in ids[:3]:
-            if time.time() - t0 > 10:
+            if time.time() - t0 > 15:
                 break
             try:
                 oe = _vidsum_get_json("https://open.spotify.com/oembed?url="
@@ -266,8 +273,9 @@ def vidsum_resolve(kind, show, title):
         # 2) show page -> embed carries the LATEST episode; use it if it matches
         try:
             sids = _vidsum_search_ids(f"site:open.spotify.com/show {show}",
-                                      r"open\.spotify\.com/show/([A-Za-z0-9]{22})")
-            if sids:
+                                      r"open\.spotify\.com/show/([A-Za-z0-9]{22})",
+                                      t0 + 22)
+            if sids and time.time() - t0 < 24:
                 emb = _vidsum_get_text("https://open.spotify.com/embed/show/" + sids[0])
                 m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', emb, re.S)
                 ent = json.loads(m.group(1))["props"]["pageProps"]["state"]["data"]["entity"]
