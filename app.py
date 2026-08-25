@@ -190,7 +190,9 @@ def _vidsum_search_ids(query, pattern, deadline):
     query = re.sub(r"\s+", " ", query).strip()
     for eng in ("https://search.brave.com/search?q=",
                 "https://lite.duckduckgo.com/lite/?q=",
-                "https://html.duckduckgo.com/html/?q="):
+                "https://html.duckduckgo.com/html/?q=",
+                "https://www.mojeek.com/search?q=",
+                "https://www.ecosia.org/search?q="):
         left = deadline - time.time()
         if left < 2:
             VIDSUM_DBG.append("search: out of time")
