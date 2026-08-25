@@ -180,6 +180,9 @@ def _word_overlap(a, b):
     return len(wa & wb) / max(1, len(wa))
 
 
+VIDSUM_DBG = []
+
+
 def _vidsum_search_ids(query, pattern):
     """Search Brave then DDG-lite for `query`, return regex matches in order."""
     for eng in ("https://search.brave.com/search?q=",
@@ -187,9 +190,11 @@ def _vidsum_search_ids(query, pattern):
         try:
             h = _vidsum_get_text(eng + urllib.parse.quote(query))
             ids = list(dict.fromkeys(re.findall(pattern, urllib.parse.unquote(h))))
+            VIDSUM_DBG.append(f"{eng[8:20]}: len={len(h)} ids={len(ids)}")
             if ids:
                 return ids
-        except Exception:
+        except Exception as e:
+            VIDSUM_DBG.append(f"{eng[8:20]}: ERR {e}")
             continue
     return []
 
@@ -735,11 +740,16 @@ class Handler(SimpleHTTPRequestHandler):
             if kind not in ("yt", "sp") or not title:
                 self._json({"ok": False, "error": "bad request"}, 400)
                 return
+            VIDSUM_DBG.clear()
             try:
                 url = vidsum_resolve_cached(kind, show, title)
-            except Exception:
+            except Exception as e:
+                VIDSUM_DBG.append(f"resolve ERR {e}")
                 url = None
-            self._json({"ok": bool(url), "url": url})
+            out = {"ok": bool(url), "url": url}
+            if req.get("dbg"):
+                out["dbg"] = list(VIDSUM_DBG)
+            self._json(out)
             return
         if p == "/api/vidsum/translate":
             text = str(req.get("text") or "").strip()
