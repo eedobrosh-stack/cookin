@@ -8,7 +8,8 @@ Mutable data lives on the persistent disk (DATA_DIR, default /var/data):
 
 Pure stdlib — no requirements. Includes HTTP Range support (Safari/iOS video).
 """
-import json, os, re, random, threading, datetime
+import json, os, re, random, threading, datetime, time
+import urllib.request, urllib.parse
 from collections import Counter
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
@@ -22,6 +23,57 @@ BARRACE_PATH = os.path.join(ASSETS, "barrace.html")
 VIDEOS_DIR = os.path.join(DATA_DIR, "videos")
 STATE_PATH = os.path.join(DATA_DIR, "family.json")
 LOCK = threading.Lock()
+
+# Vidsum Discover: topic -> recent podcast episodes (iTunes Search API, which
+# indexes the open-RSS ecosystem incl. non-exclusive Spotify shows) + a job
+# queue on the persistent disk, processed later from the owner's Mac.
+VIDSUM_PAGE_PATH = os.path.join(ASSETS, "vidsum_discover.html")
+VIDSUM_QUEUE_PATH = os.path.join(DATA_DIR, "vidsum_queue.json")
+VIDSUM_LOCK = threading.Lock()
+VIDSUM_MAX_PENDING = 100
+
+
+def vidsum_load_queue():
+    try:
+        with open(VIDSUM_QUEUE_PATH, encoding="utf-8") as f:
+            q = json.load(f)
+        q.setdefault("jobs", [])
+        return q
+    except Exception:
+        return {"jobs": []}
+
+
+def vidsum_save_queue(q):
+    tmp = VIDSUM_QUEUE_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(q, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, VIDSUM_QUEUE_PATH)
+
+
+def vidsum_search(topic):
+    url = ("https://itunes.apple.com/search?media=podcast&entity=podcastEpisode"
+           "&limit=200&term=" + urllib.parse.quote(topic))
+    req = urllib.request.Request(url, headers={"User-Agent": "jarcud-vidsum/1.0"})
+    with urllib.request.urlopen(req, timeout=25) as r:
+        data = json.load(r)
+    cutoff = (datetime.datetime.now(datetime.timezone.utc)
+              - datetime.timedelta(days=30)).strftime("%Y-%m-%d")
+    eps = []
+    for it in data.get("results", []):
+        rel = (it.get("releaseDate") or "")[:10]
+        if rel < cutoff or not it.get("episodeUrl"):
+            continue
+        eps.append({
+            "id": str(it.get("trackId") or it.get("episodeGuid") or it.get("episodeUrl")),
+            "title": it.get("trackName", ""),
+            "show": it.get("collectionName", ""),
+            "date": rel,
+            "duration_ms": it.get("trackTimeMillis") or 0,
+            "mp3": it.get("episodeUrl"),
+            "page": it.get("trackViewUrl") or "",
+        })
+    eps.sort(key=lambda e: e["date"], reverse=True)
+    return eps[:100]
 
 DEFAULT = {"members": [], "votes": {}, "decision": None, "tieCounter": None, "history": []}
 
@@ -88,6 +140,7 @@ JARCUD_ARTIFACTS = """<!doctype html>
 <a class="card" href="/ilsummer"><span class="e">&#9728;&#65039;</span><span>IL Summer<small>How much summer is left?</small></span></a>
 <a class="card" href="/lielmali"><span class="e">&#128373;&#65039;</span><span>Where in the World are Liel &amp; Mali?<small>The detective game</small></span></a>
 <a class="card" href="/barrace"><span class="e">&#127937;</span><span>Bar Race<small>7-color racing game</small></span></a>
+<a class="card" href="/vidsum"><span class="e">&#127916;</span><span>Vidsum Discover<small>Topic search &rarr; queue episodes to summarize</small></span></a>
 <a class="home" href="/">&#128081; Jarcud</a>
 """
 
@@ -274,6 +327,28 @@ class Handler(SimpleHTTPRequestHandler):
             except OSError:
                 self._json({"error": "summer page not found"}, 404)
             return
+        if self._is_main_host() and p in ("/vidsum", "/vidsum/"):
+            try:
+                with open(VIDSUM_PAGE_PATH, "rb") as f:
+                    self._html(f.read(), "no-store")
+            except OSError:
+                self._json({"error": "vidsum page not found"}, 404)
+            return
+        if p == "/api/vidsum/search":
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            topic = (qs.get("topic", [""])[0] or "").strip()[:100]
+            if not topic:
+                self._json({"ok": False, "error": "missing topic"}, 400)
+                return
+            try:
+                self._json({"ok": True, "episodes": vidsum_search(topic)})
+            except Exception as e:
+                self._json({"ok": False, "error": f"search failed: {e}"}, 502)
+            return
+        if p == "/api/vidsum/queue":
+            with VIDSUM_LOCK:
+                self._json({"ok": True, **vidsum_load_queue()})
+            return
         if self._is_main_host() and p in ("/barrace", "/barrace/", "/race", "/race/"):
             try:
                 with open(BARRACE_PATH, encoding="utf-8") as f:
@@ -319,14 +394,62 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        if self.path.split("?")[0] != "/api/family":
+        p = self.path.split("?")[0]
+        if p not in ("/api/family", "/api/vidsum/queue", "/api/vidsum/complete"):
             self._json({"error": "not found"}, 404)
             return
         try:
             n = int(self.headers.get("Content-Length", 0))
-            req = json.loads(self.rfile.read(n) or b"{}")
+            req = json.loads(self.rfile.read(min(n, 1 << 20)) or b"{}")
         except Exception:
             self._json({"error": "bad json"}, 400)
+            return
+        if p == "/api/vidsum/queue":
+            eps = req.get("episodes") or []
+            if not isinstance(eps, list) or not eps:
+                self._json({"ok": False, "error": "no episodes"}, 400)
+                return
+            topic = str(req.get("topic") or "")[:100]
+            with VIDSUM_LOCK:
+                q = vidsum_load_queue()
+                pending = [j for j in q["jobs"] if j.get("status") == "pending"]
+                known = {j.get("ep_id") for j in q["jobs"]}
+                added = 0
+                for ep in eps[:50]:
+                    if not isinstance(ep, dict) or not ep.get("mp3"):
+                        continue
+                    ep_id = str(ep.get("id") or ep.get("mp3"))
+                    if ep_id in known or len(pending) + added >= VIDSUM_MAX_PENDING:
+                        continue
+                    q["jobs"].append({
+                        "ep_id": ep_id, "status": "pending", "topic": topic,
+                        "title": str(ep.get("title") or "")[:300],
+                        "show": str(ep.get("show") or "")[:200],
+                        "date": str(ep.get("date") or "")[:10],
+                        "duration_ms": int(ep.get("duration_ms") or 0),
+                        "mp3": str(ep.get("mp3"))[:2000],
+                        "page": str(ep.get("page") or "")[:2000],
+                        "queued_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    })
+                    known.add(ep_id)
+                    added += 1
+                vidsum_save_queue(q)
+                pend = sum(1 for j in q["jobs"] if j["status"] == "pending")
+            self._json({"ok": True, "added": added, "pending": pend})
+            return
+        if p == "/api/vidsum/complete":
+            ids = req.get("ids") or []
+            status = req.get("status") if req.get("status") in ("done", "failed") else "done"
+            with VIDSUM_LOCK:
+                q = vidsum_load_queue()
+                hit = 0
+                for j in q["jobs"]:
+                    if j.get("ep_id") in ids and j.get("status") == "pending":
+                        j["status"] = status
+                        j["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                        hit += 1
+                vidsum_save_queue(q)
+            self._json({"ok": True, "updated": hit})
             return
         action = req.get("action")
         with LOCK:

@@ -1,0 +1,108 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#127916;</text></svg>">
+<title>Vidsum Discover</title>
+<style>
+  :root { --bg:#14161b; --card:#1d2129; --line:#2e3442; --ink:#e8eaf0;
+          --muted:#8b93a7; --accent:#4f8cff; --ok:#3ec97e; --err:#ff6b6b; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:34px 18px 70px; }
+  h1 { margin:0 0 4px; font-size:1.5rem; }
+  p.sub { margin:0 0 20px; color:var(--muted); font-size:.9rem; line-height:1.5; }
+  .searchrow { display:flex; gap:10px; }
+  input[type=text] { flex:1; padding:11px 13px; border-radius:9px; border:1px solid var(--line);
+          background:var(--card); color:var(--ink); font-size:.95rem; }
+  input[type=text]:focus { outline:none; border-color:var(--accent); }
+  button { padding:11px 18px; border:0; border-radius:9px; background:var(--accent);
+           color:#fff; font-size:.92rem; font-weight:700; cursor:pointer; }
+  button:disabled { opacity:.45; cursor:default; }
+  .chips { margin:12px 0 4px; display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { padding:6px 13px; border-radius:20px; border:1px solid var(--line);
+          background:var(--card); color:var(--muted); font-size:.83rem; cursor:pointer; }
+  .chip:hover { border-color:var(--accent); color:var(--ink); }
+  #status { margin:16px 0 8px; font-size:.88rem; color:var(--muted); min-height:1.2em; }
+  #status.err { color:var(--err); } #status.ok { color:var(--ok); }
+  .ep { display:flex; gap:12px; align-items:flex-start; padding:13px 14px; margin:0 0 10px;
+        background:var(--card); border:1px solid var(--line); border-radius:12px; }
+  .ep input { margin-top:4px; width:16px; height:16px; accent-color:var(--accent); }
+  .ep .t { font-weight:600; font-size:.95rem; line-height:1.35; }
+  .ep .m { color:var(--muted); font-size:.8rem; margin-top:3px; }
+  .ep a { color:var(--accent); text-decoration:none; }
+  .batchbar { position:sticky; bottom:0; padding:12px 0 6px; background:linear-gradient(transparent, var(--bg) 30%); }
+  .batchbar button { width:100%; padding:14px; font-size:1rem; }
+</style>
+<div class="wrap">
+  <h1>&#127916; Vidsum Discover</h1>
+  <p class="sub">Pick a topic, get podcast &amp; video-podcast episodes from the last 30 days
+  (Spotify shows included via their public feeds), check the ones you want, and queue them
+  for summarization.</p>
+  <form class="searchrow" id="sf">
+    <input type="text" id="topic" placeholder="Topic — e.g. AI, Israeli politics, cybersecurity…" required>
+    <button id="searchbtn">Search</button>
+  </form>
+  <div class="chips" id="chips"></div>
+  <p id="status"></p>
+  <div id="results"></div>
+  <div class="batchbar" id="batchbar" style="display:none">
+    <button id="queuebtn">Queue selected for summarization</button>
+  </div>
+</div>
+<script>
+const PRESETS = ["AI","Israeli politics","Cybersecurity","Startups","Economy","Science","History","Football"];
+const chips = document.getElementById('chips'), topicEl = document.getElementById('topic'),
+      results = document.getElementById('results'), status_ = document.getElementById('status'),
+      batchbar = document.getElementById('batchbar'), queuebtn = document.getElementById('queuebtn'),
+      searchbtn = document.getElementById('searchbtn');
+let episodes = [];
+PRESETS.forEach(t => { const c = document.createElement('span'); c.className='chip'; c.textContent=t;
+  c.onclick = () => { topicEl.value = t; search(); }; chips.appendChild(c); });
+document.getElementById('sf').addEventListener('submit', e => { e.preventDefault(); search(); });
+
+function fmtDur(ms){ if(!ms) return ''; const m = Math.round(ms/60000); return m + ' min'; }
+
+async function search(){
+  const topic = topicEl.value.trim(); if(!topic) return;
+  status_.className=''; status_.textContent='Searching the last 30 days for “'+topic+'”…';
+  results.innerHTML=''; batchbar.style.display='none'; searchbtn.disabled=true;
+  try{
+    const r = await fetch('/api/vidsum/search?topic='+encodeURIComponent(topic));
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'search failed');
+    episodes = j.episodes;
+    if(!episodes.length){ status_.textContent='No episodes from the last 30 days for “'+topic+'”. Try another phrasing.'; return; }
+    status_.textContent = episodes.length + ' episodes from the last 30 days:';
+    episodes.forEach((ep,i)=>{
+      const d = document.createElement('label'); d.className='ep';
+      d.innerHTML = '<input type="checkbox" data-i="'+i+'"><div>'+
+        '<div class="t">'+esc(ep.title)+'</div>'+
+        '<div class="m">'+esc(ep.show)+' · '+esc(ep.date)+' · '+fmtDur(ep.duration_ms)+
+        (ep.page? ' · <a href="'+esc(ep.page)+'" target="_blank" rel="noopener">open ↗</a>':'')+'</div></div>';
+      results.appendChild(d);
+    });
+    batchbar.style.display='block';
+  }catch(e){ status_.className='err'; status_.textContent='❌ '+e.message; }
+  searchbtn.disabled=false;
+}
+
+queuebtn.addEventListener('click', async ()=>{
+  const sel = [...results.querySelectorAll('input:checked')].map(cb=>episodes[+cb.dataset.i]);
+  if(!sel.length){ status_.className='err'; status_.textContent='Nothing selected.'; return; }
+  queuebtn.disabled=true; status_.className=''; status_.textContent='Queuing '+sel.length+'…';
+  try{
+    const r = await fetch('/api/vidsum/queue', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({topic: topicEl.value.trim(), episodes: sel})});
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'queue failed');
+    status_.className='ok';
+    status_.textContent='✅ Queued '+j.added+' episode(s) — '+j.pending+' now pending. They will be summarized on the next processing run.';
+    results.querySelectorAll('input:checked').forEach(cb=>cb.checked=false);
+  }catch(e){ status_.className='err'; status_.textContent='❌ '+e.message; }
+  queuebtn.disabled=false;
+});
+
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
