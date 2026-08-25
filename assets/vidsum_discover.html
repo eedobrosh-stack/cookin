@@ -62,9 +62,11 @@
   .flag:hover { transform:translate(-50%,-50%) scale(1.9); z-index:6; }
   .flag.on { transform:translate(-50%,-50%) scale(1.6); z-index:5;
              text-shadow:0 0 10px var(--accent); }
-  .srcs { display:inline-flex; gap:8px; margin-inline-start:8px; vertical-align:-2px; }
-  .srcs a { display:inline-flex; opacity:.75; }
-  .srcs a:hover { opacity:1; }
+  .srcs { display:inline-flex; gap:10px; margin-inline-start:10px; vertical-align:-5px; }
+  .srcs a { display:inline-flex; opacity:.8; }
+  .srcs a:hover { opacity:1; transform:scale(1.12); }
+  .srcs a.busy { animation:pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity:.3; } }
   .maphint { color:var(--muted); font-size:.82rem; margin:8px 2px 0; }
   .batchbar { position:sticky; bottom:0; padding:12px 0 6px;
               background:linear-gradient(transparent, var(--bg) 30%); }
@@ -177,17 +179,36 @@ function fmtDur(ms){ if(!ms) return ''; return Math.round(ms/60000)+' min'; }
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function srcLinks(ep){
-  const q = encodeURIComponent((ep.show?ep.show+' ':'')+ep.title);
-  const yt = 'https://www.youtube.com/results?search_query='+q;
-  const sp = 'https://open.spotify.com/search/'+q;
   return '<span class="srcs">'+
-    '<a href="'+yt+'" target="_blank" rel="noopener" title="Find on YouTube" onclick="event.stopPropagation()">'+
-      '<svg width="17" height="12" viewBox="0 0 28 20"><rect width="28" height="20" rx="5" fill="#FF0000"/>'+
+    '<a href="#" data-kind="yt" title="Open on YouTube">'+
+      '<svg width="26" height="18" viewBox="0 0 28 20"><rect width="28" height="20" rx="5" fill="#FF0000"/>'+
       '<path d="M11 5.5v9l8-4.5z" fill="#fff"/></svg></a>'+
-    '<a href="'+sp+'" target="_blank" rel="noopener" title="Find on Spotify" onclick="event.stopPropagation()">'+
-      '<svg width="14" height="14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#1DB954"/>'+
+    '<a href="#" data-kind="sp" title="Open on Spotify">'+
+      '<svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#1DB954"/>'+
       '<path d="M6.2 9.7c3.7-1.1 8.2-.8 11.4 1.1M6.8 12.8c3.1-.9 6.8-.6 9.5 1M7.4 15.7c2.5-.7 5.3-.5 7.5.8" '+
       'stroke="#000" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg></a></span>';
+}
+
+async function openSource(ep, kind, el){
+  // open a tab synchronously (popup-blocker safe), then point it at the
+  // resolved episode URL; fall back to the platform's search page.
+  const q = encodeURIComponent((ep.show?ep.show+' ':'')+ep.title);
+  const fallback = kind==='yt' ? 'https://www.youtube.com/results?search_query='+q
+                               : 'https://open.spotify.com/search/'+q;
+  const cacheKey = kind+'_url';
+  if (ep[cacheKey]) { window.open(ep[cacheKey], '_blank', 'noopener'); return; }
+  const w = window.open('about:blank', '_blank');
+  el.classList.add('busy');
+  try {
+    const r = await fetch('/api/vidsum/resolve', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({kind, show: ep.show, title: ep.title})});
+    const j = await r.json();
+    const url = (j.ok && j.url) ? j.url : fallback;
+    if (j.ok && j.url) ep[cacheKey] = j.url;
+    if (w) w.location = url; else window.open(url, '_blank', 'noopener');
+  } catch(_) { if (w) w.location = fallback; }
+  el.classList.remove('busy');
 }
 
 function epRow(ep, i){
@@ -205,6 +226,9 @@ function epRow(ep, i){
       (ep.page ? '\n\n' : '')+
       (ep.page ? '<a href="'+esc(ep.page)+'" target="_blank" rel="noopener">Apple page ↗</a>' : '')+
     '</div>';
+  d.querySelectorAll('.srcs a').forEach(a => a.onclick = e => {
+    e.preventDefault(); e.stopPropagation(); openSource(ep, a.dataset.kind, a);
+  });
   const btn = d.querySelector('.exp'), det = d.querySelector('.detail');
   btn.onclick = async e => { e.preventDefault(); e.stopPropagation();
     det.classList.toggle('on'); btn.textContent = det.classList.contains('on') ? '−' : '+';

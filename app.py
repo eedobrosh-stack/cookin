@@ -165,6 +165,74 @@ def vidsum_translate_text(text):
     return text
 
 
+def _vidsum_get_text(url):
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9"})
+    with urllib.request.urlopen(req, timeout=12) as r:
+        return r.read().decode("utf-8", "replace")
+
+
+def _word_overlap(a, b):
+    wa = set(re.sub(r"[^\w֐-׿]+", " ", a).lower().split())
+    wb = set(re.sub(r"[^\w֐-׿]+", " ", b).lower().split())
+    return len(wa & wb) / max(1, len(wa))
+
+
+def vidsum_resolve(kind, show, title):
+    """Resolve an episode to its actual YouTube / Spotify URL. Returns url or None."""
+    query = f"{show} {title}".strip()
+    if kind == "yt":
+        h = _vidsum_get_text("https://www.youtube.com/results?search_query="
+                             + urllib.parse.quote(query))
+        pairs = re.findall(
+            r'"videoRenderer":\{"videoId":"([\w-]{11})".*?"title":\{"runs":\[\{"text":"(.*?)"\}',
+            h)[:6]
+        best = None
+        for vid, vtitle in pairs:
+            score = _word_overlap(title, vtitle.encode().decode("unicode_escape", "ignore"))
+            if best is None or score > best[0]:
+                best = (score, vid)
+        if best and best[0] >= 0.35:
+            return "https://www.youtube.com/watch?v=" + best[1]
+        return None
+    if kind == "sp":
+        # 1) Brave-indexed episode page, verified via Spotify oEmbed title
+        try:
+            h = _vidsum_get_text("https://search.brave.com/search?q="
+                                 + urllib.parse.quote(f"site:open.spotify.com/episode {title}"))
+            ids = list(dict.fromkeys(re.findall(
+                r"open\.spotify\.com/episode/([A-Za-z0-9]{22})", urllib.parse.unquote(h))))
+        except Exception:
+            ids = []
+        for eid in ids[:3]:
+            try:
+                oe = _vidsum_get_json("https://open.spotify.com/oembed?url="
+                                      "https://open.spotify.com/episode/" + eid)
+                if _word_overlap(title, oe.get("title", "")) >= 0.5:
+                    return "https://open.spotify.com/episode/" + eid
+            except Exception:
+                continue
+        # 2) show page -> embed carries the LATEST episode; use it if it matches
+        try:
+            h = _vidsum_get_text("https://search.brave.com/search?q="
+                                 + urllib.parse.quote(f"site:open.spotify.com/show {show}"))
+            sids = re.findall(r"open\.spotify\.com/show/([A-Za-z0-9]{22})",
+                              urllib.parse.unquote(h))
+            if sids:
+                emb = _vidsum_get_text("https://open.spotify.com/embed/show/" + sids[0])
+                m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', emb, re.S)
+                ent = json.loads(m.group(1))["props"]["pageProps"]["state"]["data"]["entity"]
+                if (ent.get("type") == "episode"
+                        and _word_overlap(title, ent.get("name", "")) >= 0.5):
+                    return "https://open.spotify.com/episode/" + ent["id"]
+        except Exception:
+            pass
+        return None
+    return None
+
+
 _VIDSUM_TOP_CACHE = {}  # country -> (epoch, pods)
 
 
@@ -576,7 +644,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         p = self.path.split("?")[0]
         if p not in ("/api/family", "/api/vidsum/queue", "/api/vidsum/complete",
-                     "/api/vidsum/follows", "/api/vidsum/translate"):
+                     "/api/vidsum/follows", "/api/vidsum/translate",
+                     "/api/vidsum/resolve"):
             self._json({"error": "not found"}, 404)
             return
         try:
@@ -620,6 +689,19 @@ class Handler(SimpleHTTPRequestHandler):
                 vidsum_save_queue(q)
                 pend = sum(1 for j in q["jobs"] if j["status"] == "pending")
             self._json({"ok": True, "added": added, "pending": pend})
+            return
+        if p == "/api/vidsum/resolve":
+            kind = req.get("kind")
+            title = str(req.get("title") or "").strip()[:300]
+            show = str(req.get("show") or "").strip()[:200]
+            if kind not in ("yt", "sp") or not title:
+                self._json({"ok": False, "error": "bad request"}, 400)
+                return
+            try:
+                url = vidsum_resolve(kind, show, title)
+            except Exception:
+                url = None
+            self._json({"ok": bool(url), "url": url})
             return
         if p == "/api/vidsum/translate":
             text = str(req.get("text") or "").strip()
