@@ -152,6 +152,16 @@ def vidsum_translate_text(text):
             return tr
     except Exception:
         pass
+    try:
+        u = ("https://clients5.google.com/translate_a/t?client=dict-chrome-ex"
+             "&sl=auto&tl=en&q=" + urllib.parse.quote(text))
+        data = _vidsum_get_json(u)
+        d0 = data[0] if isinstance(data, list) and data else None
+        tr = d0[0] if isinstance(d0, list) else d0
+        if tr and str(tr).strip():
+            return str(tr)
+    except Exception:
+        pass
     return text
 
 
