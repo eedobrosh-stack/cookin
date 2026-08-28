@@ -31,6 +31,8 @@ main{max-width:1200px; margin:0 auto; padding:22px 20px 80px;}
       background:rgba(250,247,242,.95); backdrop-filter:blur(8px);
       padding:10px 0 12px; border-bottom:1px solid var(--line);}
 .cat{border:1px solid var(--line); background:var(--card); border-radius:999px; padding:6px 14px; cursor:pointer; font-size:.92rem; color:var(--ink); font-family:inherit;}
+.shuffle-btn{border-style:dashed; margin-inline-start:auto;}
+.shuffle-btn:active{transform:rotate(180deg); transition:transform .25s;}
 .cat.active{background:var(--ink); color:#fff; border-color:var(--ink);}
 /* gallery */
 .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:18px;}
@@ -292,14 +294,28 @@ function dietBadge(r){ return `<span class="badge ${DIET_CLS[r.diet]||''}">${DIE
 
 function renderCats(){
   $("#catBar").innerHTML = CAT_ORDER.map(c =>
-    `<button class="cat ${c===activeCat?'active':''}" onclick="activeCat='${c}';renderCats();renderGallery()">${c}</button>`).join("");
+    `<button class="cat ${c===activeCat?'active':''}" onclick="activeCat='${c}';renderCats();renderGallery()">${c}</button>`).join("")
+    + `<button class="cat shuffle-btn" onclick="shuffleGallery()" title="סדר אקראי">🔀 ערבוב</button>`;
+}
+
+let shuffleOrder = null; // null = default order; array of ids = shuffled display order
+function shuffleGallery(){
+  const ids = RECIPES.map(r => r.id);
+  for(let i = ids.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  shuffleOrder = ids;
+  renderGallery();
+  window.scrollTo({top:0, behavior:"smooth"});
 }
 
 function renderGallery(){
   const q = $("#search").value.trim();
-  const items = RECIPES.filter(r =>
+  let items = RECIPES.filter(r =>
     (activeCat==="הכל" || r.category===activeCat) &&
     (!q || (r.name+r.creator+(r.searchAlias||"")).includes(q)));
+  if(shuffleOrder) items = items.slice().sort((a,b)=>shuffleOrder.indexOf(a.id)-shuffleOrder.indexOf(b.id));
   $("#grid").innerHTML = items.map(r => `
     <div class="card" onclick="openDish('${r.id}')">
       <img class="thumb" src="images/${r.image}" alt="">
