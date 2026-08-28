@@ -604,6 +604,17 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    # Static assets are immutable-ish (new dishes = new filenames): let browsers
+    # and Cloudflare cache them so a refresh doesn't re-pull ~46MB of JPEGs.
+    _CACHEABLE_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4",
+                      ".ico", ".svg", ".woff", ".woff2")
+
+    def end_headers(self):
+        p = self.path.split("?")[0].lower()
+        if p.endswith(self._CACHEABLE_EXT):
+            self.send_header("Cache-Control", "public, max-age=86400")
+        super().end_headers()
+
     # --- HTTP Range support (required by Safari/iOS for <video>) ---
     def send_head(self):
         path = self.translate_path(self.path)

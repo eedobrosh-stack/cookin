@@ -269,6 +269,13 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <script src="dishlinks.js"></script>
 <script>
 const $ = s => document.querySelector(s);
+function retryImg(img){
+  const n = (+img.dataset.retries || 0) + 1;
+  if(n > 3) return;
+  img.dataset.retries = n;
+  const base = img.src.split("?")[0];
+  setTimeout(() => { img.src = base + "?r=" + n + "_" + Date.now(); }, 700 * n);
+}
 let activeCat = "הכל";
 let pantry = new Set(JSON.parse(localStorage.getItem("cookin-pantry-v1")||"[]"));
 
@@ -310,7 +317,7 @@ function renderGallery(){
   if(shuffleOrder) items = items.slice().sort((a,b)=>shuffleOrder.indexOf(a.id)-shuffleOrder.indexOf(b.id));
   $("#grid").innerHTML = items.map(r => `
     <div class="card" onclick="openDish('${r.id}')">
-      <img class="thumb" src="images/${r.image}" alt="">
+      <img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">
       <div class="cbody">
         <div class="cname">${r.name}</div>
         <div class="cmeta">
