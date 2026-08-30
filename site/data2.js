@@ -283,7 +283,7 @@ RECIPES.push(
   ]
 },
 {
-  id:"45033", diet:"צמחוני", image:"45033.jpg", category:"ירקות ותוספות",
+  id:"45033", diet:"צמחוני", image:"45033.jpg", category:"סלטים",
   name:"מטבל צזיקי-ברוסקטה",
   creator:"Chhaya Joshi", time:"20 דק'",
   video:"https://www.facebook.com/reel/1287064073395928",
