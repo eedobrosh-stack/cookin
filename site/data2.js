@@ -639,7 +639,7 @@ RECIPES.push(
   tips:"מהתגובות: גרידת לימון + פירורי לחם קלויים מעל; או שקדים/צנוברים קלויים."
 },
 {
-  id:"68884", diet:"צמחוני", image:"68884.jpg", category:"ירקות ותוספות",
+  id:"68884", diet:"צמחוני", image:"68884.jpg", category:"סלטים",
   name:"סלט תפו\"א ומלפפונים גרמני (Kartoffel-Gurkensalat)",
   creator:"German Mom Kitchen", time:"40 דק'", serves:"6 מנות",
   video:"https://www.facebook.com/reel/1334162438828186",
