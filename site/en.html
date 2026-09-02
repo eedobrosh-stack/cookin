@@ -47,16 +47,16 @@ main{max-width:1200px; margin:0 auto; padding:22px 20px 80px;}
 .badge{background:var(--chip); border-radius:6px; padding:2px 8px; font-size:.75rem; color:#6b5d4f;}
 .badge.cat-b{background:#fbe9dc; color:#a4552a;}
 /* dish view */
-#dishView{display:none;}
+#dishView{display:none; flex-direction:column;}
 .back{border:0; background:var(--chip); border-radius:999px; padding:8px 18px; cursor:pointer; font-size:.95rem; font-family:inherit; margin-bottom:16px; font-weight:600; color:var(--ink);}
-.dish{background:var(--card); border-radius:20px; box-shadow:var(--shadow); border:1px solid var(--line); overflow:hidden;}
-.dhero{display:flex; gap:0; flex-wrap:wrap;}
-.dimg{flex:0 0 340px; max-width:100%;}
-.dimg img{width:100%; height:100%; object-fit:cover; display:block; min-height:260px; max-height:420px;}
-.dimg video{width:100%; height:100%; object-fit:contain; background:#111; display:block; min-height:260px; max-height:480px;}
+.dish{background:var(--card); border-radius:20px; box-shadow:var(--shadow); border:1px solid var(--line); overflow:hidden; display:flex; flex-direction:column;}
+.dimg{width:100%;}
+.dimg img{width:100%; object-fit:cover; display:block; min-height:260px; max-height:460px;}
+.dimg video{width:100%; object-fit:contain; background:#111; display:block; min-height:260px; max-height:480px;}
+.dmain{display:flex; flex-direction:column; min-width:0;}
 .origlink{margin-top:22px; padding-top:14px; border-top:1px dashed var(--line); font-size:.85rem; color:var(--muted); line-height:1.5; word-break:break-all;}
 .origlink a{color:var(--accent-dark);}
-.dhead{flex:1; min-width:280px; padding:26px 28px; display:flex; flex-direction:column; gap:12px;}
+.dhead{padding:24px 28px; display:flex; flex-direction:column; gap:12px;}
 .dhead h2{font-size:1.6rem; line-height:1.3;}
 .dsub{color:var(--muted); font-size:.95rem;}
 .dactions{display:flex; gap:10px; margin-top:6px; flex-wrap:wrap;}
@@ -79,6 +79,25 @@ main{max-width:1200px; margin:0 auto; padding:22px 20px 80px;}
 .steps li::before{content:counter(st); flex:0 0 26px; height:26px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:.85rem; font-weight:700; margin-top:2px;}
 .tips{margin-top:20px; background:var(--amber-bg); border-radius:12px; padding:14px 16px; font-size:.92rem; line-height:1.6;}
 .tips b{color:var(--amber);}
+/* Desktop "cockpit" dish view (same as the Hebrew dish pages): everything locked
+   to one viewport — video = full-height side rail, slim header, ingredients &
+   steps scroll inside their columns */
+@media(min-width:1020px){
+  body.dishmode{height:100vh; overflow:hidden; display:flex; flex-direction:column;}
+  body.dishmode header{position:static; flex:0 0 auto;}
+  body.dishmode main{flex:1; min-height:0; display:flex; flex-direction:column; max-width:1360px; width:100%; padding:14px 18px;}
+  body.dishmode footer{display:none;}
+  body.dishmode #dishView{flex:1; min-height:0;}
+  body.dishmode .back{margin-bottom:10px; align-self:flex-start;}
+  body.dishmode .dish{flex:1; min-height:0; display:grid; grid-template-columns:auto minmax(0,1fr);}
+  body.dishmode .dimg{width:clamp(280px,44vh,440px); height:100%; border-inline-end:1px solid var(--line);}
+  body.dishmode .dimg video, body.dishmode .dimg img{height:100%; max-height:none; min-height:0;}
+  body.dishmode .dmain{min-height:0;}
+  body.dishmode .dhead{flex:0 0 auto; padding:18px 26px 14px; gap:8px;}
+  body.dishmode .dhead h2{font-size:1.45rem;}
+  body.dishmode .dbody{flex:1; min-height:0;}
+  body.dishmode .ingcol, body.dishmode .stepcol{overflow-y:auto; scrollbar-width:thin;}
+}
 /* pantry (flip) view */
 #pantryView{display:none;}
 .pgrid{display:grid; grid-template-columns:minmax(300px,420px) 1fr; gap:22px; align-items:start;}
@@ -217,8 +236,9 @@ const CAT_ORDER = ["All","Pasta","Chicken","Beef","Fish","Salads","Vegetables & 
 
 function showView(v){
   $("#galleryView").style.display = v==="gallery" ? "block":"none";
-  $("#dishView").style.display   = v==="dish"    ? "block":"none";
+  $("#dishView").style.display   = v==="dish"    ? "flex":"none";
   $("#pantryView").style.display = v==="pantry"  ? "block":"none";
+  document.body.classList.toggle("dishmode", v==="dish");
   $("#tabDishes").classList.toggle("active", v==="gallery"||v==="dish");
   $("#tabPantry").classList.toggle("active", v==="pantry");
   if(v==="pantry") renderPantry();
@@ -273,25 +293,25 @@ function openDish(id, skipPush){
     ? `<video controls playsinline preload="metadata" poster="images/${r.image}" src="videos/${r.id}.mp4"></video>`
     : `<img src="images/${r.image}" alt="">`;
   $("#dishBox").innerHTML = `
-    <div class="dhero">
-      <div class="dimg">${hero}</div>
+    <div class="dimg">${hero}</div>
+    <div class="dmain">
       <div class="dhead">
         <h2>${r.name}</h2>
         <div class="dsub">By ${r.creator}${r.serves?` · ${r.serves}`:""}${r.time?` · ⏱ ${r.time}`:""}</div>
+        <div><span class="badge cat-b">${r.category}</span> ${dietBadge(r)}</div>
         ${r.intro?`<div class="dnote">${r.intro}</div>`:""}
-        ${hasVid?`<div class="dsub">▶️ The video is embedded here — press play</div>`:""}
       </div>
-    </div>
-    <div class="dbody">
-      <div class="ingcol">
-        <h3>🧺 Ingredients</h3>
-        <ul class="ing-list">${ingHtml}</ul>
-      </div>
-      <div class="stepcol">
-        <h3>👨‍🍳 Instructions</h3>
-        <ol class="steps">${r.steps.map(s=>`<li><span>${s}</span></li>`).join("")}</ol>
-        ${r.tips?`<div class="tips"><b>💡 Tips from the community:</b> ${r.tips}</div>`:""}
-        <div class="origlink">🎬 Original video: <a href="${r.video}" target="_blank" rel="noopener">${r.video.replace("https://www.","")}</a> (by ${r.creator})</div>
+      <div class="dbody">
+        <div class="ingcol">
+          <h3>🧺 Ingredients</h3>
+          <ul class="ing-list">${ingHtml}</ul>
+        </div>
+        <div class="stepcol">
+          <h3>👨‍🍳 Instructions</h3>
+          <ol class="steps">${r.steps.map(s=>`<li><span>${s}</span></li>`).join("")}</ol>
+          ${r.tips?`<div class="tips"><b>💡 Tips from the community:</b> ${r.tips}</div>`:""}
+          <div class="origlink">🎬 Original video: <a href="${r.video}" target="_blank" rel="noopener">${r.video.replace("https://www.","")}</a> (by ${r.creator})</div>
+        </div>
       </div>
     </div>`;
   if(!skipPush) history.pushState({dish:id}, "", "#"+id);
