@@ -443,6 +443,9 @@ JARCUD_LANDING = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jarcud</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
   body { margin:0; min-height:100vh; display:flex; align-items:center;
          justify-content:center; background:#241c12; color:#f6ecd8;
@@ -457,6 +460,9 @@ JARCUD_ARTIFACTS = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jarcud Artifacts</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
   body { margin:0; min-height:100vh; display:flex; flex-direction:column;
          align-items:center; justify-content:center; gap:14px;
@@ -656,8 +662,30 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    _ICONS = {
+        "/favicon.ico": ("favicon.ico", "image/x-icon"),
+        "/favicon-32.png": ("favicon-32.png", "image/png"),
+        "/apple-touch-icon.png": ("apple-touch-icon.png", "image/png"),
+        "/jarcud-512.png": ("jarcud-512.png", "image/png"),
+    }
+
     def do_GET(self):
         p = self.path.split("?")[0]
+        if self._is_main_host() and p in self._ICONS:
+            name, ctype = self._ICONS[p]
+            try:
+                with open(os.path.join(ASSETS, name), "rb") as f:
+                    body = f.read()
+            except OSError:
+                self._json({"error": "icon not found"}, 404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "public, max-age=604800")
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if self._is_main_host() and p == "/":
             self._html(JARCUD_LANDING)
             return
