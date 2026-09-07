@@ -351,7 +351,7 @@ RECIPES.push(
   creator:"Chhaya Joshi", time:"40 min", serves:"Serves 4",
   video:"https://www.facebook.com/reel/857035817371044",
   intro:"The mushroom soup from the Moosewood vegetarian cookbook: dill, sweet paprika, and soy sauce — creamy and warming.",
-  needs:["butter","onion","mushrooms","dill","garlic","lemon","stock","soy","milk","sour-cream","parsley"],
+  needs:["butter","onion","mushrooms","dill","garlic","lemon","stock","soy","milk","sour-cream","parsley","flour"],
   ingredientLines:[
     {text:"4 tbsp butter"},
     {text:"1.5 cups chopped white onion"},
@@ -429,7 +429,7 @@ RECIPES.push(
   creator:"Don't Go Bacon My Heart", time:"30 min",
   video:"https://www.facebook.com/reel/979491511767379",
   intro:"A restaurant-style stir-fry from super simple ingredients — crispy chicken, toasted cashews, and a glossy sauce.",
-  needs:["chicken","cashews","pepper-red","onion","garlic","scallion","chili","soy","hoisin"],
+  needs:["chicken","cashews","pepper-red","onion","garlic","scallion","chili","soy","hoisin","flour"],
   serves:"Serves 4",
   ingredientLines:[
     {text:"600 g boneless chicken thighs, cubed"},

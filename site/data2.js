@@ -338,7 +338,7 @@ RECIPES.push(
   creator:"Chhaya Joshi", time:"40 דק'", serves:"4 מנות",
   video:"https://www.facebook.com/reel/857035817371044",
   intro:"מרק הפטריות מספר הבישול הצמחוני Moosewood: שמיר, פפריקה מתוקה וסויה — קרמי ומחמם.",
-  needs:["butter","onion","mushrooms","dill","garlic","lemon","stock","soy","milk","sour-cream","parsley"],
+  needs:["butter","onion","mushrooms","dill","garlic","lemon","stock","soy","milk","sour-cream","parsley","flour"],
   ingredientLines:[
     {text:"4 כפות חמאה"},
     {text:"1.5 כוסות בצל לבן קצוץ"},
@@ -413,7 +413,7 @@ RECIPES.push(
   creator:"Don't Go Bacon My Heart", time:"30 דק'",
   video:"https://www.facebook.com/reel/979491511767379",
   intro:"מוקפץ מסעדתי ממרכיבי סופר פשוטים — עוף פריך, קשיו קלוי ורוטב מבריק.",
-  needs:["chicken","cashews","pepper-red","onion","garlic","scallion","chili","soy","hoisin"],
+  needs:["chicken","cashews","pepper-red","onion","garlic","scallion","chili","soy","hoisin","flour"],
   serves:"4 מנות",
   ingredientLines:[
     {text:"600 גרם פרגיות ללא עצם בקוביות"},

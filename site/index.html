@@ -112,6 +112,7 @@ main{max-width:1200px; margin:0 auto; padding:22px 20px 80px;}
 .subnote{color:var(--green); font-weight:600;}
 .missnote{color:var(--amber);}
 .empty{color:var(--muted); font-size:.9rem; padding:12px 0;}
+.gfnote{background:#f3f0e6; border:1px solid #e2dcc8; color:#5a4a1e; border-radius:12px; padding:10px 14px; margin:10px 0 14px; font-size:14px; line-height:1.5;}
 /* diet badges */
 .badge.diet-meat{background:#fbe3e0; color:#a53a2c;}
 .badge.diet-fish{background:#e0eefb; color:#2b5f96;}
@@ -202,6 +203,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <main>
   <section id="galleryView">
     <div class="cats" id="catBar"></div>
+    <div class="gfnote" id="gfNote" style="display:none">🌾 <b>ללא גלוטן:</b> מנות ללא קמח, פירורי לחם, סולת, נודלס או כיסונים. במנות פסטה ורטבי סויה/טריאקי/הויסין/צדפות — השתמשו בגרסה ללא גלוטן (פסטה ללא גלוטן, טמרי).</div>
     <div class="grid" id="grid"></div>
   </section>
 
@@ -276,6 +278,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <script src="data4.js"></script>
 <script src="data5.js"></script>
 <script src="videos.js"></script>
+<script src="gf.js"></script>
 <script src="dishlinks.js"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -289,7 +292,8 @@ function retryImg(img){
 let activeCat = "הכל";
 let pantry = new Set(JSON.parse(localStorage.getItem("cookin-pantry-v1")||"[]"));
 
-const CAT_ORDER = ["הכל","פסטה","עוף","בקר","דגים","סלטים","ירקות ותוספות","מרקים ורטבים"];
+const GF_CAT = "ללא גלוטן";
+const CAT_ORDER = ["הכל","פסטה","עוף","בקר","דגים","סלטים","ירקות ותוספות","מרקים ורטבים",GF_CAT];
 
 function showView(v){
   $("#galleryView").style.display = v==="gallery" ? "block":"none";
@@ -322,9 +326,10 @@ for(let i = shuffleOrder.length - 1; i > 0; i--){
 function renderGallery(){
   const q = $("#search").value.trim();
   let items = RECIPES.filter(r =>
-    (activeCat==="הכל" || r.category===activeCat) &&
+    (activeCat==="הכל" || (activeCat===GF_CAT ? isGlutenFree(r) : r.category===activeCat)) &&
     (!q || (r.name+r.creator+(r.searchAlias||"")).includes(q)));
   if(shuffleOrder) items = items.slice().sort((a,b)=>shuffleOrder.indexOf(a.id)-shuffleOrder.indexOf(b.id));
+  $("#gfNote").style.display = activeCat===GF_CAT ? "block" : "none";
   $("#grid").innerHTML = items.map(r => `
     <div class="card" onclick="openDish('${r.id}')">
       <img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">

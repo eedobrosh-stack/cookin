@@ -120,7 +120,7 @@ const RECIPES = [
   name:"פסטה קרמית עם שמן צ'ילי (צ'ילי קריספ)",
   creator:"Chhaya Joshi", time:"25 דק'", serves:"4 מנות",
   video:"https://www.facebook.com/reel/1233367215603154",
-  needs:["pasta","butter","cream-cheese","milk","cream","parmesan","chili-crisp","parsley"],
+  needs:["pasta","butter","cream-cheese","milk","cream","parmesan","chili-crisp","parsley","flour"],
   ingredientLines:[
     {text:"340 גרם פסטה (חצי חבילה)"},
     {text:"2 כפות חמאה"},
