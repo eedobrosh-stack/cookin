@@ -432,6 +432,7 @@ GA_SNIPPET = (
 # icon and inserts these tags right after <meta charset> (or at the top).
 ICON_TAGS = (
     '<link rel="icon" href="/favicon.ico" sizes="any">'
+    '<link rel="icon" type="image/svg+xml" href="/favicon.svg">'
     '<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">'
     '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'
 )
@@ -680,6 +681,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     _ICONS = {
         "/favicon.ico": ("favicon.ico", "image/x-icon"),
+        "/favicon.svg": ("favicon.svg", "image/svg+xml"),
         "/favicon-32.png": ("favicon-32.png", "image/png"),
         "/apple-touch-icon.png": ("apple-touch-icon.png", "image/png"),
         "/jarcud-512.png": ("jarcud-512.png", "image/png"),
