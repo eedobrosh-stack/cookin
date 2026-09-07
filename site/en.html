@@ -36,6 +36,9 @@ main{max-width:1200px; margin:0 auto; padding:22px 20px 80px;}
       padding:10px 0 12px; border-bottom:1px solid var(--line);}
 .cat{border:1px solid var(--line); background:var(--card); border-radius:999px; padding:6px 14px; cursor:pointer; font-size:.92rem; color:var(--ink); font-family:inherit;}
 .cat.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+.catsep{width:1px; align-self:stretch; background:var(--line); margin:0 4px; flex:0 0 auto;}
+.cat.gf{border-color:#8aa64a; color:#4f6b1f; background:#f4f8ea;}
+.cat.gf.active{background:#4f6b1f; border-color:#4f6b1f; color:#fff;}
 /* gallery */
 .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:18px;}
 .card{background:var(--card); border-radius:16px; overflow:hidden; box-shadow:var(--shadow); cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; border:1px solid var(--line); display:flex; flex-direction:column;}
@@ -235,8 +238,9 @@ function retryImg(img){
 let activeCat = "All";
 let pantry = new Set(JSON.parse(localStorage.getItem("cookin-pantry-v1")||"[]"));
 
-const GF_CAT = "Gluten-free";
-const CAT_ORDER = ["All","Pasta","Chicken","Beef","Fish","Salads","Vegetables & Sides","Soups & Sauces",GF_CAT];
+const CAT_ORDER = ["All","Pasta","Chicken","Beef","Fish","Salads","Vegetables & Sides","Soups & Sauces"];
+// Gluten-free is an independent toggle (combines with any category); persisted per browser.
+let gfOn = false; try{ gfOn = localStorage.getItem("cookin-gf")==="1"; }catch(e){}
 
 function showView(v){
   $("#galleryView").style.display = v==="gallery" ? "block":"none";
@@ -254,7 +258,13 @@ function dietBadge(r){ return `<span class="badge ${DIET_CLS[r.diet]||''}">${DIE
 
 function renderCats(){
   $("#catBar").innerHTML = CAT_ORDER.map(c =>
-    `<button class="cat ${c===activeCat?'active':''}" onclick="activeCat='${c.replace(/'/g,"\\'")}';renderCats();renderGallery()">${c}</button>`).join("");
+    `<button class="cat ${c===activeCat?'active':''}" onclick="activeCat='${c.replace(/'/g,"\\'")}';renderCats();renderGallery()">${c}</button>`).join("")
+    + `<span class="catsep"></span><button class="cat gf ${gfOn?'active':''}" role="switch" aria-checked="${gfOn}" title="Show only gluten-free dishes (combines with any category)" onclick="toggleGf()">🌾 Gluten-free</button>`;
+}
+function toggleGf(){
+  gfOn = !gfOn;
+  try{ localStorage.setItem("cookin-gf", gfOn ? "1" : "0"); }catch(e){}
+  renderCats(); renderGallery();
 }
 
 // Gallery order is randomized once per page load (Fisher-Yates)
@@ -267,10 +277,10 @@ for(let i = shuffleOrder.length - 1; i > 0; i--){
 function renderGallery(){
   const q = $("#search").value.trim().toLowerCase();
   let items = RECIPES.filter(r =>
-    (activeCat==="All" || (activeCat===GF_CAT ? isGlutenFree(r) : r.category===activeCat)) &&
+    (activeCat==="All" || r.category===activeCat) && (!gfOn || isGlutenFree(r)) &&
     (!q || (r.name+r.creator+(r.searchAlias||"")).toLowerCase().includes(q)));
   if(shuffleOrder) items = items.slice().sort((a,b)=>shuffleOrder.indexOf(a.id)-shuffleOrder.indexOf(b.id));
-  $("#gfNote").style.display = activeCat===GF_CAT ? "block" : "none";
+  $("#gfNote").style.display = gfOn ? "block" : "none";
   $("#grid").innerHTML = items.map(r => `
     <div class="card" onclick="openDish('${r.id}')">
       <img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">

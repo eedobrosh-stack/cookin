@@ -427,6 +427,28 @@ GA_SNIPPET = (
     "gtag('js',new Date());gtag('config','" + GA_ID + "');</script>"
 )
 
+# Jarcud's face (pencil sketch, assets/favicon*.png|ico) is the favicon of every
+# HTML page this server emits, on every host: _brand() strips any per-page emoji
+# icon and inserts these tags right after <meta charset> (or at the top).
+ICON_TAGS = (
+    '<link rel="icon" href="/favicon.ico" sizes="any">'
+    '<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">'
+    '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'
+)
+_ICON_LINK_RE = re.compile(
+    rb'<link\s+rel="icon"(?:[^>]*?data:image/svg\+xml,.*?</svg>")?[^>]*>\s*', re.S | re.I)
+_CHARSET_RE = re.compile(rb'<meta\s+charset=[^>]*>', re.I)
+
+def brand_html(body):
+    body = _ICON_LINK_RE.sub(b"", body)
+    tags = ICON_TAGS.encode("utf-8")
+    m = _CHARSET_RE.search(body)
+    if m:
+        return body[:m.end()] + b"\n" + tags + b"\n" + body[m.end():]
+    m = re.match(rb'\s*<!doctype[^>]*>\s*', body, re.I)
+    i = m.end() if m else 0
+    return body[:i] + tags + b"\n" + body[i:]
+
 SUMMER_PREFIX = (
     "<!doctype html>\n"
     '<meta charset="utf-8">\n'
@@ -443,9 +465,6 @@ JARCUD_LANDING = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jarcud</title>
-<link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
   body { margin:0; min-height:100vh; display:flex; align-items:center;
          justify-content:center; background:#241c12; color:#f6ecd8;
@@ -460,9 +479,6 @@ JARCUD_ARTIFACTS = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jarcud Artifacts</title>
-<link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
   body { margin:0; min-height:100vh; display:flex; flex-direction:column;
          align-items:center; justify-content:center; gap:14px;
@@ -601,7 +617,7 @@ class Handler(SimpleHTTPRequestHandler):
     def _html(self, body, cache_control=None):
         if isinstance(body, str):
             body = body.encode("utf-8")
-        body = self._ga(body)
+        body = self._ga(brand_html(body))
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
@@ -671,7 +687,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         p = self.path.split("?")[0]
-        if self._is_main_host() and p in self._ICONS:
+        if p in self._ICONS:
             name, ctype = self._ICONS[p]
             try:
                 with open(os.path.join(ASSETS, name), "rb") as f:
@@ -783,7 +799,7 @@ class Handler(SimpleHTTPRequestHandler):
                 fs = os.path.join(fs, "index.html")
             if fs.endswith(".html") and os.path.isfile(fs):
                 with open(fs, "rb") as f:
-                    body = self._ga(f.read())
+                    body = self._ga(brand_html(f.read()))
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(body)))
