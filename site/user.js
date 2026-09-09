@@ -123,7 +123,7 @@ const st = document.createElement("style"); st.textContent = css; document.head.
 
 let ME = null, hidden = new Set(), hideBase = false, muted = [];
 let communityOnly = false; try{ communityOnly = localStorage.getItem('cookin-community')==='1'; }catch(e){}
-let pollTimer = null;
+let pollTimer = null, deepLinked = false;
 
 window.VIS = function(all){
   return RECIPES.filter(r => {
@@ -208,7 +208,8 @@ async function refresh(){
   clearTimeout(pollTimer);
   if(ME.user && (ME.mine||[]).some(d => d.status === "processing")) pollTimer = setTimeout(refresh, 6000);
   // deep link to a user dish (en.html renders in-page via #id)
-  if(LANG === "en" && location.hash && location.hash.slice(1).startsWith("u") && typeof openDish === "function"){
+  if(!deepLinked && LANG === "en" && location.hash && location.hash.slice(1).startsWith("u") && typeof openDish === "function"){
+    deepLinked = true;
     const id = location.hash.slice(1); if(RECIPES.some(r => r.id === id)) openDish(id, true);
   }
 }

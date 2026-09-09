@@ -248,6 +248,7 @@ function showView(v){
   $("#dishView").style.display   = v==="dish"    ? "flex":"none";
   $("#pantryView").style.display = v==="pantry"  ? "block":"none";
   document.body.classList.toggle("dishmode", v==="dish");
+  if(v!=="dish" && location.hash) history.replaceState(null, "", location.pathname);
   $("#tabDishes").classList.toggle("active", v==="gallery"||v==="dish");
   $("#tabPantry").classList.toggle("active", v==="pantry");
   if(v==="pantry") renderPantry();
