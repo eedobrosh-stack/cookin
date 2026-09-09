@@ -468,12 +468,16 @@ JARCUD_LANDING = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jarcud</title>
 <style>
-  body { margin:0; min-height:100vh; display:flex; align-items:center;
-         justify-content:center; background:#241c12; color:#f6ecd8;
+  body { margin:0; min-height:100vh; display:flex; flex-direction:column;
+         align-items:center; justify-content:center; gap:22px; padding:24px 0;
+         box-sizing:border-box; background:#241c12; color:#f6ecd8;
          font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  img.king { width:min(300px,62vw); max-height:52vh; object-fit:contain;
+             display:block; filter:drop-shadow(0 10px 28px rgba(0,0,0,.55)); }
   h1 { font-size:clamp(30px,7vw,58px); letter-spacing:.12em; margin:0;
        text-transform:uppercase; text-align:center; padding:0 16px; }
 </style>
+<img class="king" src="/jarcud-cat.jpg" alt="Jarcud">
 <h1>Jarcud is King &#128081;</h1>
 """
 
@@ -716,6 +720,7 @@ class Handler(SimpleHTTPRequestHandler):
         "/favicon-32.png": ("favicon-32.png", "image/png"),
         "/apple-touch-icon.png": ("apple-touch-icon.png", "image/png"),
         "/jarcud-512.png": ("jarcud-512.png", "image/png"),
+        "/jarcud-cat.jpg": ("jarcud-cat.jpg", "image/jpeg"),
     }
 
     def do_GET(self):
