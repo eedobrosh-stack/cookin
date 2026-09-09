@@ -479,6 +479,20 @@ def api_bulk_visibility(handler, user, req):
     return handler._json({"ok": True})
 
 
+# --- admin: moderation list (all user dishes with owner info) ---
+def api_admin_dishes(handler, user):
+    if not user or not user.get("admin"):
+        return handler._json({"error": "forbidden"}, 403)
+    with db() as c:
+        rows = []
+        for r in c.execute("SELECT d.*, u.name AS oname, u.email AS oemail, u.avatar AS oavatar FROM dishes d "
+                           "LEFT JOIN users u ON u.id=d.owner_id ORDER BY d.visibility='public' DESC, d.created_at DESC"):
+            d = _dish_public(r)
+            d["owner"] = {"id": r["owner_id"], "name": r["oname"], "email": r["oemail"], "avatar": r["oavatar"]}
+            rows.append(d)
+    return handler._json({"ok": True, "dishes": rows})
+
+
 # --- admin: manual queue drained from the Mac via the /cookin skill ---
 def api_admin_queue(handler, user):
     if not user or not user.get("admin"):
@@ -1102,6 +1116,8 @@ def handle_get(handler, path, qs):
         api_dish_get(handler, current_user(handler), path.rsplit("/", 1)[1]); return True
     if path == "/api/admin/queue":
         api_admin_queue(handler, current_user(handler)); return True
+    if path == "/api/admin/dishes":
+        api_admin_dishes(handler, current_user(handler)); return True
     if path.startswith("/d/"):
         did = path[3:].strip("/")
         if re.fullmatch(r"u[0-9a-f]{10}", did):

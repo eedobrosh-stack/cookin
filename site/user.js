@@ -17,6 +17,7 @@ const S = LANG === "he" ? {
   hideDish:"הסתר מנה זו", others:"מנות של משתמשים אחרים (ציבוריות)", noOthers:"עדיין אין מנות ציבוריות של משתמשים אחרים.",
   include:"הצג", dishes:n=>`${n} מנות`, close:"✕", limit:"הגעתם למכסה היומית.", err:"שגיאה", mine:"שלי",
   adminQ:n=>`בתור לטיפול ידני: ${n}`, notConfigured:"ההתחברות עוד לא מוגדרת",
+  adminSec:"🛡️ ניהול הקהילה (אדמין)", adminPublic:n=>`מנות ציבוריות (${n})`, adminAll:n=>`כל מנות המשתמשים (${n})`, adminNone:"אין מנות של משתמשים.", unpublish:"הסתר מהקהילה", publish:"פרסם", by:"מאת",
   community:"👥 קהילה", communityTitle:"👥 מנות מהקהילה", communityHint:"מנות שמשתמשים אחרים הוסיפו ובחרו לפרסם. התחברו כדי להוסיף משלכם.",
   urlsPh:"קישור אחד בכל שורה — פייסבוק / אינסטגרם / טיקטוק / יוטיוב",
   importFile:"📂 ייבוא מקובץ ייצוא (פייסבוק / אינסטגרם)", found:n=>`נמצאו ${n} קישורים בקובץ`, noneFound:"לא נמצאו קישורים בקובץ",
@@ -40,6 +41,7 @@ const S = LANG === "he" ? {
   hideDish:"Hide this dish", others:"Other users' dishes (public)", noOthers:"No public dishes from other users yet.",
   include:"Show", dishes:n=>`${n} dishes`, close:"✕", limit:"Daily limit reached.", err:"Error", mine:"mine",
   adminQ:n=>`Manual queue: ${n}`, notConfigured:"Sign-in not configured yet",
+  adminSec:"🛡️ Community admin", adminPublic:n=>`Public dishes (${n})`, adminAll:n=>`All user dishes (${n})`, adminNone:"No user dishes.", unpublish:"Unpublish", publish:"Publish", by:"by",
   community:"👥 Community", communityTitle:"👥 Dishes from the community", communityHint:"Dishes other users added and chose to publish. Sign in to add your own.",
   urlsPh:"One link per line — Facebook / Instagram / TikTok / YouTube",
   importFile:"📂 Import from an export file (Facebook / Instagram)", found:n=>`Found ${n} links in the file`, noneFound:"No links found in the file",
@@ -398,8 +400,37 @@ function renderSettings(){
       <label class="uchk"><input type="checkbox" ${hideBase?"":"checked"} onchange="cookinHideBase(!this.checked)"> ${S.showBase}</label>
       <div class="hint" style="margin:8px 0 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">${S.hiddenN(hidden.size)}
         ${hidden.size ? `<button class="mini" onclick="cookinUnhide('*')">${S.restoreAll}</button>` : ""}</div>${hiddenHtml}</div>
-    <div class="sec"><h4>${S.others}</h4><div class="ulist">${othersHtml}</div></div>`;
+    <div class="sec"><h4>${S.others}</h4><div class="ulist">${othersHtml}</div></div>
+    ${ME.user.admin ? `<div class="sec" id="uadmin"><h4>${S.adminSec}</h4><div class="hint">…</div></div>` : ""}`;
+  if(ME.user.admin) renderAdmin();
 }
+async function renderAdmin(){
+  const box = document.querySelector("#uadmin"); if(!box) return;
+  let dishes = [];
+  try { dishes = (await api("/api/admin/dishes")).dishes || []; } catch(e){ box.innerHTML += `<div class="msg">${esc(e.message)}</div>`; return; }
+  const item = d => {
+    const rec = d[LANG] || d.he || {};
+    const st = d.status === "ready" ? (d.visibility === "public" ? S.pub : S.priv) : (d.status === "queued" ? S.queued : d.status === "failed" ? S.failed : S.processing);
+    return `<div class="uitem">
+      <img src="/images/${d.id}.jpg" alt="" onerror="this.style.visibility='hidden'">
+      <div class="t"><div class="n"><a href="/d/${d.id}${LANG==='en'?'?lang=en':''}" style="color:inherit;text-decoration:none">${esc(rec.name || d.source_url || d.id)}</a></div>
+        <div class="m">${st} · ${S.by} ${esc(d.owner.name || d.owner.email || "?")} · ${(d.created_at||"").slice(0,10)}${d.error ? " · " + esc(d.error.slice(0,80)) : ""}</div></div>
+      <div class="a">
+        ${d.status === "ready" ? `<button class="mini ${d.visibility==='public'?'':'on'}" onclick="cookinAdmin('${d.id}','setVisibility','${d.visibility==='public'?'private':'public'}')">${d.visibility==='public'?S.unpublish:S.publish}</button>` : ""}
+        ${d.status === "queued" || d.status === "failed" ? `<button class="mini" onclick="cookinAdmin('${d.id}','retry')">${S.retry}</button>` : ""}
+        ${d.status !== "processing" ? `<button class="mini danger" onclick="if(confirm('${S.confirmDel}'))cookinAdmin('${d.id}','delete')">${S.del}</button>` : ""}
+      </div></div>`;
+  };
+  const pub = dishes.filter(d => d.visibility === "public" && d.status === "ready");
+  box.innerHTML = `<h4>${S.adminSec}</h4>
+    <div class="hint" style="margin-bottom:6px"><b>${S.adminPublic(pub.length)}</b></div>
+    <div class="ulist">${pub.map(item).join("") || `<div class="hint">${S.adminNone}</div>`}</div>
+    <details style="margin-top:12px"><summary>${S.adminAll(dishes.length)}</summary><div class="ulist" style="margin-top:8px">${dishes.map(item).join("")}</div></details>`;
+}
+window.cookinAdmin = async function(id, action, visibility){
+  try { await api("/api/dishes/" + id, {action, visibility}); } catch(e){ alert(e.message); }
+  await refresh(); renderSettings();
+};
 window.cookinDish = async function(id, action, visibility){
   try { await api("/api/dishes/" + id, {action, visibility}); } catch(e){ alert(e.message); }
   await refresh(); renderSettings();
