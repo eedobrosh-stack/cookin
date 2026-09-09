@@ -137,6 +137,12 @@ def parse_cookies(header):
 
 
 def current_user(handler):
+    # Headless admin (queue watcher / drain scripts on Eedo's Mac): Authorization: Bearer <COOKIN_ADMIN_TOKEN>
+    auth = handler.headers.get("Authorization") or ""
+    atok = secret("COOKIN_ADMIN_TOKEN")
+    if atok and auth.startswith("Bearer ") and secrets.compare_digest(auth[7:].strip(), atok):
+        return {"id": "admin-token", "email": next(iter(sorted(admin_emails())), "admin"), "name": "Admin",
+                "avatar": "", "admin": True}
     tok = parse_cookies(handler.headers.get("Cookie")).get(COOKIE)
     if not tok:
         return None
@@ -466,10 +472,12 @@ def api_admin_queue(handler, user):
     if not user or not user.get("admin"):
         return handler._json({"error": "forbidden"}, 403)
     with db() as c:
-        rows = [dict(_dish_public(r), owner_name=r["name"], owner_email=r["email"]) for r in c.execute(
+        rows = [dict(_dish_public(r), owner_name=r["name"], owner_email=r["email"],
+                     has_image=os.path.exists(os.path.join(UIMAGES_DIR, r["id"] + ".jpg"))) for r in c.execute(
             "SELECT d.*, u.name, u.email FROM dishes d JOIN users u ON u.id=d.owner_id "
             "WHERE d.status IN ('queued','failed') ORDER BY d.created_at")]
-    return handler._json({"ok": True, "queue": rows})
+        processing = c.execute("SELECT COUNT(*) FROM dishes WHERE status='processing'").fetchone()[0]
+    return handler._json({"ok": True, "queue": rows, "processing": processing})
 
 
 def api_admin_fill(handler, user, req):
