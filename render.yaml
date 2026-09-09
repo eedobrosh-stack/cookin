@@ -3,7 +3,7 @@ services:
     name: cookin
     runtime: python
     plan: starter
-    buildCommand: "echo no build needed"
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "python app.py"
     envVars:
       - key: DATA_DIR

@@ -226,6 +226,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <script src="data5-en.js"></script>
 <script src="videos.js"></script>
 <script src="gf.js"></script>
+<script src="user.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 function retryImg(img){
@@ -276,19 +277,20 @@ for(let i = shuffleOrder.length - 1; i > 0; i--){
 
 function renderGallery(){
   const q = $("#search").value.trim().toLowerCase();
-  let items = RECIPES.filter(r =>
+  let items = VIS(true).filter(r =>
     (activeCat==="All" || r.category===activeCat) && (!gfOn || isGlutenFree(r)) &&
     (!q || (r.name+r.creator+(r.searchAlias||"")).toLowerCase().includes(q)));
   if(shuffleOrder) items = items.slice().sort((a,b)=>shuffleOrder.indexOf(a.id)-shuffleOrder.indexOf(b.id));
   $("#gfNote").style.display = gfOn ? "block" : "none";
   $("#grid").innerHTML = items.map(r => `
-    <div class="card" onclick="openDish('${r.id}')">
-      <img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">
+    <div class="card${cardClass(r)}" onclick="openDish('${r.id}')">
+      ${r._user && r._status!=="ready" ? `<div class="thumb"></div>` : `<img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">`}${cardExtras(r)}
       <div class="cbody">
         <div class="cname">${r.name}</div>
         <div class="cmeta">
-          <span class="badge cat-b">${r.category}</span>
-          ${dietBadge(r)}
+          ${ownerBadge(r)}
+          ${r.category?`<span class="badge cat-b">${r.category}</span>`:""}
+          ${r.diet?dietBadge(r):""}
           ${r.time?`<span class="badge">⏱ ${r.time}</span>`:""}
           <span>${r.creator}</span>
         </div>
@@ -301,6 +303,7 @@ function ingLabel(key){ return (INGREDIENTS[key]||{}).label || key; }
 function openDish(id, skipPush){
   const r = RECIPES.find(x=>x.id===id);
   if(!r) return;
+  if(r._user && r._status !== "ready"){ location.href = "/d/" + id + "?lang=en"; return; }
   const ingHtml = r.ingredientLines.map(l =>
     l.group ? `<div class="ing-group">${l.group}</div>` : `<li>${l.text}</li>`).join("");
   const hasVid = (typeof LOCAL_VIDEOS !== "undefined") && LOCAL_VIDEOS.has(r.id);
@@ -378,7 +381,7 @@ function renderPantry(){
 
   // results
   const can=[], almost=[];
-  RECIPES.forEach(r=>{
+  VIS().forEach(r=>{
     const missing=[], subs=[];
     r.needs.forEach(k=>{
       const h = haveIngredient(k, basicsOn);

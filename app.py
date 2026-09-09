@@ -12,6 +12,7 @@ import json, os, re, random, threading, datetime, time
 import urllib.request, urllib.parse
 from collections import Counter
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
+import multiuser
 
 PORT = int(os.environ.get("PORT", "10000"))
 DATA_DIR = os.environ.get("DATA_DIR", "/var/data")
@@ -598,6 +599,9 @@ class Handler(SimpleHTTPRequestHandler):
         if p.startswith("/videos/"):
             name = os.path.basename(p)
             return os.path.join(VIDEOS_DIR, name)
+        um = multiuser.user_media_path(p)
+        if um:
+            return um
         return super().translate_path(path)
 
     def _inject_ga(self):
@@ -707,6 +711,10 @@ class Handler(SimpleHTTPRequestHandler):
         if self._is_main_host() and p == "/":
             self._html(JARCUD_LANDING)
             return
+        if p.startswith(("/auth/", "/api/me", "/api/dishes", "/api/admin/", "/d/")):
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if multiuser.handle_get(self, p, qs):
+                return
         if self._is_main_host() and p in ("/artifacts", "/artifacts/"):
             self._html(JARCUD_ARTIFACTS)
             return
@@ -811,8 +819,25 @@ class Handler(SimpleHTTPRequestHandler):
                 return
         super().do_GET()
 
+    def _read_json(self):
+        try:
+            n = int(self.headers.get("Content-Length", 0))
+            return json.loads(self.rfile.read(min(n, 1 << 20)) or b"{}")
+        except Exception:
+            return {}
+
+    def do_PUT(self):
+        p = self.path.split("?")[0]
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        if not multiuser.handle_put(self, p, qs):
+            self._json({"error": "not found"}, 404)
+
     def do_POST(self):
         p = self.path.split("?")[0]
+        if p.startswith(("/auth/", "/api/prefs", "/api/dishes", "/api/admin/")):
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if multiuser.handle_post(self, p, qs, self._read_json):
+                return
         if p not in ("/api/family", "/api/vidsum/queue", "/api/vidsum/complete",
                      "/api/vidsum/follows", "/api/vidsum/translate",
                      "/api/vidsum/resolve"):
@@ -945,6 +970,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     os.makedirs(VIDEOS_DIR, exist_ok=True)
+    multiuser.init()
     if not os.path.exists(STATE_PATH):
         save_state(json.loads(json.dumps(DEFAULT)))
     print(f"cookin serving on 0.0.0.0:{PORT}, data={DATA_DIR}", flush=True)
