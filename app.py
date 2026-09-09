@@ -477,7 +477,7 @@ JARCUD_LANDING = """<!doctype html>
   h1 { font-size:clamp(30px,7vw,58px); letter-spacing:.12em; margin:0;
        text-transform:uppercase; text-align:center; padding:0 16px; }
 </style>
-<img class="king" src="/jarcud-cat.jpg" alt="Jarcud">
+<img class="king" src="/jarcud-cat.png" alt="Jarcud">
 <h1>Jarcud is King &#128081;</h1>
 """
 
@@ -720,7 +720,7 @@ class Handler(SimpleHTTPRequestHandler):
         "/favicon-32.png": ("favicon-32.png", "image/png"),
         "/apple-touch-icon.png": ("apple-touch-icon.png", "image/png"),
         "/jarcud-512.png": ("jarcud-512.png", "image/png"),
-        "/jarcud-cat.jpg": ("jarcud-cat.jpg", "image/jpeg"),
+        "/jarcud-cat.png": ("jarcud-cat.png", "image/png"),
     }
 
     def do_GET(self):
