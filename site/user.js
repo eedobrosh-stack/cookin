@@ -14,9 +14,10 @@ const S = LANG === "he" ? {
   pub:"🌍 ציבורי", priv:"🔒 פרטי", makePub:"פרסום", makePriv:"הסתרה", del:"מחיקה", retry:"נסו שוב", toQueue:"שלחו לאידו",
   confirmDel:"למחוק את המנה לצמיתות?",
   base:"מנות הבסיס (Cookin)", showBase:"הצג את מנות הבסיס", hiddenN:n=>`מנות מוסתרות: ${n}`, restore:"החזר", restoreAll:"החזר הכל",
-  hideDish:"הסתר מנה זו", others:"מנות של משתמשים אחרים", noOthers:"עדיין אין מנות ציבוריות של משתמשים אחרים.",
-  include:"כלול", dishes:n=>`${n} מנות`, close:"✕", limit:"הגעתם למכסה היומית.", err:"שגיאה", mine:"שלי",
+  hideDish:"הסתר מנה זו", others:"מנות של משתמשים אחרים (ציבוריות)", noOthers:"עדיין אין מנות ציבוריות של משתמשים אחרים.",
+  include:"הצג", dishes:n=>`${n} מנות`, close:"✕", limit:"הגעתם למכסה היומית.", err:"שגיאה", mine:"שלי",
   adminQ:n=>`בתור לטיפול ידני: ${n}`, notConfigured:"ההתחברות עוד לא מוגדרת",
+  community:"👥 קהילה", communityTitle:"👥 מנות מהקהילה", communityHint:"מנות שמשתמשים אחרים הוסיפו ובחרו לפרסם. התחברו כדי להוסיף משלכם.",
   urlsPh:"קישור אחד בכל שורה — פייסבוק / אינסטגרם / טיקטוק / יוטיוב",
   importFile:"📂 ייבוא מקובץ ייצוא (פייסבוק / אינסטגרם)", found:n=>`נמצאו ${n} קישורים בקובץ`, noneFound:"לא נמצאו קישורים בקובץ",
   howTo:"איך מייצאים מנות שמורות מפייסבוק ואינסטגרם?",
@@ -36,9 +37,10 @@ const S = LANG === "he" ? {
   pub:"🌍 Public", priv:"🔒 Private", makePub:"Publish", makePriv:"Unpublish", del:"Delete", retry:"Retry", toQueue:"Send to Eedo",
   confirmDel:"Delete this dish permanently?",
   base:"Base dishes (Cookin)", showBase:"Show the base dishes", hiddenN:n=>`Hidden dishes: ${n}`, restore:"Restore", restoreAll:"Restore all",
-  hideDish:"Hide this dish", others:"Other users' dishes", noOthers:"No public dishes from other users yet.",
-  include:"Include", dishes:n=>`${n} dishes`, close:"✕", limit:"Daily limit reached.", err:"Error", mine:"mine",
+  hideDish:"Hide this dish", others:"Other users' dishes (public)", noOthers:"No public dishes from other users yet.",
+  include:"Show", dishes:n=>`${n} dishes`, close:"✕", limit:"Daily limit reached.", err:"Error", mine:"mine",
   adminQ:n=>`Manual queue: ${n}`, notConfigured:"Sign-in not configured yet",
+  community:"👥 Community", communityTitle:"👥 Dishes from the community", communityHint:"Dishes other users added and chose to publish. Sign in to add your own.",
   urlsPh:"One link per line — Facebook / Instagram / TikTok / YouTube",
   importFile:"📂 Import from an export file (Facebook / Instagram)", found:n=>`Found ${n} links in the file`, noneFound:"No links found in the file",
   howTo:"How do I export my saved dishes from Facebook and Instagram?",
@@ -59,6 +61,7 @@ header{z-index:60 !important}
 .ubtn:hover{background:var(--chip)}
 .ubtn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .ubtn.primary:hover{background:var(--accent-dark)}
+.uinit{display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;font-weight:700;font-size:.85rem}
 .uav{width:34px;height:34px;border-radius:50%;cursor:pointer;border:2px solid var(--card);box-shadow:0 1px 4px rgba(80,60,40,.25)}
 .umenu{position:absolute;top:46px;inset-inline-end:0;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:10px;min-width:200px;z-index:80;display:none;font-size:.9rem}
 .umenu .n{font-weight:700}.umenu .e{color:var(--muted);font-size:.8rem;margin-bottom:8px;word-break:break-all}
@@ -102,19 +105,27 @@ header{z-index:60 !important}
 .uitem .t{flex:1;min-width:0}.uitem .t .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .uitem .t .m{color:var(--muted);font-size:.78rem}
 .uitem .a{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
-.uitem img.av{width:32px;height:32px;border-radius:50%}
+.uitem .av{width:32px;height:32px;border-radius:50%;flex:0 0 32px}
+.ubadge .uinit{width:16px;height:16px;border-radius:50%;font-size:.6rem}
 label.uchk{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem}
 .gbtn{display:inline-flex;align-items:center;gap:8px}
+.cat.community{border-color:#7a8fb8;color:#2f4a7a;background:#eef2fa}
+.cat.community.active{background:#2f4a7a;border-color:#2f4a7a;color:#fff}
+.ucomm{margin-top:34px;padding-top:22px;border-top:1px solid var(--line)}
+.ucomm h2{font-size:1.25rem;margin-bottom:4px}
+.ucomm .hint{color:var(--muted);font-size:.9rem;margin-bottom:16px}
 #utoast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-size:.92rem;line-height:1.5;max-width:min(560px,92vw);z-index:120;box-shadow:var(--shadow);display:none;text-align:center}
 .gbtn svg{width:16px;height:16px}
 `;
 const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
-let ME = null, hidden = new Set(), hideBase = false, sources = [];
+let ME = null, hidden = new Set(), hideBase = false, muted = [];
+let communityOnly = false; try{ communityOnly = localStorage.getItem('cookin-community')==='1'; }catch(e){}
 let pollTimer = null;
 
 window.VIS = function(all){
   return RECIPES.filter(r => {
+    if(communityOnly && !r._user) return false;
     if(r._user) return all || r._status === "ready";
     if(!ME || !ME.user) return true;
     return !hideBase && !hidden.has(r.id);
@@ -130,7 +141,7 @@ window.ownerBadge = function(r){
   if(!r._user) return "";
   if(r._mine) return `<span class="ubadge ${r._vis==='public'?'pub':'priv'}">${r._vis==='public'?S.pub:S.priv}</span>`;
   const o = r._owner || {};
-  return `<span class="ubadge">${o.avatar?`<img src="${o.avatar}" alt="" referrerpolicy="no-referrer">`:"👤"} ${esc(o.name||"")}</span>`;
+  return `<span class="ubadge">${avatar(o.avatar, o.name, "")} ${esc(o.name||"")}</span>`;
 };
 window.cardClass = function(r){
   if(!r._user) return "";
@@ -143,6 +154,11 @@ function toast(msg, ms){
   if(!t){ t = document.createElement("div"); t.id = "utoast"; document.body.appendChild(t); }
   t.textContent = msg; t.style.display = "block";
   clearTimeout(t._h); t._h = setTimeout(() => { t.style.display = "none"; }, ms || 7000);
+}
+function avatar(src, name, cls){
+  const n = esc(name||"?"); 
+  if(src) return `<img class="${cls}" src="${esc(src)}" alt="${n}" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'${cls} uinit',textContent:'${n.slice(0,1)}'}))">`;
+  return `<span class="${cls} uinit">${n.slice(0,1)}</span>`;
 }
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
@@ -160,7 +176,7 @@ function rerender(){
 
 function applyDishes(){
   for(let i = RECIPES.length - 1; i >= 0; i--) if(RECIPES[i]._user) RECIPES.splice(i, 1);
-  if(!ME || !ME.user) return;
+  if(!ME) return;
   const mineIds = new Set();
   const add = (d, mine) => {
     const rec = d[LANG] || d.he || {};
@@ -175,16 +191,16 @@ function applyDishes(){
     if(d.has_video && typeof LOCAL_VIDEOS !== "undefined") LOCAL_VIDEOS.add(d.id);
     RECIPES.push(r);
   };
-  (ME.mine||[]).forEach(d => { mineIds.add(d.id); add(d, true); });
+  (ME.user ? (ME.mine||[]) : []).forEach(d => { mineIds.add(d.id); add(d, true); });
   (ME.included||[]).forEach(d => { if(!mineIds.has(d.id)) add(d, false); });
 }
 
 async function refresh(){
   try { ME = await api("/api/me"); } catch(e){ ME = {user:null}; }
   if(ME.user){
-    hidden = new Set(ME.prefs.hidden||[]); hideBase = !!ME.prefs.hideBase; sources = ME.prefs.sources||[];
+    hidden = new Set(ME.prefs.hidden||[]); hideBase = !!ME.prefs.hideBase; muted = ME.prefs.muted||[];
   }
-  applyDishes(); renderBar(); rerender();
+  hookPage(); applyDishes(); renderBar(); try{ renderCats(); }catch(e){} rerender();
   try { setHeaderH(); } catch(e){}
   if(document.querySelector("#umodal") && document.querySelector("#umodal").style.display === "flex" && modalMode === "settings") renderSettings();
   clearTimeout(pollTimer);
@@ -193,6 +209,45 @@ async function refresh(){
   if(LANG === "en" && location.hash && location.hash.slice(1).startsWith("u") && typeof openDish === "function"){
     const id = location.hash.slice(1); if(RECIPES.some(r => r.id === id)) openDish(id, true);
   }
+}
+
+/* ---------- page hooks: community chip in the category bar, community section in the gallery ---------- */
+let hooked = false;
+function hookPage(){
+  if(hooked || typeof renderCats !== "function" || typeof renderGallery !== "function") return;
+  hooked = true;
+  const origCats = renderCats;
+  window.renderCats = function(){
+    origCats();
+    const bar = document.querySelector("#catBar"); if(!bar) return;
+    const hasCommunity = RECIPES.some(r => r._user);
+    if(!hasCommunity) return;
+    const b = document.createElement("button");
+    b.className = "cat community" + (communityOnly ? " active" : "");
+    b.setAttribute("role", "switch"); b.setAttribute("aria-checked", String(communityOnly));
+    b.title = S.communityTitle; b.textContent = S.community;
+    b.onclick = () => { communityOnly = !communityOnly; try{ localStorage.setItem("cookin-community", communityOnly ? "1" : "0"); }catch(e){} renderCats(); renderGallery(); };
+    bar.appendChild(b);
+  };
+  const origGallery = renderGallery;
+  window.renderGallery = function(){
+    origGallery();
+    const grid = document.querySelector("#grid"); if(!grid) return;
+    const old = document.querySelector("#communitySec"); if(old) old.remove();
+    // community cards (other users' public dishes) go after the base dishes:
+    // signed-out → own titled section; signed-in → end of the same grid (own dishes stay first)
+    const cards = [...grid.querySelectorAll(".card")].filter(el => {
+      const m = (el.getAttribute("onclick")||"").match(/openDish\('([^']+)'/); const r = m && RECIPES.find(x => x.id === m[1]);
+      return r && r._user && !r._mine;
+    });
+    if(!cards.length || communityOnly) return;
+    if(ME && ME.user){ cards.forEach(c => grid.appendChild(c)); return; }
+    const sec = document.createElement("div"); sec.id = "communitySec"; sec.className = "ucomm";
+    sec.innerHTML = `<h2>${S.communityTitle}</h2><div class="hint">${S.communityHint}</div><div class="grid" id="communityGrid"></div>`;
+    grid.parentNode.appendChild(sec);
+    const cg = sec.querySelector("#communityGrid"); cards.forEach(c => cg.appendChild(c));
+    if(!grid.children.length) grid.innerHTML = "";
+  };
 }
 
 /* ---------- header bar ---------- */
@@ -213,7 +268,7 @@ function renderBar(){
     <button class="ubtn primary" onclick="cookinOpen('add')">${S.add}</button>
     <button class="ubtn" onclick="cookinOpen('settings')" title="${S.settings}">⚙️</button>
     <div class="uwrap">
-      <img class="uav" src="${esc(u.avatar)}" alt="${esc(u.name)}" referrerpolicy="no-referrer" onclick="document.querySelector('.umenu').style.display=document.querySelector('.umenu').style.display==='block'?'none':'block'">
+      <span onclick="document.querySelector('.umenu').style.display=document.querySelector('.umenu').style.display==='block'?'none':'block'">${avatar(u.avatar, u.name, "uav")}</span>
       <div class="umenu"><div class="n">${esc(u.name)}</div><div class="e">${esc(u.email)}</div>
         ${u.admin && ME.queued ? `<div class="e">${S.adminQ(ME.queued)}</div>` : ""}
         <button class="ubtn" onclick="cookinLogout()">${S.signout}</button></div>
@@ -227,7 +282,7 @@ window.cookinLogout = async function(){ await api("/auth/logout", {}); location.
 
 /* ---------- hide base dishes ---------- */
 async function savePrefs(){
-  await api("/api/prefs", {hidden:[...hidden], hideBase, sources});
+  await api("/api/prefs", {hidden:[...hidden], hideBase, muted});
 }
 window.cookinHide = async function(id){ hidden.add(id); rerender(); await savePrefs(); };
 window.cookinUnhide = async function(id){ if(id === "*") hidden.clear(); else hidden.delete(id); rerender(); await savePrefs(); renderSettings(); };
@@ -330,9 +385,9 @@ function renderSettings(){
     <div class="a"><button class="mini" onclick="cookinUnhide('${r.id}')">${S.restore}</button></div></div>`).join("")}</div>` : "";
   const others = ME.explore || [];
   const othersHtml = others.length ? others.map(o => `
-    <div class="uitem"><img class="av" src="${esc(o.avatar)}" alt="" referrerpolicy="no-referrer">
+    <div class="uitem">${avatar(o.avatar, o.name, "av")}
       <div class="t"><div class="n">${esc(o.name)}</div><div class="m">${S.dishes(o.count)}</div></div>
-      <div class="a"><label class="uchk"><input type="checkbox" ${sources.includes(o.id)?"checked":""} onchange="cookinSource('${o.id}',this.checked)"> ${S.include}</label></div></div>`).join("")
+      <div class="a"><label class="uchk"><input type="checkbox" ${muted.includes(o.id)?"":"checked"} onchange="cookinSource('${o.id}',this.checked)"> ${S.include}</label></div></div>`).join("")
     : `<div class="hint">${S.noOthers}</div>`;
   box.innerHTML = `
     <h3>${S.settings}<button class="x" onclick="cookinClose()">${S.close}</button></h3>
@@ -353,8 +408,8 @@ window.cookinBulk = async function(visibility){
   await api("/api/dishes/bulk-visibility", {visibility}); await refresh(); renderSettings();
 };
 window.cookinHideBase = async function(v){ hideBase = v; rerender(); await savePrefs(); renderSettings(); };
-window.cookinSource = async function(id, on){
-  sources = sources.filter(s => s !== id); if(on) sources.push(id);
+window.cookinSource = async function(id, show){
+  muted = muted.filter(s => s !== id); if(!show) muted.push(id);
   await savePrefs(); await refresh(); renderSettings();
 };
 

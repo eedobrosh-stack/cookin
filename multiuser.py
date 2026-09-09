@@ -108,6 +108,9 @@ def init():
     os.makedirs(UIMAGES_DIR, exist_ok=True)
     with db() as c:
         c.executescript(SCHEMA)
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(prefs)")}
+        if "muted" not in cols:
+            c.execute("ALTER TABLE prefs ADD COLUMN muted TEXT DEFAULT '[]'")
     # resume dishes interrupted by a redeploy
     with db() as c:
         c.execute("UPDATE dishes SET status='processing', error=NULL WHERE status IN ('failed','queued') "
@@ -278,9 +281,9 @@ def get_prefs(uid):
     with db() as c:
         r = c.execute("SELECT * FROM prefs WHERE user_id=?", (uid,)).fetchone()
     if not r:
-        return {"hidden": [], "hideBase": False, "sources": []}
+        return {"hidden": [], "hideBase": False, "muted": []}
     return {"hidden": json.loads(r["hidden"] or "[]"), "hideBase": bool(r["hide_base"]),
-            "sources": json.loads(r["sources"] or "[]")}
+            "muted": json.loads(r["muted"] or "[]")}
 
 
 def usage_today(uid):
@@ -289,36 +292,45 @@ def usage_today(uid):
     return r["n"] if r else 0
 
 
+def _community(c, exclude_owner=None):
+    """All public+ready dishes (with owner info) and the owners list."""
+    owners, dishes = {}, []
+    for r in c.execute(
+            "SELECT d.*, u.name AS oname, u.avatar AS oavatar FROM dishes d JOIN users u ON u.id=d.owner_id "
+            "WHERE d.visibility='public' AND d.status='ready' ORDER BY d.created_at DESC"):
+        if r["owner_id"] == exclude_owner:
+            continue
+        o = owners.setdefault(r["owner_id"], {"id": r["owner_id"], "name": r["oname"], "avatar": r["oavatar"], "count": 0})
+        o["count"] += 1
+        d = _dish_public(r)
+        d["owner"] = {"name": r["oname"], "avatar": r["oavatar"]}
+        dishes.append(d)
+    return dishes, sorted(owners.values(), key=lambda o: -o["count"])
+
+
 def api_me(handler, user):
     if not user:
-        return handler._json({"user": None, "configured": bool(secret("GOOGLE_CLIENT_ID"))})
+        with db() as c:
+            community, owners = _community(c)
+        return handler._json({"user": None, "configured": bool(secret("GOOGLE_CLIENT_ID")),
+                              "included": community, "explore": owners})
     uid = user["id"]
     prefs = get_prefs(uid)
     with db() as c:
         mine = [_dish_public(r) for r in c.execute(
             "SELECT * FROM dishes WHERE owner_id=? ORDER BY created_at DESC", (uid,))]
-        owners = {}
-        for r in c.execute(
-                "SELECT d.owner_id, u.name, u.avatar, COUNT(*) n FROM dishes d JOIN users u ON u.id=d.owner_id "
-                "WHERE d.visibility='public' AND d.status='ready' AND d.owner_id<>? "
-                "GROUP BY d.owner_id ORDER BY n DESC", (uid,)):
-            owners[r["owner_id"]] = {"id": r["owner_id"], "name": r["name"], "avatar": r["avatar"], "count": r["n"]}
-        included = []
-        srcs = [s for s in prefs["sources"] if s in owners]
-        if srcs:
-            q = ",".join("?" * len(srcs))
-            included = [_dish_public(r) for r in c.execute(
-                f"SELECT * FROM dishes WHERE visibility='public' AND status='ready' AND owner_id IN ({q})", srcs)]
+        community, owners = _community(c, exclude_owner=uid)
         queued = 0
         if user.get("admin"):
             queued = c.execute("SELECT COUNT(*) FROM dishes WHERE status='queued'").fetchone()[0]
-    for d in included:
-        o = owners.get(d["owner_id"]) or {}
-        d["owner"] = {"name": o.get("name"), "avatar": o.get("avatar")}
+    muted = set(prefs["muted"])
+    for o in owners:
+        o["muted"] = o["id"] in muted
+    included = [d for d in community if d["owner_id"] not in muted]
     return handler._json({
         "user": {"id": uid, "name": user["name"], "avatar": user["avatar"], "email": user["email"],
                  "admin": user.get("admin", False)},
-        "prefs": prefs, "mine": mine, "included": included, "explore": list(owners.values()),
+        "prefs": prefs, "mine": mine, "included": included, "explore": owners,
         "usage": {"today": usage_today(uid), "limit": DAILY_LIMIT}, "queued": queued,
     })
 
@@ -331,14 +343,14 @@ def api_prefs(handler, user, req):
         prefs["hidden"] = [str(x)[:32] for x in req["hidden"]][:2000]
     if "hideBase" in req:
         prefs["hideBase"] = bool(req["hideBase"])
-    if "sources" in req and isinstance(req["sources"], list):
-        prefs["sources"] = [str(x)[:64] for x in req["sources"]][:500]
+    if "muted" in req and isinstance(req["muted"], list):
+        prefs["muted"] = [str(x)[:64] for x in req["muted"]][:500]
     with db() as c:
-        c.execute("INSERT INTO prefs(user_id,hidden,hide_base,sources) VALUES(?,?,?,?) "
+        c.execute("INSERT INTO prefs(user_id,hidden,hide_base,muted) VALUES(?,?,?,?) "
                   "ON CONFLICT(user_id) DO UPDATE SET hidden=excluded.hidden, "
-                  "hide_base=excluded.hide_base, sources=excluded.sources",
+                  "hide_base=excluded.hide_base, muted=excluded.muted",
                   (user["id"], json.dumps(prefs["hidden"]), int(prefs["hideBase"]),
-                   json.dumps(prefs["sources"])))
+                   json.dumps(prefs["muted"])))
     return handler._json({"ok": True, "prefs": prefs})
 
 
