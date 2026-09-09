@@ -23,7 +23,7 @@ const S = LANG === "he" ? {
   howToHtml:`<p><b>דרך מהירה (כמה מנות):</b> פותחים את הסרטון השמור ← ⋯ / שיתוף ← <b>העתקת קישור</b> ← מדביקים כאן, שורה לכל קישור.</p>
 <p><b>ייצוא מלא של כל השמורים (פייסבוק):</b> פייסבוק ← הגדרות ופרטיות ← הגדרות ← <b>מרכז החשבונות</b> ← המידע וההרשאות שלך ← <b>הורדת המידע שלך</b> ← "הורדה או העברה של מידע" ← בוחרים את פרופיל הפייסבוק ← "מידע מסוים" ← מסמנים <b>פריטים שמורים ואוספים</b> (Saved items and collections) ← פורמט <b>JSON</b>, טווח "כל הזמן" ← יוצרים קבצים. אחרי כמה דקות מגיע מייל עם ZIP; מחלצים ומעלים כאן את הקובץ <code>saved_items_and_collections.json</code> (או את כל ה-ZIP המחולץ, קובץ אחר קובץ) בכפתור "ייבוא מקובץ".</p>
 <p><b>אינסטגרם:</b> אותו מסלול במרכז החשבונות ← בוחרים את חשבון האינסטגרם ← "מידע מסוים" ← <b>שמורים</b> (Saved) ← JSON. הקובץ הוא <code>saved/saved_posts.json</code>. שימו לב: אינסטגרם חוסמת לפעמים הורדת סרטונים ללא התחברות — מנות כאלה ייכנסו לתור של אידו במקום להיכשל.</p>
-<p>הקובץ נקרא רק בדפדפן שלכם: שולפים ממנו את הקישורים ומדביקים אותם בתיבה למעלה. המכסה היומית (5) נשמרת — השאר פשוט לא ייכנסו, אפשר להדביק שוב מחר.</p>`,
+<p>הקובץ נקרא רק בדפדפן שלכם: שולפים ממנו את הקישורים ומדביקים אותם בתיבה למעלה. המכסה היומית (15 מנות ביום) נשמרת — השאר פשוט לא ייכנסו, אפשר להדביק שוב מחר.</p>`,
   bulkResult:(a,l,d)=>`נוספו ${a} מנות` + (l?` · ${l} לא נוספו (מכסה יומית)`:"") + (d?` · ${d} כבר קיימות`:""),
 } : {
   signin:"Sign in", signout:"Sign out", add:"➕ New dish", settings:"⚙️ My dishes & sources",
@@ -43,7 +43,7 @@ const S = LANG === "he" ? {
   howToHtml:`<p><b>Quick way (a few dishes):</b> open the saved reel → ⋯ / Share → <b>Copy link</b> → paste here, one link per line.</p>
 <p><b>Full export of everything you saved (Facebook):</b> Facebook → Settings & privacy → Settings → <b>Accounts Center</b> → Your information and permissions → <b>Download your information</b> → "Download or transfer information" → pick your Facebook profile → "Some of your information" → tick <b>Saved items and collections</b> → format <b>JSON</b>, date range "All time" → Create files. A few minutes later you get an email with a ZIP; unzip it and upload <code>saved_items_and_collections.json</code> (or any file from the unzipped folder, one at a time) with the "Import from an export file" button.</p>
 <p><b>Instagram:</b> same path in Accounts Center → pick the Instagram account → "Some of your information" → <b>Saved</b> → JSON. The file is <code>saved/saved_posts.json</code>. Note: Instagram sometimes blocks anonymous video downloads; those dishes go to Eedo's queue instead of failing.</p>
-<p>The file is read only in your browser: the links are extracted and pasted into the box above. The daily cap (5) still applies; the rest are simply not added, paste again tomorrow.</p>`,
+<p>The file is read only in your browser: the links are extracted and pasted into the box above. The daily cap (15 dishes a day) still applies; the rest are simply not added, paste again tomorrow.</p>`,
   bulkResult:(a,l,d)=>`Added ${a} dishes` + (l?` · ${l} not added (daily cap)`:"") + (d?` · ${d} already existed`:""),
 };
 
@@ -239,7 +239,7 @@ window.cookinOpen = function(mode){
   if(mode === "add") renderAdd(); else renderSettings();
 };
 function renderAdd(){
-  const u = ME.usage || {today:0, limit:5};
+  const u = ME.usage || {today:0, limit:15};
   document.querySelector("#ubox").innerHTML = `
     <h3>${S.addTitle}<button class="x" onclick="cookinClose()">${S.close}</button></h3>
     <div class="hint">${S.addHint}</div>

@@ -521,7 +521,7 @@ section[dir=ltr]{border-top:1px dashed #eee5d8;margin-top:28px;padding-top:18px;
 <h2>מה נשמר כשמתחברים עם Google</h2>
 <ul><li>השם, כתובת האימייל ותמונת הפרופיל של חשבון Google, כפי ש-Google מספקת אותם, כדי לזהות אתכם ולהציג את שמכם ליד מנות שבחרתם לפרסם.</li>
 <li>המנות שהוספתם (קישור המקור, הסרטון, התמונה, המתכון שנוצר) וההגדרות שלכם: מנות שהסתרתם, מנות ציבוריות/פרטיות ומקורות שכללתם.</li>
-<li>מונה יומי של מנות שנוספו (מכסה של 5 ביום).</li></ul>
+<li>מונה יומי של מנות שנוספו (מכסה של 15 ביום).</li></ul>
 <h2>מה לא נעשה</h2>
 <ul><li>לא מוכרים ולא משתפים מידע עם צד שלישי. הסרטון של מנה חדשה נשלח ל-Google Gemini לצורך כתיבת המתכון בלבד ונמחק משם מיד לאחר מכן.</li>
 <li>לא שולחים מיילים, לא מבקשים הרשאות מעבר לפרופיל בסיסי (שם, אימייל, תמונה).</li></ul>
@@ -529,7 +529,7 @@ section[dir=ltr]{border-top:1px dashed #eee5d8;margin-top:28px;padding-top:18px;
 <p>מנות פרטיות נראות רק לכם. אפשר למחוק כל מנה בכל רגע מהמסך ⚙️. למחיקת החשבון וכל המידע — שלחו מייל ל-<a href="mailto:eedo.brosh@gmail.com">eedo.brosh@gmail.com</a>.</p>
 <section dir="ltr"><h1>Privacy Policy (English)</h1>
 <p>Cookin (cookin.jarcud.com) is a personal, non-commercial family recipe book run by Eedo Brosh.</p>
-<p><b>When you sign in with Google</b> we store your Google name, email address and profile picture (to identify you and show your name next to dishes you choose to publish), the dishes you add (source link, video, thumbnail, generated recipe), your preferences (hidden dishes, public/private flags, included sources) and a daily counter of added dishes (limit 5/day).</p>
+<p><b>When you sign in with Google</b> we store your Google name, email address and profile picture (to identify you and show your name next to dishes you choose to publish), the dishes you add (source link, video, thumbnail, generated recipe), your preferences (hidden dishes, public/private flags, included sources) and a daily counter of added dishes (limit 15/day).</p>
 <p><b>We do not</b> sell or share data with third parties. The video of a new dish is sent to Google Gemini only to write the recipe and is deleted there right after. We request only basic profile scopes (openid, email, profile) and never send emails.</p>
 <p><b>Your control:</b> private dishes are visible only to you; delete any dish from the ⚙️ screen at any time. To delete your account and all data, email <a href="mailto:eedo.brosh@gmail.com">eedo.brosh@gmail.com</a>.</p>
 <p>Last updated: September 9, 2026.</p></section>
