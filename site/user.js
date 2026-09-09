@@ -17,6 +17,14 @@ const S = LANG === "he" ? {
   hideDish:"הסתר מנה זו", others:"מנות של משתמשים אחרים", noOthers:"עדיין אין מנות ציבוריות של משתמשים אחרים.",
   include:"כלול", dishes:n=>`${n} מנות`, close:"✕", limit:"הגעתם למכסה היומית.", err:"שגיאה", mine:"שלי",
   adminQ:n=>`בתור לטיפול ידני: ${n}`, notConfigured:"ההתחברות עוד לא מוגדרת",
+  urlsPh:"קישור אחד בכל שורה — פייסבוק / אינסטגרם / טיקטוק / יוטיוב",
+  importFile:"📂 ייבוא מקובץ ייצוא (פייסבוק / אינסטגרם)", found:n=>`נמצאו ${n} קישורים בקובץ`, noneFound:"לא נמצאו קישורים בקובץ",
+  howTo:"איך מייצאים מנות שמורות מפייסבוק ואינסטגרם?",
+  howToHtml:`<p><b>דרך מהירה (כמה מנות):</b> פותחים את הסרטון השמור ← ⋯ / שיתוף ← <b>העתקת קישור</b> ← מדביקים כאן, שורה לכל קישור.</p>
+<p><b>ייצוא מלא של כל השמורים (פייסבוק):</b> פייסבוק ← הגדרות ופרטיות ← הגדרות ← <b>מרכז החשבונות</b> ← המידע וההרשאות שלך ← <b>הורדת המידע שלך</b> ← "הורדה או העברה של מידע" ← בוחרים את פרופיל הפייסבוק ← "מידע מסוים" ← מסמנים <b>פריטים שמורים ואוספים</b> (Saved items and collections) ← פורמט <b>JSON</b>, טווח "כל הזמן" ← יוצרים קבצים. אחרי כמה דקות מגיע מייל עם ZIP; מחלצים ומעלים כאן את הקובץ <code>saved_items_and_collections.json</code> (או את כל ה-ZIP המחולץ, קובץ אחר קובץ) בכפתור "ייבוא מקובץ".</p>
+<p><b>אינסטגרם:</b> אותו מסלול במרכז החשבונות ← בוחרים את חשבון האינסטגרם ← "מידע מסוים" ← <b>שמורים</b> (Saved) ← JSON. הקובץ הוא <code>saved/saved_posts.json</code>. שימו לב: אינסטגרם חוסמת לפעמים הורדת סרטונים ללא התחברות — מנות כאלה ייכנסו לתור של אידו במקום להיכשל.</p>
+<p>הקובץ נקרא רק בדפדפן שלכם: שולפים ממנו את הקישורים ומדביקים אותם בתיבה למעלה. המכסה היומית (5) נשמרת — השאר פשוט לא ייכנסו, אפשר להדביק שוב מחר.</p>`,
+  bulkResult:(a,l,d)=>`נוספו ${a} מנות` + (l?` · ${l} לא נוספו (מכסה יומית)`:"") + (d?` · ${d} כבר קיימות`:""),
 } : {
   signin:"Sign in", signout:"Sign out", add:"➕ New dish", settings:"⚙️ My dishes & sources",
   addTitle:"Add a dish from a video", addHint:"Paste a Facebook / Instagram / TikTok / YouTube reel link. The video is downloaded, Gemini writes the recipe in Hebrew and English, and you can edit it. The dish is saved private — you decide whether to publish.",
@@ -29,9 +37,18 @@ const S = LANG === "he" ? {
   hideDish:"Hide this dish", others:"Other users' dishes", noOthers:"No public dishes from other users yet.",
   include:"Include", dishes:n=>`${n} dishes`, close:"✕", limit:"Daily limit reached.", err:"Error", mine:"mine",
   adminQ:n=>`Manual queue: ${n}`, notConfigured:"Sign-in not configured yet",
+  urlsPh:"One link per line — Facebook / Instagram / TikTok / YouTube",
+  importFile:"📂 Import from an export file (Facebook / Instagram)", found:n=>`Found ${n} links in the file`, noneFound:"No links found in the file",
+  howTo:"How do I export my saved dishes from Facebook and Instagram?",
+  howToHtml:`<p><b>Quick way (a few dishes):</b> open the saved reel → ⋯ / Share → <b>Copy link</b> → paste here, one link per line.</p>
+<p><b>Full export of everything you saved (Facebook):</b> Facebook → Settings & privacy → Settings → <b>Accounts Center</b> → Your information and permissions → <b>Download your information</b> → "Download or transfer information" → pick your Facebook profile → "Some of your information" → tick <b>Saved items and collections</b> → format <b>JSON</b>, date range "All time" → Create files. A few minutes later you get an email with a ZIP; unzip it and upload <code>saved_items_and_collections.json</code> (or any file from the unzipped folder, one at a time) with the "Import from an export file" button.</p>
+<p><b>Instagram:</b> same path in Accounts Center → pick the Instagram account → "Some of your information" → <b>Saved</b> → JSON. The file is <code>saved/saved_posts.json</code>. Note: Instagram sometimes blocks anonymous video downloads; those dishes go to Eedo's queue instead of failing.</p>
+<p>The file is read only in your browser: the links are extracted and pasted into the box above. The daily cap (5) still applies; the rest are simply not added, paste again tomorrow.</p>`,
+  bulkResult:(a,l,d)=>`Added ${a} dishes` + (l?` · ${l} not added (daily cap)`:"") + (d?` · ${d} already existed`:""),
 };
 
 const css = `
+header{z-index:60 !important}
 .card{position:relative}
 .ubar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ubtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;cursor:pointer;font-family:inherit;font-size:.9rem;color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
@@ -60,6 +77,11 @@ const css = `
 #umodal h3 .x{margin-inline-start:auto;border:0;background:var(--chip);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1rem}
 #umodal .hint{color:var(--muted);font-size:.9rem;line-height:1.5;margin-bottom:14px}
 #umodal input[type=url]{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:1rem;font-family:inherit;color:var(--ink);direction:ltr}
+#umodal textarea{width:100%;min-height:110px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:.95rem;font-family:inherit;color:var(--ink);direction:ltr;resize:vertical;line-height:1.5}
+#umodal details{margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--bg)}
+#umodal summary{cursor:pointer;font-weight:600;color:var(--accent-dark)}
+#umodal details p{font-size:.88rem;line-height:1.6;margin:8px 0;color:var(--ink)}
+#umodal details code{background:var(--chip);border-radius:4px;padding:0 4px;direction:ltr;unicode-bidi:embed}
 #umodal .row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
 #umodal .row .u{color:var(--muted);font-size:.85rem;margin-inline-start:auto}
 #umodal .msg{margin-top:10px;font-size:.9rem;color:#a53a2c;min-height:1.2em}
@@ -221,21 +243,57 @@ function renderAdd(){
   document.querySelector("#ubox").innerHTML = `
     <h3>${S.addTitle}<button class="x" onclick="cookinClose()">${S.close}</button></h3>
     <div class="hint">${S.addHint}</div>
-    <input type="url" id="uurl" placeholder="https://www.facebook.com/reel/…" autocomplete="off">
-    <div class="row"><button class="ubtn primary" id="uadd" onclick="cookinSubmit()">${S.addBtn}</button><span class="u">${S.usage(u.today,u.limit)}</span></div>
-    <div class="msg" id="umsg"></div>`;
+    <textarea id="uurl" placeholder="${S.urlsPh}" autocomplete="off"></textarea>
+    <div class="row">
+      <button class="ubtn primary" id="uadd" onclick="cookinSubmit()">${S.addBtn}</button>
+      <label class="ubtn" style="cursor:pointer">${S.importFile}<input type="file" id="ufile" accept=".json,.html,.htm,.txt,.csv" style="display:none" onchange="cookinImportFile(this)"></label>
+      <span class="u" id="uusage">${S.usage(u.today,u.limit)}</span>
+    </div>
+    <div class="msg" id="umsg"></div>
+    <details><summary>${S.howTo}</summary>${S.howToHtml}</details>`;
   setTimeout(() => document.querySelector("#uurl").focus(), 50);
-  document.querySelector("#uurl").addEventListener("keydown", e => { if(e.key === "Enter") cookinSubmit(); });
 }
+const URL_RX = /https?:\/\/[^\s"'<>\\)\]]+/g;
+function extractUrls(text){
+  const out = [], seen = new Set();
+  text = text.replace(/\\\//g, "/").replace(/&amp;/g, "&");
+  for(const m of (text.match(URL_RX) || [])){
+    let u = m.replace(/\\\//g, "/").replace(/[.,;:]+$/, "");
+    if(!/facebook\.com|fb\.watch|instagram\.com|tiktok\.com|youtube\.com|youtu\.be/.test(u)) continue;
+    if(/facebook\.com\/(login|help|privacy|settings|profile\.php)/.test(u)) continue;
+    if(/instagram\.com\/(accounts|explore|direct)\b/.test(u) || /instagram\.com\/[^\/]+\/?$/.test(u)) continue;
+    if(!seen.has(u)){ seen.add(u); out.push(u); }
+  }
+  return out;
+}
+window.cookinImportFile = function(input){
+  const f = input.files && input.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    let text = String(rd.result || "");
+    try { text = JSON.stringify(JSON.parse(text)); } catch(e){}
+    const urls = extractUrls(text);
+    const ta = document.querySelector("#uurl");
+    const cur = ta.value.trim();
+    ta.value = (cur ? cur + "\n" : "") + urls.join("\n");
+    document.querySelector("#umsg").textContent = urls.length ? S.found(urls.length) : S.noneFound;
+    input.value = "";
+  };
+  rd.readAsText(f);
+};
 window.cookinSubmit = async function(){
-  const url = document.querySelector("#uurl").value.trim(); const msg = document.querySelector("#umsg");
-  if(!/^https?:\/\//.test(url)){ msg.textContent = "URL?"; return; }
+  const urls = extractUrls(document.querySelector("#uurl").value); const msg = document.querySelector("#umsg");
+  if(!urls.length){ msg.textContent = "URL?"; return; }
   const b = document.querySelector("#uadd"); b.disabled = true; b.textContent = S.adding; msg.textContent = "";
   try {
-    await api("/api/dishes", {url});
-    cookinClose(); await refresh();
-    document.querySelector("#search").value = ""; window.scrollTo({top:0});
-  } catch(e){ msg.textContent = e.message === "limit" ? S.limit : e.message; b.disabled = false; b.textContent = S.addBtn; }
+    const r = await api("/api/dishes", {urls});
+    await refresh();
+    if(urls.length === 1 && r.added === 1){ cookinClose(); window.scrollTo({top:0}); return; }
+    msg.style.color = "var(--muted)"; msg.textContent = S.bulkResult(r.added, r.skipped_limit, r.skipped_dupe);
+    document.querySelector("#uurl").value = "";
+    document.querySelector("#uusage").textContent = S.usage(r.usage.today, r.usage.limit);
+    b.disabled = false; b.textContent = S.addBtn;
+  } catch(e){ msg.style.color = ""; msg.textContent = e.message === "limit" ? S.limit : e.message; b.disabled = false; b.textContent = S.addBtn; }
 };
 
 function renderSettings(){

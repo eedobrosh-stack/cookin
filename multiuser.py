@@ -347,27 +347,62 @@ def api_dish_get(handler, user, did):
 URL_RE = re.compile(r"^https?://[^\s]+$")
 
 
+def _norm_url(u):
+    u = (u or "").strip()
+    if not URL_RE.match(u) or len(u) > 1000:
+        return None
+    # strip tracking params from FB/IG share links
+    try:
+        pr = urllib.parse.urlsplit(u)
+        if any(h in pr.netloc for h in ("facebook.com", "instagram.com", "fb.watch")):
+            keep = [(k, v) for k, v in urllib.parse.parse_qsl(pr.query) if k in ("v", "story_fbid", "id")]
+            u = urllib.parse.urlunsplit((pr.scheme, pr.netloc, pr.path, urllib.parse.urlencode(keep), ""))
+    except Exception:
+        pass
+    return u.rstrip("/")
+
+
 def api_dish_create(handler, user, req):
+    """Accepts {url} or {urls:[...]} (bulk, up to 100). Enforces the daily cap,
+    dedupes against the user's existing dishes."""
     if not user:
         return handler._json({"error": "sign in"}, 401)
-    url = (req.get("url") or "").strip()
-    if not URL_RE.match(url) or len(url) > 1000:
+    raw = req.get("urls") if isinstance(req.get("urls"), list) else [req.get("url")]
+    urls, seen = [], set()
+    for u in raw[:100]:
+        n = _norm_url(str(u or ""))
+        if n and n not in seen:
+            seen.add(n); urls.append(n)
+    if not urls:
         return handler._json({"error": "bad url"}, 400)
     if not secret("GEMINI_API_KEY"):
         return handler._json({"error": "extraction not configured"}, 503)
     uid = user["id"]
     with _LOCK:
-        n = usage_today(uid)
-        if n >= DAILY_LIMIT and not user.get("admin"):
-            return handler._json({"error": "limit", "message": f"הגעת למכסה היומית ({DAILY_LIMIT} מנות ביום)"}, 429)
-        did = "u" + secrets.token_hex(5)
         with db() as c:
-            c.execute("INSERT INTO usage(user_id,day,n) VALUES(?,?,1) "
-                      "ON CONFLICT(user_id,day) DO UPDATE SET n=n+1", (uid, today()))
-            c.execute("INSERT INTO dishes(id,owner_id,visibility,status,source_url,created_at,updated_at) "
-                      "VALUES(?,?,?,?,?,?,?)", (did, uid, "private", "processing", url, now_iso(), now_iso()))
-    start_processing(did)
-    return handler._json({"ok": True, "id": did, "usage": {"today": n + 1, "limit": DAILY_LIMIT}})
+            have = {(_norm_url(r["source_url"]) or r["source_url"]) for r in
+                    c.execute("SELECT source_url FROM dishes WHERE owner_id=?", (uid,))}
+            n = usage_today(uid)
+            remaining = 10**6 if user.get("admin") else max(0, DAILY_LIMIT - n)
+            ids, dupes, over = [], 0, 0
+            for u in urls:
+                if u in have:
+                    dupes += 1; continue
+                if len(ids) >= remaining:
+                    over += 1; continue
+                did = "u" + secrets.token_hex(5)
+                c.execute("INSERT INTO dishes(id,owner_id,visibility,status,source_url,created_at,updated_at) "
+                          "VALUES(?,?,?,?,?,?,?)", (did, uid, "private", "processing", u, now_iso(), now_iso()))
+                have.add(u); ids.append(did)
+            if ids:
+                c.execute("INSERT INTO usage(user_id,day,n) VALUES(?,?,?) "
+                          "ON CONFLICT(user_id,day) DO UPDATE SET n=n+excluded.n", (uid, today(), len(ids)))
+    if not ids and over and not dupes:
+        return handler._json({"error": "limit", "message": f"הגעת למכסה היומית ({DAILY_LIMIT} מנות ביום)"}, 429)
+    for did in ids:
+        start_processing(did)
+    return handler._json({"ok": True, "ids": ids, "added": len(ids), "skipped_limit": over, "skipped_dupe": dupes,
+                          "usage": {"today": n + len(ids), "limit": DAILY_LIMIT}})
 
 
 def api_dish_action(handler, user, did, req):
@@ -545,6 +580,7 @@ def _clean_lang(d, lang):
 
 # --------------------------------------------------------------- pipeline ---
 _running = set()
+_WORKERS = threading.Semaphore(int(os.environ.get("COOKIN_WORKERS", "2")))  # 512 MB box: don't run many yt-dlp/ffmpeg at once
 
 
 def start_processing(did):
@@ -561,7 +597,8 @@ class BudgetExhausted(RuntimeError):
 
 def _process_wrapper(did):
     try:
-        process_dish(did)
+        with _WORKERS:
+            process_dish(did)
     except BudgetExhausted as e:
         log(f"{did} QUEUED (gemini budget): {e}")
         with db() as c:
