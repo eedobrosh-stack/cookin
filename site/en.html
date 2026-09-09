@@ -310,7 +310,8 @@ function openDish(id, skipPush){
   const hasVid = (typeof LOCAL_VIDEOS !== "undefined") && LOCAL_VIDEOS.has(r.id);
   const hero = hasVid
     ? `<video controls playsinline preload="metadata" poster="images/${r.image}" src="videos/${r.id}.mp4"></video>`
-    : `<img src="images/${r.image}" alt="">`;
+    : (r._embed ? `<iframe src="${r._embed}" style="width:100%;aspect-ratio:9/16;max-height:560px;border:0;background:#111;display:block" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`
+                : `<img src="images/${r.image}" alt="">`);
   $("#dishBox").innerHTML = `
     <div class="dimg">${hero}</div>
     <div class="dmain">

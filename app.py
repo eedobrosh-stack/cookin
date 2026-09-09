@@ -864,7 +864,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path.split("?")[0]
-        if p.startswith(("/auth/", "/api/prefs", "/api/dishes", "/api/admin/")):
+        if p.startswith(("/auth/", "/api/prefs", "/api/dishes", "/api/admin/", "/api/claim/")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if multiuser.handle_post(self, p, qs, self._read_json):
                 return

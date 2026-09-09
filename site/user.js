@@ -17,6 +17,11 @@ const S = LANG === "he" ? {
   hideDish:"הסתר מנה זו", others:"מנות של משתמשים אחרים (ציבוריות)", noOthers:"עדיין אין מנות ציבוריות של משתמשים אחרים.",
   include:"הצג", dishes:n=>`${n} מנות`, close:"✕", limit:"הגעתם למכסה היומית.", err:"שגיאה", mine:"שלי",
   adminQ:n=>`בתור לטיפול ידני: ${n}`, notConfigured:"ההתחברות עוד לא מוגדרת",
+  terms:"בהוספה אני מאשר/ת שהסרטון פורסם בפומבי על ידי היוצר/ת ושהשימוש כאן אישי; פרסום לקהילה כפוף לאישור היוצר/ת ולהסרה לפי בקשתו/ה.",
+  askTitle:"📨 בקשת אישור מהיוצר/ת", askHint:"המנה פורסמה לקהילה. עד שהיוצר/ת מאשר/ת, מבקרים לא מחוברים יראו את הסרטון מהמקור (נגן מוטמע) ולא את העותק שלנו. שלחו ליוצר/ת את ההודעה הזו (הודעה פרטית באינסטגרם/פייסבוק או מייל):",
+  copy:"📋 העתקה", copied:"הועתק!", askBtn:"📨 בקשת אישור", creatorOk:"✅ אושר ע\"י היוצר/ת", creatorRm:"🚫 היוצר/ת ביקש/ה הסרה", creatorPend:"⏳ בקשת הסרה בבדיקה",
+  nameTitle:"השם שלי בקהילה", nameHint:"כך תופיעו ליד המנות שפרסמתם. ברירת המחדל: ראשי תיבות.", save:"שמירה",
+  claimsTitle:n=>`בקשות מיוצרים (${n})`, approve:"אישור", deny:"דחייה",
   adminSec:"🛡️ ניהול הקהילה (אדמין)", adminPublic:n=>`מנות ציבוריות (${n})`, adminAll:n=>`כל מנות המשתמשים (${n})`, adminNone:"אין מנות של משתמשים.", unpublish:"הסתר מהקהילה", publish:"פרסם", by:"מאת",
   community:"👥 קהילה", communityTitle:"👥 מנות מהקהילה", communityHint:"מנות שמשתמשים אחרים הוסיפו ובחרו לפרסם. התחברו כדי להוסיף משלכם.",
   urlsPh:"קישור אחד בכל שורה — פייסבוק / אינסטגרם / טיקטוק / יוטיוב",
@@ -41,6 +46,11 @@ const S = LANG === "he" ? {
   hideDish:"Hide this dish", others:"Other users' dishes (public)", noOthers:"No public dishes from other users yet.",
   include:"Show", dishes:n=>`${n} dishes`, close:"✕", limit:"Daily limit reached.", err:"Error", mine:"mine",
   adminQ:n=>`Manual queue: ${n}`, notConfigured:"Sign-in not configured yet",
+  terms:"By adding I confirm the video was published publicly by its creator and that my use here is personal; publishing to the community is subject to the creator's approval and removal on request.",
+  askTitle:"📨 Ask the creator", askHint:"The dish is public. Until the creator approves, signed-out visitors see the video from its source (embedded player) rather than our copy. Send the creator this message (Instagram/Facebook DM or email):",
+  copy:"📋 Copy", copied:"Copied!", askBtn:"📨 Ask creator", creatorOk:"✅ Creator approved", creatorRm:"🚫 Creator requested removal", creatorPend:"⏳ Removal request under review",
+  nameTitle:"My community name", nameHint:"How you appear next to dishes you publish. Default: your initials.", save:"Save",
+  claimsTitle:n=>`Creator requests (${n})`, approve:"Approve", deny:"Deny",
   adminSec:"🛡️ Community admin", adminPublic:n=>`Public dishes (${n})`, adminAll:n=>`All user dishes (${n})`, adminNone:"No user dishes.", unpublish:"Unpublish", publish:"Publish", by:"by",
   community:"👥 Community", communityTitle:"👥 Dishes from the community", communityHint:"Dishes other users added and chose to publish. Sign in to add your own.",
   urlsPh:"One link per line — Facebook / Instagram / TikTok / YouTube",
@@ -91,6 +101,11 @@ header{z-index:60 !important}
 #umodal summary{cursor:pointer;font-weight:600;color:var(--accent-dark)}
 #umodal details p{font-size:.88rem;line-height:1.6;margin:8px 0;color:var(--ink)}
 #umodal details code{background:var(--chip);border-radius:4px;padding:0 4px;direction:ltr;unicode-bidi:embed}
+#umodal .terms{color:var(--muted);font-size:.78rem;line-height:1.5;margin-top:10px}
+#umodal .msgbox{width:100%;min-height:120px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-family:inherit;font-size:.9rem;color:var(--ink);background:var(--bg);line-height:1.5}
+#umodal .namerow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#umodal .namerow input{border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-family:inherit;font-size:.9rem;color:var(--ink);width:220px}
+.card .thumb.uembed{display:flex;align-items:center;justify-content:center;background:#e9e2d6}
 #umodal .row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
 #umodal .row .u{color:var(--muted);font-size:.85rem;margin-inline-start:auto}
 #umodal .msg{margin-top:10px;font-size:.9rem;color:#a53a2c;min-height:1.2em}
@@ -186,6 +201,7 @@ function applyDishes(){
                              ingredientLines:[], steps:[], tips:""}, rec);
     r.id = d.id; r.image = d.id + ".jpg"; r.video = d.source_url || ""; r.needs = d.needs || [];
     r._user = true; r._mine = mine; r._status = d.status; r._vis = d.visibility; r._owner = d.owner || null;
+    r._embed = d.embed || null; r._creatorOk = d.creator_ok || 0; r._hasVideo = !!d.has_video;
     if(d.status !== "ready"){
       r.name = d.status === "failed" ? S.failed : (d.status === "queued" ? S.queued : S.processing);
       r.creator = d.status === "queued" ? S.queuedNote : (d.source_url||"").replace(/^https?:\/\/(www\.)?/,"").slice(0,40);
@@ -319,6 +335,7 @@ function renderAdd(){
       <span class="u" id="uusage">${S.usage(u.today,u.limit)}</span>
     </div>
     <div class="msg" id="umsg"></div>
+    <div class="terms">${S.terms}</div>
     <details><summary>${S.howTo}</summary>${S.howToHtml}</details>`;
   setTimeout(() => document.querySelector("#uurl").focus(), 50);
 }
@@ -374,9 +391,10 @@ function renderSettings(){
     <div class="uitem">
       <img src="/images/${d.id}.jpg" alt="" onerror="this.style.visibility='hidden'">
       <div class="t"><div class="n"><a href="/d/${d.id}${LANG==='en'?'?lang=en':''}" style="color:inherit;text-decoration:none">${esc(nameOf(d))}</a></div>
-        <div class="m">${d.status === "ready" ? (d.visibility === "public" ? S.pub : S.priv) : (d.status === "queued" ? S.queuedNote + (ME.user.admin && d.error ? " · " + esc(d.error) : "") : esc(d.error||""))}</div></div>
+        <div class="m">${d.status === "ready" ? (d.visibility === "public" ? S.pub : S.priv) + (d.creator_ok === 1 ? " · " + S.creatorOk : d.creator_ok === -1 ? " · " + S.creatorRm : d.creator_ok === -2 ? " · " + S.creatorPend : "") : (d.status === "queued" ? S.queuedNote + (ME.user.admin && d.error ? " · " + esc(d.error) : "") : esc(d.error||""))}</div></div>
       <div class="a">
-        ${d.status === "ready" ? `<button class="mini ${d.visibility==='public'?'on':''}" onclick="cookinDish('${d.id}','setVisibility','${d.visibility==='public'?'private':'public'}')">${d.visibility==='public'?S.makePriv:S.makePub}</button>` : ""}
+        ${d.status === "ready" && d.visibility === "public" && d.creator_ok !== 1 ? `<button class="mini" onclick="cookinAsk('${d.id}')">${S.askBtn}</button>` : ""}
+        ${d.status === "ready" && !(d.creator_ok === -1 && d.visibility !== "public" && !ME.user.admin) ? `<button class="mini ${d.visibility==='public'?'on':''}" onclick="cookinDish('${d.id}','setVisibility','${d.visibility==='public'?'private':'public'}')">${d.visibility==='public'?S.makePriv:S.makePub}</button>` : ""}
         ${d.status === "failed" ? `<button class="mini" onclick="cookinDish('${d.id}','retry')">${S.retry}</button><button class="mini" onclick="cookinDish('${d.id}','queue')">${S.toQueue}</button>` : ""}
         ${d.status === "queued" && ME.user.admin ? `<button class="mini" onclick="cookinDish('${d.id}','retry')">${S.retry}</button>` : ""}
         ${d.status !== "processing" ? `<button class="mini danger" onclick="if(confirm('${S.confirmDel}'))cookinDish('${d.id}','delete')">${S.del}</button>` : ""}
@@ -394,6 +412,8 @@ function renderSettings(){
     : `<div class="hint">${S.noOthers}</div>`;
   box.innerHTML = `
     <h3>${S.settings}<button class="x" onclick="cookinClose()">${S.close}</button></h3>
+    <div class="sec"><h4>${S.nameTitle}</h4><div class="hint" style="margin-bottom:8px">${S.nameHint}</div>
+      <div class="namerow"><input id="udn" maxlength="40" value="${esc(ME.user.displayName||"")}" placeholder="${esc(ME.user.publicName||"")}"><button class="mini" onclick="cookinName()">${S.save}</button></div></div>
     <div class="sec"><h4>${S.myDishes} (${mine.length})
       ${mine.length ? `<span class="r"><button class="mini" onclick="cookinBulk('public')">${S.allPublic}</button><button class="mini" onclick="cookinBulk('private')">${S.allPrivate}</button></span>` : ""}</h4>
       <div class="ulist">${mineHtml}</div></div>
@@ -407,15 +427,19 @@ function renderSettings(){
 }
 async function renderAdmin(){
   const box = document.querySelector("#uadmin"); if(!box) return;
-  let dishes = [];
-  try { dishes = (await api("/api/admin/dishes")).dishes || []; } catch(e){ box.innerHTML += `<div class="msg">${esc(e.message)}</div>`; return; }
+  let dishes = [], claims = [];
+  try { dishes = (await api("/api/admin/dishes")).dishes || []; claims = (await api("/api/admin/claims")).claims || []; } catch(e){ box.innerHTML += `<div class="msg">${esc(e.message)}</div>`; return; }
+  const pending = claims.filter(c => c.status === "pending");
+  const claimItem = c => `<div class="uitem"><div class="t"><div class="n">${c.action === "approve" ? "✅" : "🚫"} <a href="/d/${c.dish_id}" style="color:inherit;text-decoration:none">${esc(c.dish_name || c.dish_id)}</a></div>
+      <div class="m">${esc(c.email||"")} ${c.note ? "· " + esc(c.note) : ""} · ${(c.created_at||"").slice(0,16).replace("T"," ")} · ${c.status}</div></div>
+      ${c.status === "pending" ? `<div class="a"><button class="mini on" onclick="cookinClaim('${c.id}','approve')">${S.approve}</button><button class="mini danger" onclick="cookinClaim('${c.id}','deny')">${S.deny}</button></div>` : ""}</div>`;
   const item = d => {
     const rec = d[LANG] || d.he || {};
     const st = d.status === "ready" ? (d.visibility === "public" ? S.pub : S.priv) : (d.status === "queued" ? S.queued : d.status === "failed" ? S.failed : S.processing);
     return `<div class="uitem">
       <img src="/images/${d.id}.jpg" alt="" onerror="this.style.visibility='hidden'">
       <div class="t"><div class="n"><a href="/d/${d.id}${LANG==='en'?'?lang=en':''}" style="color:inherit;text-decoration:none">${esc(rec.name || d.source_url || d.id)}</a></div>
-        <div class="m">${st} · ${S.by} ${esc(d.owner.name || d.owner.email || "?")} · ${(d.created_at||"").slice(0,10)}${d.error ? " · " + esc(d.error.slice(0,80)) : ""}</div></div>
+        <div class="m">${st}${d.creator_ok === 1 ? " · " + S.creatorOk : d.creator_ok === -1 ? " · " + S.creatorRm : d.creator_ok === -2 ? " · " + S.creatorPend : ""} · ${S.by} ${esc(d.owner.name || d.owner.email || "?")} (${esc(d.owner.public_name||"")}) · ${(d.created_at||"").slice(0,10)}${d.error ? " · " + esc(d.error.slice(0,80)) : ""}</div></div>
       <div class="a">
         ${d.status === "ready" ? `<button class="mini ${d.visibility==='public'?'':'on'}" onclick="cookinAdmin('${d.id}','setVisibility','${d.visibility==='public'?'private':'public'}')">${d.visibility==='public'?S.unpublish:S.publish}</button>` : ""}
         ${d.status === "queued" || d.status === "failed" ? `<button class="mini" onclick="cookinAdmin('${d.id}','retry')">${S.retry}</button>` : ""}
@@ -424,20 +448,51 @@ async function renderAdmin(){
   };
   const pub = dishes.filter(d => d.visibility === "public" && d.status === "ready");
   box.innerHTML = `<h4>${S.adminSec}</h4>
+    ${claims.length ? `<div class="hint" style="margin-bottom:6px"><b>${S.claimsTitle(pending.length)}</b></div><div class="ulist" style="margin-bottom:12px">${claims.slice(0, 20).map(claimItem).join("")}</div>` : ""}
     <div class="hint" style="margin-bottom:6px"><b>${S.adminPublic(pub.length)}</b></div>
     <div class="ulist">${pub.map(item).join("") || `<div class="hint">${S.adminNone}</div>`}</div>
     <details style="margin-top:12px"><summary>${S.adminAll(dishes.length)}</summary><div class="ulist" style="margin-top:8px">${dishes.map(item).join("")}</div></details>`;
 }
+window.cookinClaim = async function(id, decision){
+  try { await api("/api/admin/claim", {id, decision}); } catch(e){ alert(e.message); }
+  await refresh(); renderSettings();
+};
 window.cookinAdmin = async function(id, action, visibility){
   try { await api("/api/dishes/" + id, {action, visibility}); } catch(e){ alert(e.message); }
   await refresh(); renderSettings();
 };
 window.cookinDish = async function(id, action, visibility){
-  try { await api("/api/dishes/" + id, {action, visibility}); } catch(e){ alert(e.message); }
+  let r = null;
+  try { r = await api("/api/dishes/" + id, {action, visibility}); } catch(e){ alert(e.message); }
   await refresh(); renderSettings();
+  if(r && r.creator_message) cookinAsk(id, r.creator_message);
+};
+window.cookinAsk = function(id, msgs){
+  if(!msgs){ const d = (ME.mine||[]).find(x => x.id === id); if(!d) return;
+    // build locally from the dish (same wording as the server template)
+    const link = location.origin + "/d/" + id;
+    const he = (d.he||{}).name || "", en = (d.en||{}).name || he;
+    msgs = {en:`Hi! I loved your recipe video (${en}) and saved it to Cookin, a small non-commercial community recipe book. It shows your name, links back to your original post, and hosts a copy of the video so members can cook along. Are you OK with it being public there? You can approve or ask for removal in one click here: ${link}#creator — thank you!`,
+            he:`היי! אהבתי את סרטון המתכון שלך (${he}) ושמרתי אותו ב-Cookin, ספר מתכונים קהילתי קטן וללא מטרות רווח. המנה מציגה את שמך, מקשרת לפוסט המקורי ומארחת עותק של הסרטון כדי שחברי הקהילה יוכלו לבשל לפיו. מסכים/ה שהיא תהיה ציבורית שם? אפשר לאשר או לבקש הסרה בלחיצה אחת כאן: ${link}#creator — תודה!`}; }
+  modalMode = "ask"; const m = modal(); m.style.display = "flex";
+  document.querySelector("#ubox").innerHTML = `
+    <h3>${S.askTitle}<button class="x" onclick="cookinOpen('settings')">${S.close}</button></h3>
+    <div class="hint">${S.askHint}</div>
+    <textarea class="msgbox" id="askEn" readonly dir="ltr">${esc(msgs.en)}</textarea>
+    <div class="row"><button class="ubtn" onclick="cookinCopy('askEn',this)">${S.copy} (EN)</button></div>
+    <textarea class="msgbox" id="askHe" readonly dir="rtl" style="margin-top:10px">${esc(msgs.he)}</textarea>
+    <div class="row"><button class="ubtn" onclick="cookinCopy('askHe',this)">${S.copy} (HE)</button></div>`;
+};
+window.cookinCopy = async function(id, btn){
+  const t = document.querySelector("#"+id).value;
+  try { await navigator.clipboard.writeText(t); } catch(e){ const ta = document.querySelector("#"+id); ta.select(); document.execCommand("copy"); }
+  const old = btn.textContent; btn.textContent = S.copied; setTimeout(() => btn.textContent = old, 1500);
 };
 window.cookinBulk = async function(visibility){
   await api("/api/dishes/bulk-visibility", {visibility}); await refresh(); renderSettings();
+};
+window.cookinName = async function(){
+  await api("/api/prefs", {displayName: document.querySelector("#udn").value}); await refresh(); renderSettings();
 };
 window.cookinHideBase = async function(v){ hideBase = v; rerender(); await savePrefs(); renderSettings(); };
 window.cookinSource = async function(id, show){

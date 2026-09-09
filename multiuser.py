@@ -93,6 +93,9 @@ CREATE TABLE IF NOT EXISTS prefs(
   sources TEXT DEFAULT '[]');
 CREATE TABLE IF NOT EXISTS usage(user_id TEXT, day TEXT, n INTEGER DEFAULT 0,
   PRIMARY KEY(user_id, day));
+CREATE TABLE IF NOT EXISTS claims(
+  id TEXT PRIMARY KEY, dish_id TEXT, action TEXT, email TEXT, note TEXT,
+  status TEXT DEFAULT 'pending', created_at TEXT, decided_at TEXT);
 """
 
 
@@ -111,6 +114,12 @@ def init():
         cols = {r["name"] for r in c.execute("PRAGMA table_info(prefs)")}
         if "muted" not in cols:
             c.execute("ALTER TABLE prefs ADD COLUMN muted TEXT DEFAULT '[]'")
+        dcols = {r["name"] for r in c.execute("PRAGMA table_info(dishes)")}
+        if "creator_ok" not in dcols:   # 0 = no answer, 1 = creator approved, -1 = creator asked for removal
+            c.execute("ALTER TABLE dishes ADD COLUMN creator_ok INTEGER DEFAULT 0")
+        ucols = {r["name"] for r in c.execute("PRAGMA table_info(users)")}
+        if "display_name" not in ucols:
+            c.execute("ALTER TABLE users ADD COLUMN display_name TEXT")
     # resume dishes interrupted by a redeploy
     with db() as c:
         c.execute("UPDATE dishes SET status='processing', error=NULL WHERE status IN ('failed','queued') "
@@ -268,6 +277,8 @@ def _dish_public(row, lang_both=True):
         "status": row["status"], "source_url": row["source_url"],
         "has_video": bool(row["has_video"]), "error": row["error"],
         "created_at": row["created_at"], "needs": json.loads(row["needs"] or "[]"),
+        "creator_ok": int(row["creator_ok"] or 0) if "creator_ok" in row.keys() else 0,
+        "embed": embed_url(row["source_url"]),
     }
     for k in ("he", "en"):
         try:
@@ -275,6 +286,71 @@ def _dish_public(row, lang_both=True):
         except Exception:
             d[k] = None
     return d
+
+
+def embed_url(u):
+    """Official inline player for a source URL (Meta/TikTok/YouTube embeds), or None."""
+    if not u:
+        return None
+    try:
+        pr = urllib.parse.urlsplit(u)
+        host, path = pr.netloc.lower(), pr.path
+        if "facebook.com" in host or "fb.watch" in host:
+            return "https://www.facebook.com/plugins/video.php?" + urllib.parse.urlencode(
+                {"href": u, "show_text": "false", "width": "560"})
+        if "instagram.com" in host:
+            m = re.match(r"^/(p|reel|reels|tv)/([A-Za-z0-9_-]+)", path)
+            if m:
+                return f"https://www.instagram.com/{'reel' if m.group(1) == 'reels' else m.group(1)}/{m.group(2)}/embed/"
+        if "tiktok.com" in host:
+            m = re.search(r"/video/(\d+)", path)
+            if m:
+                return f"https://www.tiktok.com/embed/v2/{m.group(1)}"
+        if "youtube.com" in host or "youtu.be" in host:
+            vid = urllib.parse.parse_qs(pr.query).get("v", [None])[0]
+            m = re.match(r"^/(shorts|embed)/([A-Za-z0-9_-]{6,})", path)
+            if m:
+                vid = m.group(2)
+            if "youtu.be" in host:
+                vid = path.strip("/").split("/")[0]
+            if vid:
+                return f"https://www.youtube.com/embed/{vid}"
+    except Exception:
+        pass
+    return None
+
+
+def initials(name):
+    parts = [p for p in re.split(r"\s+", (name or "").strip()) if p]
+    return "".join(p[0].upper() for p in parts[:2]) or "?"
+
+
+def public_name(row, name_key="name"):
+    """What other members / visitors see: display_name if set, else initials of the Google name."""
+    keys = row.keys()
+    dn = (row["display_name"] if "display_name" in keys else None) or ""
+    nm = row[name_key] if name_key in keys else (row["name"] if "name" in keys else "")
+    return dn.strip() or initials(nm)
+
+
+def creator_message(dish_id, rec_he, rec_en, host="https://cookin.jarcud.com"):
+    link = f"{host}/d/{dish_id}"
+    name_en = (rec_en or {}).get("name") or (rec_he or {}).get("name") or "your recipe"
+    return {
+        "en": (f"Hi! I loved your recipe video ({name_en}) and saved it to Cookin, a small non-commercial "
+               f"community recipe book. It shows your name, links back to your original post, and hosts a copy of the "
+               f"video so members can cook along. Are you OK with it being public there? You can approve or ask for "
+               f"removal in one click here: {link}#creator — thank you!"),
+        "he": (f"היי! אהבתי את סרטון המתכון שלך ({(rec_he or {}).get('name') or name_en}) ושמרתי אותו ב-Cookin, ספר "
+               f"מתכונים קהילתי קטן וללא מטרות רווח. המנה מציגה את שמך, מקשרת לפוסט המקורי ומארחת עותק של הסרטון "
+               f"כדי שחברי הקהילה יוכלו לבשל לפיו. מסכים/ה שהיא תהיה ציבורית שם? אפשר לאשר או לבקש הסרה בלחיצה "
+               f"אחת כאן: {link}#creator — תודה!"),
+    }
+
+
+def user_row(uid):
+    with db() as c:
+        return c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
 
 
 def get_prefs(uid):
@@ -292,18 +368,25 @@ def usage_today(uid):
     return r["n"] if r else 0
 
 
-def _community(c, exclude_owner=None):
-    """All public+ready dishes (with owner info) and the owners list."""
+def _community(c, exclude_owner=None, anonymous=False):
+    """All public+ready dishes (with owner info) and the owners list.
+    Visitors (anonymous=True) only get the rehosted video when the creator approved (creator_ok=1);
+    otherwise they get the official embed."""
     owners, dishes = {}, []
     for r in c.execute(
-            "SELECT d.*, u.name AS oname, u.avatar AS oavatar FROM dishes d JOIN users u ON u.id=d.owner_id "
+            "SELECT d.*, u.name AS oname, u.display_name, u.avatar AS oavatar FROM dishes d JOIN users u ON u.id=d.owner_id "
             "WHERE d.visibility='public' AND d.status='ready' ORDER BY d.created_at DESC"):
         if r["owner_id"] == exclude_owner:
             continue
-        o = owners.setdefault(r["owner_id"], {"id": r["owner_id"], "name": r["oname"], "avatar": r["oavatar"], "count": 0})
+        if anonymous and int(r["creator_ok"] or 0) == -2:
+            continue
+        pname = public_name(r, "oname")
+        o = owners.setdefault(r["owner_id"], {"id": r["owner_id"], "name": pname, "avatar": r["oavatar"], "count": 0})
         o["count"] += 1
         d = _dish_public(r)
-        d["owner"] = {"name": r["oname"], "avatar": r["oavatar"]}
+        d["owner"] = {"name": pname, "avatar": r["oavatar"]}
+        if anonymous and d["creator_ok"] != 1:
+            d["has_video"] = False
         dishes.append(d)
     return dishes, sorted(owners.values(), key=lambda o: -o["count"])
 
@@ -311,7 +394,7 @@ def _community(c, exclude_owner=None):
 def api_me(handler, user):
     if not user:
         with db() as c:
-            community, owners = _community(c)
+            community, owners = _community(c, anonymous=True)
         return handler._json({"user": None, "configured": bool(secret("GOOGLE_CLIENT_ID")),
                               "included": community, "explore": owners})
     uid = user["id"]
@@ -329,7 +412,8 @@ def api_me(handler, user):
     included = [d for d in community if d["owner_id"] not in muted]
     return handler._json({
         "user": {"id": uid, "name": user["name"], "avatar": user["avatar"], "email": user["email"],
-                 "admin": user.get("admin", False)},
+                 "admin": user.get("admin", False), "displayName": user.get("display_name") or "",
+                 "publicName": public_name(user_row(uid))},
         "prefs": prefs, "mine": mine, "included": included, "explore": owners,
         "usage": {"today": usage_today(uid), "limit": DAILY_LIMIT}, "queued": queued,
     })
@@ -345,6 +429,10 @@ def api_prefs(handler, user, req):
         prefs["hideBase"] = bool(req["hideBase"])
     if "muted" in req and isinstance(req["muted"], list):
         prefs["muted"] = [str(x)[:64] for x in req["muted"]][:500]
+    if "displayName" in req:
+        dn = re.sub(r"\s+", " ", str(req["displayName"] or "")).strip()[:40]
+        with db() as c:
+            c.execute("UPDATE users SET display_name=? WHERE id=?", (dn or None, user["id"]))
     with db() as c:
         c.execute("INSERT INTO prefs(user_id,hidden,hide_base,muted) VALUES(?,?,?,?) "
                   "ON CONFLICT(user_id) DO UPDATE SET hidden=excluded.hidden, "
@@ -437,6 +525,9 @@ def api_dish_action(handler, user, did, req):
     action = req.get("action")
     with db() as c:
         if action == "setVisibility" and req.get("visibility") in ("public", "private"):
+            if req["visibility"] == "public" and int(r["creator_ok"] or 0) == -1 and not user.get("admin"):
+                return handler._json({"error": "creator_removed",
+                                      "message": "היוצר/ת ביקש/ה להסיר את המנה הזו מהקהילה"}, 403)
             c.execute("UPDATE dishes SET visibility=?, updated_at=? WHERE id=?",
                       (req["visibility"], now_iso(), did))
         elif action == "delete":
@@ -465,7 +556,11 @@ def api_dish_action(handler, user, did, req):
         else:
             return handler._json({"error": "unknown action"}, 400)
         row = c.execute("SELECT * FROM dishes WHERE id=?", (did,)).fetchone()
-    return handler._json({"ok": True, "dish": _dish_public(row)})
+    out = {"ok": True, "dish": _dish_public(row)}
+    if action == "setVisibility" and req.get("visibility") == "public" and int(row["creator_ok"] or 0) != 1:
+        out["creator_message"] = creator_message(did, json.loads(row["he"] or "{}"), json.loads(row["en"] or "{}"),
+                                                 base_url(handler))
+    return handler._json(out)
 
 
 def api_bulk_visibility(handler, user, req):
@@ -479,16 +574,82 @@ def api_bulk_visibility(handler, user, req):
     return handler._json({"ok": True})
 
 
+# --- creator claims (public, no login): approve = pending admin review; remove = immediate ---
+def api_claim(handler, did, req):
+    action = req.get("action")
+    if action not in ("approve", "remove"):
+        return handler._json({"error": "bad action"}, 400)
+    email = str(req.get("email") or "").strip()[:200]
+    note = str(req.get("note") or "").strip()[:1000]
+    with db() as c:
+        r = c.execute("SELECT * FROM dishes WHERE id=?", (did,)).fetchone()
+        if not r:
+            return handler._json({"error": "not found"}, 404)
+        recent = c.execute("SELECT COUNT(*) FROM claims WHERE dish_id=? AND created_at>?",
+                           (did, (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)).isoformat())).fetchone()[0]
+        if recent >= 5:
+            return handler._json({"error": "too many"}, 429)
+        cid = "c" + secrets.token_hex(6)
+        c.execute("INSERT INTO claims(id,dish_id,action,email,note,status,created_at) VALUES(?,?,?,?,?,?,?)",
+                  (cid, did, action, email, note, "pending", now_iso()))
+        if action == "remove" and int(r["creator_ok"] or 0) != 1:
+            # interim: hide from anonymous visitors right away; members keep it until the admin verifies
+            c.execute("UPDATE dishes SET creator_ok=-2, updated_at=? WHERE id=?", (now_iso(), did))
+    log(f"claim {cid} {action} on {did} ({email})")
+    return handler._json({"ok": True, "id": cid, "status": "pending"})
+
+
+def api_admin_claims(handler, user):
+    if not user or not user.get("admin"):
+        return handler._json({"error": "forbidden"}, 403)
+    with db() as c:
+        rows = [dict(r) for r in c.execute(
+            "SELECT cl.*, d.he, d.source_url, d.visibility, d.creator_ok FROM claims cl LEFT JOIN dishes d ON d.id=cl.dish_id "
+            "ORDER BY cl.status='pending' DESC, cl.created_at DESC LIMIT 200")]
+    for r in rows:
+        try:
+            r["dish_name"] = (json.loads(r.pop("he") or "{}")).get("name")
+        except Exception:
+            r["dish_name"] = None
+    return handler._json({"ok": True, "claims": rows})
+
+
+def api_admin_claim_decide(handler, user, req):
+    if not user or not user.get("admin"):
+        return handler._json({"error": "forbidden"}, 403)
+    cid, decision = str(req.get("id") or ""), req.get("decision")
+    if decision not in ("approve", "deny"):
+        return handler._json({"error": "bad decision"}, 400)
+    with db() as c:
+        cl = c.execute("SELECT * FROM claims WHERE id=?", (cid,)).fetchone()
+        if not cl:
+            return handler._json({"error": "not found"}, 404)
+        c.execute("UPDATE claims SET status=?, decided_at=? WHERE id=?",
+                  ("approved" if decision == "approve" else "denied", now_iso(), cid))
+        if cl["action"] == "approve":
+            if decision == "approve":
+                c.execute("UPDATE dishes SET creator_ok=1, updated_at=? WHERE id=?", (now_iso(), cl["dish_id"]))
+        else:  # removal request
+            if decision == "approve":   # verified creator → private + blocked from re-publishing
+                c.execute("UPDATE dishes SET visibility='private', creator_ok=-1, updated_at=? WHERE id=?",
+                          (now_iso(), cl["dish_id"]))
+            else:                       # bogus request → restore
+                c.execute("UPDATE dishes SET creator_ok=CASE WHEN creator_ok=-2 THEN 0 ELSE creator_ok END, "
+                          "updated_at=? WHERE id=?", (now_iso(), cl["dish_id"]))
+    return handler._json({"ok": True})
+
+
 # --- admin: moderation list (all user dishes with owner info) ---
 def api_admin_dishes(handler, user):
     if not user or not user.get("admin"):
         return handler._json({"error": "forbidden"}, 403)
     with db() as c:
         rows = []
-        for r in c.execute("SELECT d.*, u.name AS oname, u.email AS oemail, u.avatar AS oavatar FROM dishes d "
+        for r in c.execute("SELECT d.*, u.name AS oname, u.display_name, u.email AS oemail, u.avatar AS oavatar FROM dishes d "
                            "LEFT JOIN users u ON u.id=d.owner_id ORDER BY d.visibility='public' DESC, d.created_at DESC"):
             d = _dish_public(r)
-            d["owner"] = {"id": r["owner_id"], "name": r["oname"], "email": r["oemail"], "avatar": r["oavatar"]}
+            d["owner"] = {"id": r["owner_id"], "name": r["oname"], "email": r["oemail"], "avatar": r["oavatar"],
+                          "public_name": public_name(r, "oname")}
             rows.append(d)
     return handler._json({"ok": True, "dishes": rows})
 
@@ -503,7 +664,8 @@ def api_admin_queue(handler, user):
             "SELECT d.*, u.name, u.email FROM dishes d JOIN users u ON u.id=d.owner_id "
             "WHERE d.status IN ('queued','failed') ORDER BY d.created_at")]
         processing = c.execute("SELECT COUNT(*) FROM dishes WHERE status='processing'").fetchone()[0]
-    return handler._json({"ok": True, "queue": rows, "processing": processing})
+        claims = [dict(r) for r in c.execute("SELECT id, dish_id, action, email, created_at FROM claims WHERE status='pending'")]
+    return handler._json({"ok": True, "queue": rows, "processing": processing, "claims": claims})
 
 
 def api_admin_fill(handler, user, req):
@@ -962,6 +1124,18 @@ color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85r
 .origlink{margin-top:22px;padding-top:14px;border-top:1px dashed var(--line);font-size:.85rem;color:var(--muted);line-height:1.5;word-break:break-all}
 .origlink a{color:var(--accent-dark)}
 .owner{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
+.dimg iframe{width:100%;aspect-ratio:9/16;max-height:560px;border:0;background:#111;display:block}
+@media(min-width:1020px){.dimg iframe{height:100%;max-height:none;aspect-ratio:auto}}
+.creator{margin-top:18px;padding:14px 16px;border-radius:12px;background:#f7f2ea;border:1px solid var(--line);font-size:.9rem;line-height:1.6}
+.creator b{color:var(--accent-dark)}
+.creator .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.creator button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;cursor:pointer;font-family:inherit;font-size:.88rem;color:var(--ink)}
+.creator button.ok{background:#e4f3e4;border-color:#bfe0c1;color:#2f6b34}
+.creator button.rm{color:#a53a2c;border-color:#f0c9c2}
+.creator form{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.creator input,.creator textarea{border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-family:inherit;font-size:.9rem;color:var(--ink)}
+.creator .done{color:#2f6b34;font-weight:600}
+.creator .approved{color:#2f6b34}
 .owner img{width:22px;height:22px;border-radius:50%}
 @media(min-width:1020px){
 html,body{height:100%;overflow:hidden}
@@ -985,6 +1159,10 @@ T = {
            "make_public": "🌍 הפוך לציבורי", "make_private": "🔒 הפוך לפרטי", "delete": "🗑 מחיקה",
            "confirm": "למחוק את המנה לצמיתות?", "home": "/", "other": "/d/{id}?lang=en", "flag": "🇺🇸",
            "processing": "המנה עדיין בהכנה…", "failed": "העיבוד נכשל", "queued": "ממתין לטיפול ידני של אידו",
+           "cr_title": "🎬 הסרטון והמתכון מאת", "cr_q": "אתם היוצרים של הסרטון?", "cr_ok": "✅ מאשר/ת את הפרסום", "cr_rm": "🚫 בקשת הסרה",
+           "cr_email": "אימייל (לא חובה, לאישור חוזר)", "cr_note": "הערה (לא חובה)", "cr_send": "שליחה", "cr_cancel": "ביטול",
+           "cr_thanks_ok": "תודה! האישור נרשם וייאושר סופית על ידי מנהל האתר.", "cr_thanks_rm": "תודה, הבקשה נרשמה. המנה הוסתרה ממבקרי האתר, ומנהל האתר יאמת ויסיר אותה מהקהילה בדרך כלל תוך יום.", "cr_pending_rm": "⏳ בקשת הסרה מהיוצר/ת בבדיקה",
+           "cr_approved": "✅ הפרסום אושר על ידי היוצר/ת", "cr_embed_note": "הסרטון מוצג מהמקור. חברי הקהילה המחוברים רואים נגן מקומי.",
            "diet_cls": {"בשרי": "diet-meat", "דגים": "diet-fish", "צמחוני": "diet-veg"},
            "diet_emoji": {"בשרי": "🥩", "דגים": "🐟", "צמחוני": "🥦"}, "dir": "rtl", "lang": "he"},
     "en": {"back": "← Back to all recipes 🍳", "by": "By", "ing": "🧺 Ingredients", "steps": "👨‍🍳 Instructions",
@@ -993,6 +1171,10 @@ T = {
            "confirm": "Delete this dish permanently?", "home": "/en.html", "other": "/d/{id}", "flag": "🇮🇱",
            "processing": "This dish is still being prepared…", "failed": "Processing failed",
            "queued": "Waiting for Eedo's manual pipeline",
+           "cr_title": "🎬 Video and recipe by", "cr_q": "Are you the creator of this video?", "cr_ok": "✅ I approve publishing", "cr_rm": "🚫 Request removal",
+           "cr_email": "Email (optional, for confirmation)", "cr_note": "Note (optional)", "cr_send": "Send", "cr_cancel": "Cancel",
+           "cr_thanks_ok": "Thank you! Your approval is recorded and will be confirmed by the site admin.", "cr_thanks_rm": "Thank you, your request is recorded. The dish is hidden from visitors, and the site admin will verify and remove it from the community, usually within a day.", "cr_pending_rm": "⏳ Creator removal request under review",
+           "cr_approved": "✅ Publishing approved by the creator", "cr_embed_note": "Video shown from the original source. Signed-in members see a local player.",
            "diet_cls": {"Meat": "diet-meat", "Fish": "diet-fish", "Vegetarian": "diet-veg"},
            "diet_emoji": {"Meat": "🥩", "Fish": "🐟", "Vegetarian": "🥦"}, "dir": "ltr", "lang": "en"},
 }
@@ -1003,12 +1185,15 @@ def dish_page(handler, user, did, qs):
     t = T[lang]
     e = _html.escape
     with db() as c:
-        r = c.execute("SELECT d.*, u.name AS oname, u.avatar AS oavatar FROM dishes d "
+        r = c.execute("SELECT d.*, u.name AS oname, u.display_name, u.avatar AS oavatar FROM dishes d "
                       "LEFT JOIN users u ON u.id=d.owner_id WHERE d.id=?", (did,)).fetchone()
     if not r:
         return handler._html(f"<!doctype html><meta charset=utf-8><p style='font-family:sans-serif;padding:40px'>"
                              f"Dish not found. <a href='/'>Cookin</a></p>", "no-store")
     is_owner = bool(user) and (user["id"] == r["owner_id"] or user.get("admin"))
+    if user is None and int(r["creator_ok"] or 0) == -2 and r["visibility"] == "public":
+        return handler._html("<!doctype html><meta charset=utf-8><p style='font-family:sans-serif;padding:40px'>"
+                             "This dish is under review following a creator request. <a href='/'>Cookin</a></p>", "no-store")
     if r["visibility"] != "public" and not is_owner:
         handler.send_response(302)
         handler.send_header("Location", "/auth/login?next=" + urllib.parse.quote(handler.path))
@@ -1035,8 +1220,18 @@ def dish_page(handler, user, did, qs):
 <div class="dish"><div class="dhead"><h1>{msg}</h1>{err}<div class="dsub">{e(r['source_url'] or '')}</div></div></div></div>
 <script>{_ACT_JS}</script></body></html>"""
         return handler._html(body, "no-store")
-    hero = (f'<video controls playsinline preload="metadata" poster="/images/{did}.jpg" src="/videos/{did}.mp4"></video>'
-            if r["has_video"] else f'<img src="/images/{did}.jpg" alt="">')
+    # Visitors (not signed in) get the official embed unless the creator approved; members get the rehosted video.
+    creator_ok = int(r["creator_ok"] or 0)
+    emb = embed_url(r["source_url"])
+    show_local = bool(r["has_video"]) and (user is not None or creator_ok == 1)
+    embed_note = ""
+    if show_local:
+        hero = f'<video controls playsinline preload="metadata" poster="/images/{did}.jpg" src="/videos/{did}.mp4"></video>'
+    elif emb:
+        hero = f'<iframe src="{e(emb)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>'
+        embed_note = f'<div class="dsub">{t["cr_embed_note"]}</div>'
+    else:
+        hero = f'<img src="/images/{did}.jpg" alt="">'
     ing = "\n".join(f'<div class="ing-group">{e(l["group"])}</div>' if l.get("group") else f'<li>{e(l.get("text", ""))}</li>'
                     for l in rec.get("ingredientLines", []))
     steps = "\n".join(f"<li><span>{e(s)}</span></li>" for s in rec.get("steps", []))
@@ -1048,8 +1243,23 @@ def dish_page(handler, user, did, qs):
     owner_html = ""
     if r["oname"]:
         av = f'<img src="{e(r["oavatar"])}" alt="" referrerpolicy="no-referrer">' if r["oavatar"] else ""
-        owner_html = f'<div class="owner">{av}<span>{e(r["oname"])}</span></div>'
+        shown = r["oname"] if (user and user.get("admin")) else public_name(r, "oname")
+        owner_html = f'<div class="owner">{av}<span>{e(shown)}</span></div>'
     src = r["source_url"] or ""
+    if creator_ok == 1:
+        creator_block = f'<div class="approved">{t["cr_approved"]}</div>'
+    elif creator_ok == -2:
+        creator_block = f'<div>{t["cr_pending_rm"]}</div>'
+    else:
+        creator_block = (
+            f'<div>{t["cr_q"]}</div>'
+            f'<div class="btns"><button class="ok" onclick="claimForm(\'approve\')">{t["cr_ok"]}</button>'
+            f'<button class="rm" onclick="claimForm(\'remove\')">{t["cr_rm"]}</button></div>'
+            f'<form id="claimf" style="display:none" onsubmit="return sendClaim(event)">'
+            f'<input type="email" id="clEmail" placeholder="{t["cr_email"]}"><textarea id="clNote" rows="2" placeholder="{t["cr_note"]}"></textarea>'
+            f'<div class="btns"><button type="submit" class="ok" id="clSend">{t["cr_send"]}</button>'
+            f'<button type="button" onclick="document.querySelector(\'#claimf\').style.display=\'none\'">{t["cr_cancel"]}</button></div>'
+            f'</form><div id="claimDone" class="done"></div>')
     body = f"""<!DOCTYPE html>
 <html lang="{t['lang']}" dir="{t['dir']}">
 <head>
@@ -1072,6 +1282,7 @@ def dish_page(handler, user, did, qs):
         <div class="dsub">{meta}</div>
         <div><span class="badge {cls}">{emoji} {e(diet)}</span><span class="badge">{e(rec.get('category', ''))}</span></div>
         {owner_html}
+        {embed_note}
         {f'<div class="dnote">{e(rec["intro"])}</div>' if rec.get('intro') else ''}
       </div>
       <div class="dbody">
@@ -1080,6 +1291,10 @@ def dish_page(handler, user, did, qs):
           <h3>{t['steps']}</h3><ol class="steps">{steps}</ol>
           {f'<div class="tips"><b>{t["tips"]}</b> {e(rec["tips"])}</div>' if rec.get('tips') else ''}
           <div class="origlink">{t['orig']} <a href="{e(src)}" target="_blank" rel="noopener">{e(src.replace('https://www.', ''))}</a></div>
+          <div class="creator" id="creator">
+            <div><b>{t['cr_title']} {e(rec.get('creator', '') or '')}</b> · <a href="{e(src)}" target="_blank" rel="noopener">{e(src.replace('https://www.', ''))}</a></div>
+            {creator_block}
+          </div>
         </div>
       </div>
     </div>
@@ -1092,6 +1307,23 @@ def dish_page(handler, user, did, qs):
 
 
 _ACT_JS = """
+let claimAction = null;
+function claimForm(a){ claimAction = a; const f = document.querySelector('#claimf'); f.style.display = 'flex'; f.scrollIntoView({block:'nearest'}); }
+async function sendClaim(ev){
+  ev.preventDefault();
+  const id = location.pathname.split('/').pop();
+  const b = document.querySelector('#clSend'); b.disabled = true;
+  const r = await fetch('/api/claim/'+id, {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action: claimAction, email: document.querySelector('#clEmail').value, note: document.querySelector('#clNote').value})});
+  const j = await r.json();
+  const lang = document.documentElement.lang;
+  const ok = {he:'תודה! האישור נרשם וייאושר סופית על ידי מנהל האתר.', en:'Thank you! Your approval is recorded and will be confirmed by the site admin.'};
+  const rm = {he:'תודה, הבקשה נרשמה. המנה הוסתרה ממבקרי האתר, ומנהל האתר יאמת ויסיר אותה מהקהילה בדרך כלל תוך יום.', en:'Thank you, your request is recorded. The dish is hidden from visitors, and the site admin will verify and remove it from the community, usually within a day.'};
+  document.querySelector('#claimf').style.display = 'none';
+  document.querySelectorAll('.creator .btns button.ok, .creator .btns button.rm').forEach(x => x.disabled = true);
+  document.querySelector('#claimDone').textContent = j.ok ? (claimAction === 'remove' ? rm[lang] || rm.he : ok[lang] || ok.he) : (j.error || 'error');
+  return false;
+}
 async function act(action, visibility){
   const id = location.pathname.split('/').pop();
   const r = await fetch('/api/dishes/'+id, {method:'POST', headers:{'Content-Type':'application/json'},
@@ -1118,6 +1350,8 @@ def handle_get(handler, path, qs):
         api_admin_queue(handler, current_user(handler)); return True
     if path == "/api/admin/dishes":
         api_admin_dishes(handler, current_user(handler)); return True
+    if path == "/api/admin/claims":
+        api_admin_claims(handler, current_user(handler)); return True
     if path.startswith("/d/"):
         did = path[3:].strip("/")
         if re.fullmatch(r"u[0-9a-f]{10}", did):
@@ -1138,6 +1372,12 @@ def handle_post(handler, path, qs, read_json):
         api_dish_action(handler, current_user(handler), path.rsplit("/", 1)[1], read_json()); return True
     if path == "/api/admin/fill":
         api_admin_fill(handler, current_user(handler), read_json()); return True
+    if path == "/api/admin/claim":
+        api_admin_claim_decide(handler, current_user(handler), read_json()); return True
+    if path.startswith("/api/claim/"):
+        did = path.rsplit("/", 1)[1]
+        if re.fullmatch(r"u[0-9a-f]{10}", did):
+            api_claim(handler, did, read_json()); return True
     return False
 
 
