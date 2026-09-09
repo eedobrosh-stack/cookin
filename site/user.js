@@ -111,7 +111,7 @@ header{z-index:60 !important}
 .ubadge .uinit{width:16px;height:16px;border-radius:50%;font-size:.6rem}
 label.uchk{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem}
 .gbtn{display:inline-flex;align-items:center;gap:8px}
-.cat.community{border-color:#7a8fb8;color:#2f4a7a;background:#eef2fa}
+.cat.community{border-color:#7a8fb8;color:#2f4a7a;background:#eef2fa;margin-inline-start:auto}
 .cat.community.active{background:#2f4a7a;border-color:#2f4a7a;color:#fff}
 .ucomm{margin-top:34px;padding-top:22px;border-top:1px solid var(--line)}
 .ucomm h2{font-size:1.25rem;margin-bottom:4px}
