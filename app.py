@@ -509,6 +509,33 @@ JARCUD_ARTIFACTS = """<!doctype html>
 """
 
 
+PRIVACY_HTML = """<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cookin — פרטיות / Privacy</title>
+<style>body{font-family:-apple-system,"Segoe UI",Rubik,Arial,sans-serif;background:#faf7f2;color:#2b2420;margin:0;padding:32px 20px 60px}
+.w{max-width:760px;margin:0 auto;background:#fff;border:1px solid #eee5d8;border-radius:18px;padding:28px 30px;line-height:1.7}
+h1{font-size:1.5rem;margin:0 0 6px}h2{font-size:1.1rem;color:#c05f28;margin:26px 0 8px}p,li{font-size:.97rem}a{color:#c05f28}
+section[dir=ltr]{border-top:1px dashed #eee5d8;margin-top:28px;padding-top:18px;text-align:left}</style></head><body><div class="w">
+<h1>🍳 Cookin — מדיניות פרטיות</h1>
+<p>Cookin הוא ספר מתכונים משפחתי (cookin.jarcud.com) שמופעל על ידי אידו ברוש כפרויקט אישי, ללא מטרות רווח וללא פרסומות.</p>
+<h2>מה נשמר כשמתחברים עם Google</h2>
+<ul><li>השם, כתובת האימייל ותמונת הפרופיל של חשבון Google, כפי ש-Google מספקת אותם, כדי לזהות אתכם ולהציג את שמכם ליד מנות שבחרתם לפרסם.</li>
+<li>המנות שהוספתם (קישור המקור, הסרטון, התמונה, המתכון שנוצר) וההגדרות שלכם: מנות שהסתרתם, מנות ציבוריות/פרטיות ומקורות שכללתם.</li>
+<li>מונה יומי של מנות שנוספו (מכסה של 5 ביום).</li></ul>
+<h2>מה לא נעשה</h2>
+<ul><li>לא מוכרים ולא משתפים מידע עם צד שלישי. הסרטון של מנה חדשה נשלח ל-Google Gemini לצורך כתיבת המתכון בלבד ונמחק משם מיד לאחר מכן.</li>
+<li>לא שולחים מיילים, לא מבקשים הרשאות מעבר לפרופיל בסיסי (שם, אימייל, תמונה).</li></ul>
+<h2>שליטה ומחיקה</h2>
+<p>מנות פרטיות נראות רק לכם. אפשר למחוק כל מנה בכל רגע מהמסך ⚙️. למחיקת החשבון וכל המידע — שלחו מייל ל-<a href="mailto:eedo.brosh@gmail.com">eedo.brosh@gmail.com</a>.</p>
+<section dir="ltr"><h1>Privacy Policy (English)</h1>
+<p>Cookin (cookin.jarcud.com) is a personal, non-commercial family recipe book run by Eedo Brosh.</p>
+<p><b>When you sign in with Google</b> we store your Google name, email address and profile picture (to identify you and show your name next to dishes you choose to publish), the dishes you add (source link, video, thumbnail, generated recipe), your preferences (hidden dishes, public/private flags, included sources) and a daily counter of added dishes (limit 5/day).</p>
+<p><b>We do not</b> sell or share data with third parties. The video of a new dish is sent to Google Gemini only to write the recipe and is deleted there right after. We request only basic profile scopes (openid, email, profile) and never send emails.</p>
+<p><b>Your control:</b> private dishes are visible only to you; delete any dish from the ⚙️ screen at any time. To delete your account and all data, email <a href="mailto:eedo.brosh@gmail.com">eedo.brosh@gmail.com</a>.</p>
+<p>Last updated: September 9, 2026.</p></section>
+</div></body></html>"""
+
+
 class _LimitedFile:
     """File wrapper that stops after `remaining` bytes (for HTTP 206 responses)."""
     def __init__(self, f, remaining):
@@ -794,6 +821,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if p == "/healthz":
             self._json({"ok": True})
+            return
+        if p in ("/privacy", "/privacy/", "/terms", "/terms/"):
+            self._html(PRIVACY_HTML)
             return
         if p == "/api/family":
             with LOCK:
