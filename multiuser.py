@@ -25,7 +25,7 @@ SECRETS_PATH = os.path.join(DATA_DIR, "secrets.json")
 TZ = ZoneInfo("Asia/Jerusalem")
 DAILY_LIMIT = int(os.environ.get("COOKIN_DAILY_LIMIT", "5"))
 SESSION_DAYS = 90
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 MAX_VIDEO_MB = 200
 COOKIE = "cookin_sid"
 LOG_PATH = os.path.join(DATA_DIR, "multiuser.log")
@@ -517,15 +517,20 @@ def _clean_lang(d, lang):
     cats = CATS_HE if lang == "he" else CATS_EN
     diets = DIET_HE if lang == "he" else DIET_EN
     s = lambda k, n=300: str(d.get(k) or "").strip()[:n]
-    lines = []
+    lines, last_group = [], None
     for l in (d.get("ingredientLines") or [])[:80]:
         if isinstance(l, dict):
-            if l.get("group"):
-                lines.append({"group": str(l["group"])[:120]})
-            elif l.get("text"):
-                lines.append({"text": str(l["text"])[:300]})
+            g = str(l.get("group") or "").strip()[:120]
+            t = str(l.get("text") or "").strip()[:300]
+            # Gemini tends to repeat the group on every line: emit a header only when it changes
+            if g and g != last_group:
+                lines.append({"group": g}); last_group = g
+            if t:
+                lines.append({"text": t})
         elif isinstance(l, str) and l.strip():
             lines.append({"text": l.strip()[:300]})
+    if len(lines) == 1 and "group" in lines[0]:
+        lines = []
     steps = [str(x).strip()[:600] for x in (d.get("steps") or [])[:40] if str(x).strip()]
     cat = s("category")
     if cat not in cats:
