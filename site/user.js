@@ -24,6 +24,8 @@ const S = LANG === "he" ? {
 <p><b>ייצוא מלא של כל השמורים (פייסבוק):</b> פייסבוק ← הגדרות ופרטיות ← הגדרות ← <b>מרכז החשבונות</b> ← המידע וההרשאות שלך ← <b>הורדת המידע שלך</b> ← "הורדה או העברה של מידע" ← בוחרים את פרופיל הפייסבוק ← "מידע מסוים" ← מסמנים <b>פריטים שמורים ואוספים</b> (Saved items and collections) ← פורמט <b>JSON</b>, טווח "כל הזמן" ← יוצרים קבצים. אחרי כמה דקות מגיע מייל עם ZIP; מחלצים ומעלים כאן את הקובץ <code>saved_items_and_collections.json</code> (או את כל ה-ZIP המחולץ, קובץ אחר קובץ) בכפתור "ייבוא מקובץ".</p>
 <p><b>אינסטגרם:</b> אותו מסלול במרכז החשבונות ← בוחרים את חשבון האינסטגרם ← "מידע מסוים" ← <b>שמורים</b> (Saved) ← JSON. הקובץ הוא <code>saved/saved_posts.json</code>. שימו לב: אינסטגרם חוסמת לפעמים הורדת סרטונים ללא התחברות — מנות כאלה ייכנסו לתור של אידו במקום להיכשל.</p>
 <p>הקובץ נקרא רק בדפדפן שלכם: שולפים ממנו את הקישורים ומדביקים אותם בתיבה למעלה. המכסה היומית (15 מנות ביום) נשמרת — השאר פשוט לא ייכנסו, אפשר להדביק שוב מחר.</p>`,
+  submitted:n=>`${n===1?"המנה נשלחה":"המנות נשלחו"} להכנה ⏳ בדרך כלל זה לוקח דקה-שתיים. אם העיבוד האוטומטי לא יצליח, המנה תעבור לתור של אידו ותתווסף ידנית מאוחר יותר.`,
+  queuedNote:"ממתין לטיפול של אידו — המנה תתווסף ידנית בהמשך",
   bulkResult:(a,l,d)=>`נוספו ${a} מנות` + (l?` · ${l} לא נוספו (מכסה יומית)`:"") + (d?` · ${d} כבר קיימות`:""),
 } : {
   signin:"Sign in", signout:"Sign out", add:"➕ New dish", settings:"⚙️ My dishes & sources",
@@ -44,6 +46,8 @@ const S = LANG === "he" ? {
 <p><b>Full export of everything you saved (Facebook):</b> Facebook → Settings & privacy → Settings → <b>Accounts Center</b> → Your information and permissions → <b>Download your information</b> → "Download or transfer information" → pick your Facebook profile → "Some of your information" → tick <b>Saved items and collections</b> → format <b>JSON</b>, date range "All time" → Create files. A few minutes later you get an email with a ZIP; unzip it and upload <code>saved_items_and_collections.json</code> (or any file from the unzipped folder, one at a time) with the "Import from an export file" button.</p>
 <p><b>Instagram:</b> same path in Accounts Center → pick the Instagram account → "Some of your information" → <b>Saved</b> → JSON. The file is <code>saved/saved_posts.json</code>. Note: Instagram sometimes blocks anonymous video downloads; those dishes go to Eedo's queue instead of failing.</p>
 <p>The file is read only in your browser: the links are extracted and pasted into the box above. The daily cap (15 dishes a day) still applies; the rest are simply not added, paste again tomorrow.</p>`,
+  submitted:n=>`${n===1?"Dish sent":"Dishes sent"} for preparation ⏳ It usually takes a minute or two. If automatic processing fails, the dish goes to Eedo's queue and is added manually later.`,
+  queuedNote:"Waiting for Eedo — this dish will be added manually later",
   bulkResult:(a,l,d)=>`Added ${a} dishes` + (l?` · ${l} not added (daily cap)`:"") + (d?` · ${d} already existed`:""),
 };
 
@@ -101,6 +105,7 @@ header{z-index:60 !important}
 .uitem img.av{width:32px;height:32px;border-radius:50%}
 label.uchk{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem}
 .gbtn{display:inline-flex;align-items:center;gap:8px}
+#utoast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-size:.92rem;line-height:1.5;max-width:min(560px,92vw);z-index:120;box-shadow:var(--shadow);display:none;text-align:center}
 .gbtn svg{width:16px;height:16px}
 `;
 const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
@@ -133,6 +138,12 @@ window.cardClass = function(r){
   if(r._status === "failed") return " ufail";
   return "";
 };
+function toast(msg, ms){
+  let t = document.querySelector("#utoast");
+  if(!t){ t = document.createElement("div"); t.id = "utoast"; document.body.appendChild(t); }
+  t.textContent = msg; t.style.display = "block";
+  clearTimeout(t._h); t._h = setTimeout(() => { t.style.display = "none"; }, ms || 7000);
+}
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
 async function api(url, body, method){
@@ -159,7 +170,7 @@ function applyDishes(){
     r._user = true; r._mine = mine; r._status = d.status; r._vis = d.visibility; r._owner = d.owner || null;
     if(d.status !== "ready"){
       r.name = d.status === "failed" ? S.failed : (d.status === "queued" ? S.queued : S.processing);
-      r.creator = (d.source_url||"").replace(/^https?:\/\/(www\.)?/,"").slice(0,40);
+      r.creator = d.status === "queued" ? S.queuedNote : (d.source_url||"").replace(/^https?:\/\/(www\.)?/,"").slice(0,40);
     }
     if(d.has_video && typeof LOCAL_VIDEOS !== "undefined") LOCAL_VIDEOS.add(d.id);
     RECIPES.push(r);
@@ -288,6 +299,7 @@ window.cookinSubmit = async function(){
   try {
     const r = await api("/api/dishes", {urls});
     await refresh();
+    if(r.added) toast(S.submitted(r.added), 9000);
     if(urls.length === 1 && r.added === 1){ cookinClose(); window.scrollTo({top:0}); return; }
     msg.style.color = "var(--muted)"; msg.textContent = S.bulkResult(r.added, r.skipped_limit, r.skipped_dupe);
     document.querySelector("#uurl").value = "";
@@ -304,10 +316,11 @@ function renderSettings(){
     <div class="uitem">
       <img src="/images/${d.id}.jpg" alt="" onerror="this.style.visibility='hidden'">
       <div class="t"><div class="n"><a href="/d/${d.id}${LANG==='en'?'?lang=en':''}" style="color:inherit;text-decoration:none">${esc(nameOf(d))}</a></div>
-        <div class="m">${d.status === "ready" ? (d.visibility === "public" ? S.pub : S.priv) : esc(d.error||"")}</div></div>
+        <div class="m">${d.status === "ready" ? (d.visibility === "public" ? S.pub : S.priv) : (d.status === "queued" ? S.queuedNote + (ME.user.admin && d.error ? " · " + esc(d.error) : "") : esc(d.error||""))}</div></div>
       <div class="a">
         ${d.status === "ready" ? `<button class="mini ${d.visibility==='public'?'on':''}" onclick="cookinDish('${d.id}','setVisibility','${d.visibility==='public'?'private':'public'}')">${d.visibility==='public'?S.makePriv:S.makePub}</button>` : ""}
         ${d.status === "failed" ? `<button class="mini" onclick="cookinDish('${d.id}','retry')">${S.retry}</button><button class="mini" onclick="cookinDish('${d.id}','queue')">${S.toQueue}</button>` : ""}
+        ${d.status === "queued" && ME.user.admin ? `<button class="mini" onclick="cookinDish('${d.id}','retry')">${S.retry}</button>` : ""}
         ${d.status !== "processing" ? `<button class="mini danger" onclick="if(confirm('${S.confirmDel}'))cookinDish('${d.id}','delete')">${S.del}</button>` : ""}
       </div>
     </div>`).join("") : `<div class="hint">${S.noMine}</div>`;

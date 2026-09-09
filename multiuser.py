@@ -110,6 +110,8 @@ def init():
         c.executescript(SCHEMA)
     # resume dishes interrupted by a redeploy
     with db() as c:
+        c.execute("UPDATE dishes SET status='processing', error=NULL WHERE status IN ('failed','queued') "
+                  "AND error LIKE '%No module named%'")
         rows = c.execute("SELECT id FROM dishes WHERE status='processing'").fetchall()
     for r in rows:
         start_processing(r["id"])
@@ -605,8 +607,10 @@ def _process_wrapper(did):
             c.execute("UPDATE dishes SET status='queued', error=?, updated_at=? WHERE id=?",
                       ("Gemini budget exhausted — sent to Eedo's manual queue", now_iso(), did))
     except Exception as e:
-        log(f"{did} FAILED: {e}\n{traceback.format_exc()}")
-        _fail(did, str(e)[:500])
+        log(f"{did} FAILED → queued: {e}\n{traceback.format_exc()}")
+        with db() as c:
+            c.execute("UPDATE dishes SET status='queued', error=?, updated_at=? WHERE id=?",
+                      (str(e)[:500], now_iso(), did))
     finally:
         with _LOCK:
             _running.discard(did)
