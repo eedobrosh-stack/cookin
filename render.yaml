@@ -11,4 +11,4 @@ services:
     disk:
       name: cookin-data
       mountPath: /var/data
-      sizeGB: 2
+      sizeGB: 5
