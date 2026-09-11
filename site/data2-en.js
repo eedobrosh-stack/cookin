@@ -148,7 +148,7 @@ RECIPES.push(
   ingredientLines:[
     {text:"1 can coconut milk/cream — unshaken!"},
     {text:"Curry paste (red/green)"},
-    {text:"The rest of your curry ingredients (chicken, vegetables, fish sauce, sugar...)"}
+    {text:"The rest of your curry ingredients (chicken, vegetables, fish sauce, sugar..)"}
   ],
   steps:[
     "Open the coconut can without shaking it — the thick cream sits on top, the water below.",
@@ -378,7 +378,7 @@ RECIPES.push(
   searchAlias:"ספגטי שום-שמנת 'מישלן ביתי'",
   creator:"Feeedmi · Disha Nayak", time:"20 min",
   video:"https://www.facebook.com/reel/1789266455757372",
-  intro:"Reconstructed from the video: garlic infused in olive oil, a pasta-water and Parmesan emulsion, and lots of black pepper.",
+  intro:"Garlic infused in olive oil, a pasta-water and Parmesan emulsion, and lots of black pepper.",
   needs:["pasta","garlic","cream","parmesan","parsley"],
   ingredientLines:[
     {text:"Spaghetti"},
@@ -486,7 +486,7 @@ RECIPES.push(
   searchAlias:"פסטת 'תתחתני איתי' עם עוף (Marry Me)",
   creator:"Vivaldi Restaurant", time:"30 min",
   video:"https://www.facebook.com/reel/1487781258988434",
-  intro:"Reconstructed from the video (the chef keeps his spice blend a secret): seared chicken in a sun-dried tomato cream sauce.",
+  intro:"The chef keeps his spice blend a secret: seared chicken in a sun-dried tomato cream sauce.",
   needs:["chicken","garlic","tomatoes-fresh","cream","parmesan","pasta","basil","stock"],
   ingredientLines:[
     {text:"Chicken breast pieces, seasoned (salt, pepper, paprika)"},
@@ -590,7 +590,7 @@ RECIPES.push(
   searchAlias:"רוטב 3 העגבניות הקרמי (ויראלי)",
   creator:"Comidas Caseras", time:"20 min",
   video:"https://www.facebook.com/reel/1594274705391563",
-  intro:"Reconstructed from the viral video (1.5 million likes): seared tomatoes mashed into a rich sauce with a touch of cream.",
+  intro:"From the viral video (1.5 million likes): seared tomatoes mashed into a rich sauce with a touch of cream.",
   needs:["tomatoes-fresh","garlic","tomato-paste","cream","pasta"],
   ingredientLines:[
     {text:"3 ripe tomatoes, halved"},
@@ -788,7 +788,7 @@ RECIPES.push(
   searchAlias:"פטוצ'יני פורצ'יני וכמהין (Tre Lune)",
   creator:"Tre Lune Restaurant", time:"25 min",
   video:"https://www.facebook.com/reel/1043622271384930",
-  intro:"Reconstructed from the Hollywood restaurant's video: porcini mushrooms, garlic, butter, and the aroma of black truffle.",
+  intro:"From the Hollywood restaurant's video: porcini mushrooms, garlic, butter, and the aroma of black truffle.",
   needs:["pasta","mushrooms","garlic","butter","parsley","parmesan","truffle"],
   ingredientLines:[
     {text:"Fettuccine"},

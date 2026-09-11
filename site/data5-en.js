@@ -72,8 +72,8 @@ RECIPES.push(
 },
 {
   id:"71279", diet:"Meat", image:"71279.jpg", category:"Chicken",
-  name:"Easy Yellow Chicken Curry (Reconstructed)",
-  searchAlias:"קארי עוף צהוב קליל (משוחזר)",
+  name:"Easy Yellow Chicken Curry",
+  searchAlias:"קארי עוף צהוב קליל",
   creator:"foodinfivemins", time:"40 min", serves:"Serves 3",
   video:"https://www.facebook.com/reel/1025871130212335",
   intro:"A high-protein yellow chicken curry with green beans and carrots in coconut milk. 724 calories and 53 grams of protein per serving. Ingredients are from the original caption; the steps are reconstructed from the video.",
@@ -97,6 +97,6 @@ RECIPES.push(
     "Return the chicken to the sauce and cook another 5-8 minutes until the chicken is done and the sauce has thickened.",
     "Serve over rice with fresh chili, cilantro, and crispy fried onions."
   ],
-  tips:"Reconstructed — the full written recipe was gated behind 'comment recipe'. Nutrition per serving: 53 g protein / 25 g fat / 72 g carbs / 724 calories."
+  tips:"The full written recipe was gated behind 'comment recipe'. Nutrition per serving: 53 g protein / 25 g fat / 72 g carbs / 724 calories."
 }
 );

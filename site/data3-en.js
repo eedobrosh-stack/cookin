@@ -15,7 +15,7 @@ RECIPES.push(
   searchAlias:"פסטת שרימפס בשום וצ'ילי קריספ",
   creator:"Chef Fatty", time:"20 min", serves:"Serves 2",
   video:"https://www.facebook.com/reel/1705864810707471",
-  intro:"One pan: a sweet-savory butter, garlic, and chili crisp sauce the pasta cooks right in, with shrimp added at the very end. Reconstructed from the video.",
+  intro:"One pan: a sweet-savory butter, garlic, and chili crisp sauce the pasta cooks right in, with shrimp added at the very end.",
   needs:["pasta","shrimp","butter","garlic","chili-crisp","soy","sugar","scallion"],
   ingredientLines:[
     {text:"200 g spaghetti"},
@@ -35,7 +35,7 @@ RECIPES.push(
     "Add the shrimp and cook 2-3 minutes, until pink.",
     "Finish with scallions and serve immediately."
   ],
-  tips:"Reconstructed from the video (the full recipe was only sent by DM). Thin with a splash of water if the sauce thickens before the pasta is done."
+  tips:"The full recipe was only sent by DM. Thin with a splash of water if the sauce thickens before the pasta is done."
 },
 {
   id:"69476", diet:"Meat", image:"69476.jpg", category:"Beef",
@@ -254,7 +254,7 @@ RECIPES.push(
   searchAlias:"הפסטה של סטיב — שום, תרד ופלפלים חריפים",
   creator:"Vivaldi (Chef Steve)", time:"20 min", serves:"Serves 2",
   video:"https://www.facebook.com/reel/1347402237497272",
-  intro:"\"Not everything has to be super technical\": the chef of Vivaldi throws everything into a cold pan — garlic, mushrooms, pickled hot peppers, and spinach — proving great pasta doesn't need rules. Reconstructed from the video.",
+  intro:"\"Not everything has to be super technical\": the chef of Vivaldi throws everything into a cold pan — garlic, mushrooms, pickled hot peppers, and spinach — proving great pasta doesn't need rules.",
   needs:["pasta","garlic","olive-oil","mushrooms","cherry-peppers","spinach","wine-white","parmesan","parsley"],
   ingredientLines:[
     {text:"Pasta (about 200 g)"},

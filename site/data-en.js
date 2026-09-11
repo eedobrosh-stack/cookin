@@ -919,7 +919,7 @@ const RECIPES = [
   searchAlias:"סיר דגים לשבת (בסגנון צפון-אפריקאי)",
   creator:"Chen koren", time:"45 min",
   video:"https://www.facebook.com/reel/661418020298339",
-  intro:"A free take on Moroccan fish: peppers and garlic are the base, with tomato and chickpeas. (Reconstructed from the video — Chen sends the full steps by DM.)",
+  intro:"A free take on Moroccan fish: peppers and garlic are the base, with tomato and chickpeas. (Chen sends the full steps by DM.)",
   needs:["fish-white","pepper-red","garlic","tomatoes-fresh","coriander"],
   ingredientLines:[
     {text:"White fish steaks (white grouper/mullet — salmon works too)"},
@@ -1015,7 +1015,7 @@ const RECIPES = [
     "Add the red curry paste and bloom it with a quick fry.",
     "Return the beef, add the stock and lime leaves, cover, and cook over low heat for 2.5 hours until the meat falls apart.",
     "Stir in the coconut milk, and finish with the lime juice and Thai basil.",
-    "Serve over rice with the sauce, chopped roasted peanuts, pickled cucumber, and scallions. (Reconstructed from the video + the creator's brother's recipe.)"
+    "Serve over rice with the sauce, chopped roasted peanuts, pickled cucumber, and scallions. (Based on the creator's brother's recipe.)"
   ]
 },
 {
@@ -1083,7 +1083,7 @@ const RECIPES = [
   searchAlias:"עוף עם ענבים בסיר — 'סגורים לחג'",
   creator:"Chen koren", time:"1.5 hrs",
   video:"https://www.facebook.com/reel/951278360535395",
-  intro:"In Chen Koren's signature style: no water — the chicken and grapes cook in their own juices. (Reconstructed from the video.)",
+  intro:"In Chen Koren's signature style: no water — the chicken and grapes cook in their own juices. (.)",
   needs:["chicken","grapes","onion"],
   ingredientLines:[
     {text:"Chicken leg quarters / drumsticks"},

@@ -21,7 +21,7 @@ RECIPES.push(
   name:"עוף מאודה מגורר ברוטב סויה (בסגנון סיני)",
   creator:"chinesefood0805", time:"45 דק'", serves:"3-4 מנות",
   video:"https://www.facebook.com/reel/1498359258449522",
-  intro:"עוף שלם מאודה מעל קערה הפוכה בסיר, מגורר ביד ומולבש ברוטב סויה-שומשום מבריק. משוחזר מהסרטון.",
+  intro:"עוף שלם מאודה מעל קערה הפוכה בסיר, מגורר ביד ומולבש ברוטב סויה-שומשום מבריק.",
   needs:["chicken","ginger","scallion","soy","sesame-oil","sugar","vinegar","garlic"],
   ingredientLines:[
     {text:"עוף שלם קטן או 4-6 כרעיים / חזה עוף על העצם"},

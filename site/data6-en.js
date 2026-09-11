@@ -1013,10 +1013,10 @@ RECIPES.push(
 },
 {
   id:"29260", diet:"Vegetarian", image:"29260.jpg", category:"Pasta",
-  name:"Perfumed Pasta al Limone (Reconstructed)", searchAlias:"פסטה לימונה מבושמת (משוחזר)",
+  name:"Perfumed Pasta al Limone", searchAlias:"פסטה לימונה מבושמת",
   creator:"Haim Cohen", time:"20 min", serves:"Serves 2",
   video:"https://www.facebook.com/reel/3691997067759744",
-  intro:"Haim Cohen's pasta al limone is about the perfume of lemon zest: soft butter mashed with zest, pasta water that makes an emulsion, linguine and Parmigiano. Reconstructed from the video, quantities approximate.",
+  intro:"Haim Cohen's pasta al limone is about the perfume of lemon zest: soft butter mashed with zest, pasta water that makes an emulsion, linguine and Parmigiano. Quantities approximate.",
   needs:["pasta","butter","lemon","salt","parmesan","water"],
   ingredientLines:[
     {text:"250 g linguine"},
@@ -1037,10 +1037,10 @@ RECIPES.push(
 },
 {
   id:"30119", diet:"Vegetarian", image:"30119.jpg", category:"Pasta",
-  name:"Capri Grandpa's Aglio e Olio (Reconstructed)", searchAlias:"אליו אוליו של סבא מקאפרי (משוחזר)",
+  name:"Capri Grandpa's Aglio e Olio", searchAlias:"אליו אוליו של סבא מקאפרי",
   creator:"Cocolarkincooks", time:"20 min", serves:"Serves 4",
   video:"https://www.facebook.com/reel/1486742872816804",
-  intro:"Aglio e olio with the twist an old man in Capri taught: lots of chopped garlic and parsley, dried chili, and, against tradition, two tomatoes and half a cup of dry white wine. Linguine that finishes cooking in the sauce. Great for a large group. Reconstructed from the video.",
+  intro:"Aglio e olio with the twist an old man in Capri taught: lots of chopped garlic and parsley, dried chili, and, against tradition, two tomatoes and half a cup of dry white wine. Linguine that finishes cooking in the sauce. Great for a large group.",
   needs:["pasta","garlic","parsley","olive-oil","chili","tomatoes-fresh","wine-white","salt"],
   ingredientLines:[
     {text:"500 g good linguine"},
@@ -1063,10 +1063,10 @@ RECIPES.push(
 },
 {
   id:"30326", diet:"Vegetarian", image:"30326.jpg", category:"Pasta",
-  name:"Penne all'Arrabbiata Two Ways (Reconstructed)", searchAlias:"פנה אראביאטה בשתי דרכים (משוחזר)",
+  name:"Penne all'Arrabbiata Two Ways", searchAlias:"פנה אראביאטה בשתי דרכים",
   creator:"Vivaldi", time:"20 min", serves:"Serves 1-2",
   video:"https://www.facebook.com/reel/1098493439063330",
-  intro:"The Vivaldi restaurant chef makes arrabbiata twice: the home version from whole San Marzano tomatoes crushed and cooked with onion, garlic and fresh chili, and the two-minute restaurant version with ready tomato sauce, garlic, scallion, chili flakes and wine. Reconstructed from the video.",
+  intro:"The Vivaldi restaurant chef makes arrabbiata twice: the home version from whole San Marzano tomatoes crushed and cooked with onion, garlic and fresh chili, and the two-minute restaurant version with ready tomato sauce, garlic, scallion, chili flakes and wine.",
   needs:["pasta","olive-oil","onion","garlic","chili","canned-tomatoes","salt","pepper","scallion","wine-white","parsley"],
   ingredientLines:[
     {group:"Home version"},
@@ -1093,10 +1093,10 @@ RECIPES.push(
 },
 {
   id:"30586", diet:"Vegetarian", image:"30586.jpg", category:"Pasta",
-  name:"Fettuccine Alfredo the Italian Way (Reconstructed)", searchAlias:"פטוצ'יני אלפרדו כמו באיטליה (משוחזר)",
+  name:"Fettuccine Alfredo the Italian Way", searchAlias:"פטוצ'יני אלפרדו כמו באיטליה",
   creator:"Vivaldi", time:"10 min", serves:"Serves 1-2",
   video:"https://www.facebook.com/reel/801303449074728",
-  intro:"A year after the \"North American\" Alfredo that offended Italy, Vivaldi revisit the Italian version: egg tagliatelle, unsalted butter, two-year-old Parmigiano-Reggiano and pasta water, whipped with residual heat only. Reconstructed from the video.",
+  intro:"A year after the \"North American\" Alfredo that offended Italy, Vivaldi revisit the Italian version: egg tagliatelle, unsalted butter, two-year-old Parmigiano-Reggiano and pasta water, whipped with residual heat only.",
   needs:["pasta","butter","parmesan","salt","pepper"],
   ingredientLines:[
     {text:"200 g fresh egg tagliatelle / fettuccine"},
@@ -1116,10 +1116,10 @@ RECIPES.push(
 },
 {
   id:"30969", diet:"Meat", image:"30969.jpg", category:"Beef",
-  name:"Easy Oven Sofrito (Reconstructed)", searchAlias:"סופריטו קל בתנור (משוחזר)",
+  name:"Easy Oven Sofrito", searchAlias:"סופריטו קל בתנור",
   creator:"Chen Koren", time:"3 hrs", serves:"Serves 6",
   video:"https://www.facebook.com/reel/1190143849640375",
-  intro:"\"All the work ends at the supermarket\": beef cubes, whole baby potatoes and quartered red onion in an open pot on the stove until everything is charred, then water, parsley, a lid and the oven. Sofrito without all the frying. Reconstructed from the video, quantities approximate.",
+  intro:"\"All the work ends at the supermarket\": beef cubes, whole baby potatoes and quartered red onion in an open pot on the stove until everything is charred, then water, parsley, a lid and the oven. Sofrito without all the frying. Quantities approximate.",
   needs:["beef","potato","red-onion","parsley","olive-oil","salt","pepper","water"],
   ingredientLines:[
     {text:"1 kg stewing beef (chuck / roast), large cubes"},
@@ -1139,10 +1139,10 @@ RECIPES.push(
 },
 {
   id:"31986", diet:"Vegetarian", image:"31986.jpg", category:"Vegetables & Sides",
-  name:"Persian Drained Rice with Tahdig (Reconstructed)", searchAlias:"אורז מסונן עם תהדיג (משוחזר)",
+  name:"Persian Drained Rice with Tahdig", searchAlias:"אורז מסונן עם תהדיג",
   creator:"Haim Cohen", time:"1 hr 15 min", serves:"Serves 6",
   video:"https://www.facebook.com/reel/1760868444827952",
-  intro:"Persian rice like Haim Cohen's mother made: soaked rice boiled 5 minutes in lots of salted water and drained, a pot with oil and turmeric, an old metal plate to spread the heat, a towel under the lid and 40 minutes on the lowest flame. Reconstructed from the video.",
+  intro:"Persian rice like Haim Cohen's mother made: soaked rice boiled 5 minutes in lots of salted water and drained, a pot with oil and turmeric, an old metal plate to spread the heat, a towel under the lid and 40 minutes on the lowest flame.",
   needs:["rice","water","oil","salt","turmeric","greek-yogurt"],
   ingredientLines:[
     {text:"3 cups basmati rice, soaked at least 20 minutes and rinsed"},
@@ -1163,10 +1163,10 @@ RECIPES.push(
 },
 {
   id:"32663", diet:"Vegetarian", image:"32663.jpg", category:"Pasta",
-  name:"Eastern European Jewish Pasta (Reconstructed)", searchAlias:"פסטה של יהודי מזרח אירופה (משוחזר)",
+  name:"Eastern European Jewish Pasta", searchAlias:"פסטה של יהודי מזרח אירופה",
   creator:"Haim Cohen", time:"30 min", serves:"Serves 2",
   video:"https://www.facebook.com/reel/2009556076539991",
-  intro:"\"Most Jewish food starts with fried onion\": onion patiently fried in olive oil until brown, an emulsion with pasta water that resembles onion soup, then an egg, two yolks and pecorino off the heat, carbonara style. Reconstructed from the video.",
+  intro:"\"Most Jewish food starts with fried onion\": onion patiently fried in olive oil until brown, an emulsion with pasta water that resembles onion soup, then an egg, two yolks and pecorino off the heat, carbonara style.",
   needs:["pasta","onion","olive-oil","eggs","pecorino","salt","pepper"],
   ingredientLines:[
     {text:"250 g pasta (spaghetti / tagliatelle)"},
@@ -1188,10 +1188,10 @@ RECIPES.push(
 },
 {
   id:"33018", diet:"Vegetarian", image:"33018.jpg", category:"Pasta",
-  name:"Marzipan and Rose Pasta (Reconstructed)", searchAlias:"פסטה מרציפן וורדים (משוחזר)",
+  name:"Marzipan and Rose Pasta", searchAlias:"פסטה מרציפן וורדים",
   creator:"Haim Cohen", time:"25 min", serves:"Serves 2",
   video:"https://www.facebook.com/reel/1335686124841637",
-  intro:"\"I may have gone mad, but it's simply wonderful\": white wine reduced to an essence, butter only warmed, dried rose buds, al dente pasta, and grated marzipan and Parmigiano on top. Sweet, salty, bitter. Reconstructed from the video.",
+  intro:"\"I may have gone mad, but it's simply wonderful\": white wine reduced to an essence, butter only warmed, dried rose buds, al dente pasta, and grated marzipan and Parmigiano on top. Sweet, salty, bitter.",
   needs:["pasta","wine-white","butter","salt","rose-petals","marzipan","parmesan"],
   ingredientLines:[
     {text:"250 g pasta (tagliatelle / spaghetti)"},
@@ -1213,10 +1213,10 @@ RECIPES.push(
 },
 {
   id:"33643", diet:"Meat", image:"33643.jpg", category:"Chicken",
-  name:"Chicken with Caramelized Apples (Reconstructed)", searchAlias:"עוף עם תפוחים מקורמלים (משוחזר)",
+  name:"Chicken with Caramelized Apples", searchAlias:"עוף עם תפוחים מקורמלים",
   creator:"Chen Koren", time:"1 hr 30 min", serves:"Serves 4-6",
   video:"https://www.facebook.com/reel/1763394510959529",
-  intro:"Quartered apples caramelized in butter with maple, cinnamon and a slice of ginger, then a cut-up whole chicken seared with onion in a sauté pan and the apples returned to it under a lid. \"Tastier than the chicken\", the most Rosh Hashanah dish there is. Reconstructed from the video.",
+  intro:"Quartered apples caramelized in butter with maple, cinnamon and a slice of ginger, then a cut-up whole chicken seared with onion in a sauté pan and the apples returned to it under a lid. \"Tastier than the chicken\", the most Rosh Hashanah dish there is.",
   needs:["apple","butter","maple","spices","ginger","olive-oil","onion","salt","pepper","chicken"],
   ingredientLines:[
     {text:"5 apples (Chen used 3 and says: at least five), quartered"},
@@ -1239,10 +1239,10 @@ RECIPES.push(
 },
 {
   id:"29468", diet:"Vegetarian", image:"29468.jpg", category:"Vegetables & Sides",
-  name:"Greek-Style Lemon Potatoes (Reconstructed)", searchAlias:"תפוחי אדמה לימוניים בסגנון יווני (משוחזר)",
+  name:"Greek-Style Lemon Potatoes", searchAlias:"תפוחי אדמה לימוניים בסגנון יווני",
   creator:"Matt Mancuso", time:"50 min", serves:"Serves 4-6",
   video:"https://www.facebook.com/reel/2102725633815941",
-  intro:"The dish a New York private chef makes for the family at least once a week: potato batons roasted in lots of stock, olive oil, lemon juice, garlic and fresh oregano until they soak up all the liquid and turn glassy, buttery and crispy at the edges. Reconstructed from the video.",
+  intro:"The dish a New York private chef makes for the family at least once a week: potato batons roasted in lots of stock, olive oil, lemon juice, garlic and fresh oregano until they soak up all the liquid and turn glassy, buttery and crispy at the edges.",
   needs:["potato","stock","olive-oil","lemon","garlic","oregano","salt"],
   ingredientLines:[
     {text:"1.5 kg potatoes, peeled and cut into thick batons"},
