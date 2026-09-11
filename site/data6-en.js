@@ -1260,5 +1260,62 @@ RECIPES.push(
     "Pour the oil left in the dish over the top with more fresh lemon and serve."
   ],
   tips:"Not fully traditional, \"so don't come at me\". The secret is lots of liquid: the potatoes braise in it and then roast."
+},
+{
+  id:"31178", diet:"Meat", image:"31178.jpg", category:"Chicken",
+  name:"4 Chicken Marinades for the Whole Week", searchAlias:"4 מרינדות לעוף לכל השבוע",
+  creator:"Or Kahal", time:"15 min (+ marinating)", serves:"500 g chicken per marinade",
+  video:"https://www.instagram.com/reel/DM2tKSJImP8/",
+  intro:"Dietitian Or Kahal upgrades boring chicken: four marinades (Greek yogurt, chimichurri, coriander-lemon, soy-ginger) mixed in zip bags, each cut of chicken in its own bag, flattened, and whatever isn't cooked within two or three days goes to the freezer. Saves the what-to-cook dilemma.",
+  needs:["chicken","greek-yogurt","parsley","garlic","olive-oil","lemon","salt","pepper","coriander","red-onion","honey-silan","chili","soy","teriyaki","sriracha","sesame-oil","ginger"],
+  ingredientLines:[
+    {text:"500 g chicken per marinade: breast fillets or boneless thighs (the difference: about 30 calories per 100 g)"},
+    {group:"1. Greek yogurt marinade"},
+    {text:"1 cup Greek yogurt (or any plain yogurt)"},
+    {text:"A handful of chopped parsley, 2 garlic cloves, 2 tablespoons olive oil, juice of ½ lemon, salt and pepper"},
+    {group:"2. Chimichurri marinade"},
+    {text:"A handful each of chopped parsley and coriander, ½ red onion finely chopped, 2 garlic cloves"},
+    {text:"1 tablespoon honey, ¼ cup olive oil, juice of ½ lemon, red chili, salt and pepper"},
+    {group:"3. Coriander and lemon marinade"},
+    {text:"A handful of chopped coriander, juice of 1 lemon, 2 garlic cloves, ¼ cup olive oil, salt and pepper"},
+    {group:"4. Soy and ginger marinade"},
+    {text:"3 tablespoons soy sauce, 3 tablespoons teriyaki, 2 tablespoons sriracha, 2 drops sesame oil"},
+    {text:"2 tablespoons honey, 2 tablespoons olive oil, juice of 1 lemon, 1 tablespoon grated ginger, 2 garlic cloves, salt and pepper"}
+  ],
+  steps:[
+    "Mix each marinade's ingredients directly in a zip bag.",
+    "Add 500 g chicken (breast or thighs) to each bag, seal and massage so the marinade coats every piece.",
+    "Flatten the bags. What you'll cook in the next two or three days stays in the fridge, the rest goes flat into the freezer (so it thaws fast).",
+    "To cook: thaw, then grill in a hot pan or roast in the oven (200°C, about 20 minutes for thighs / 15 for breast) until cooked and golden."
+  ],
+  tips:"Per 100 g: chicken breast 160 kcal / 31 g protein / 3.5 g fat; thighs 190 kcal / 29 g protein / 7.5 g fat. Also saves dirty dishes."
+},
+{
+  id:"29802", diet:"Meat", image:"29802.jpg", category:"Chicken",
+  name:"Edri's Chicken, Cauliflower and Carrot Pot", searchAlias:"סיר עוף, כרובית וגזר של אדרי",
+  creator:"shlakot47 · edrikobi", time:"2 hrs", serves:"Serves 4-5",
+  video:"https://www.instagram.com/reel/DQRrl0sCHD0/",
+  intro:"\"He's literally begging, so let's try it\": a chicken pot after @edrikobi's recipe, tested and rated 9 out of 10. Onion, halved chicken legs, cauliflower and carrot roughly chopped, turmeric, pepper, tomato paste and a spoon of sugar, water up to the chicken line, 20 minutes on high and an hour and a half on low. Quantities per the video.",
+  needs:["olive-oil","onion","chicken","cauliflower","carrots","turmeric","pepper","salt","tomato-paste","sugar","water"],
+  ingredientLines:[
+    {text:"Olive oil, generously"},
+    {text:"2 onions, roughly chopped"},
+    {text:"5 chicken legs, halved (drumstick + thigh)"},
+    {text:"1 nice cauliflower, in florets"},
+    {text:"4 carrots, in chunks"},
+    {text:"1 teaspoon turmeric"},
+    {text:"1 teaspoon black pepper, salt"},
+    {text:"2 tablespoons tomato paste"},
+    {text:"1 tablespoon sugar (don't ask why)"},
+    {text:"Water up to the chicken line"}
+  ],
+  steps:[
+    "In a wide pot heat olive oil generously and add the roughly chopped onion.",
+    "Add the halved chicken legs, then the cauliflower and carrots on top. No need for precise cutting.",
+    "Season with turmeric, black pepper and salt. Add 2 tablespoons tomato paste and a tablespoon of sugar.",
+    "Add water up to the chicken line and give the pot a light shake.",
+    "Cover and cook 20 minutes on high heat, then lower and cook another hour and a half, until the chicken melts and the sauce is red and thick."
+  ],
+  tips:"The sugar balances the acidity of the tomato paste. Score: 9 out of 10."
 }
 );
