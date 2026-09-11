@@ -22,6 +22,7 @@ PER_QUERY = int(os.environ.get("COOKIN_CANDS_PER_QUERY", "15"))
 QUERIES_PER_SCAN = int(os.environ.get("COOKIN_CANDS_QUERIES", "10"))
 KEEP_SCORE = float(os.environ.get("COOKIN_CANDS_KEEP", "7"))       # below this → stored as 'low', hidden
 PER_DISH = int(os.environ.get("COOKIN_CANDS_PER_DISH", "2"))       # max videos of the same dish per scan
+PER_QUERY_KEEP = int(os.environ.get("COOKIN_CANDS_PER_QUERY_KEEP", "5"))  # max candidates per search query per scan
 SCAN_HOUR_UTC = int(os.environ.get("COOKIN_CANDS_HOUR_UTC", "4"))
 SCAN_ENABLED = os.environ.get("COOKIN_CANDS_SCAN", "on").lower() not in ("off", "0", "false")
 
@@ -344,18 +345,25 @@ def scan(n_queries=None):
         i["final"] = round(0.5 * fit + 0.3 * nov + 0.2 * pop, 1) if s.get("is_recipe", True) else 0.0
         i["dish"] = (s.get("dish") or "").strip().lower()[:60] or i["query"]
     # same dish → keep only the best PER_DISH videos as candidates, the rest are duplicates
-    per_dish = {}
+    per_dish, per_q = {}, {}
     for i in sorted(cands, key=lambda x: (-x["final"], -x["views"])):
         n = per_dish.get(i["dish"], 0)
         i["dup"] = n >= PER_DISH
         per_dish[i["dish"]] = n + 1
+        i["over"] = False
+        if not i["dup"] and i["final"] >= KEEP_SCORE:
+            q = per_q.get(i["query"], 0)
+            i["over"] = q >= PER_QUERY_KEEP   # variety: no more than PER_QUERY_KEEP dishes from one query
+            per_q[i["query"]] = q + 1
     with db() as c:
         for i in cands:
             s, final = i["s"], i["final"]
             reason = (s.get("reason") or "")[:300]
-            st = "new" if final >= KEEP_SCORE and not i["dup"] else "low"
+            st = "new" if final >= KEEP_SCORE and not i["dup"] and not i["over"] else "low"
             if i["dup"] and final >= KEEP_SCORE:
                 reason = f"כפילות ({i['dish']}) · " + reason
+            elif i["over"]:
+                reason = "עודף לשאילתה · " + reason
             kept += st == "new"; low += st == "low"
             c.execute("INSERT OR IGNORE INTO cands(id,url,title,channel,duration,views,thumb,query,lang,cuisine,category,"
                       "score,fit,novelty,reason,status,found_at,dish) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
