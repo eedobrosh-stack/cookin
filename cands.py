@@ -35,55 +35,52 @@ CREATE INDEX IF NOT EXISTS cands_status ON cands(status, score);
 CREATE TABLE IF NOT EXISTS cands_meta(k TEXT PRIMARY KEY, v TEXT);
 """
 
-# Query pool — deliberately wider than the catalog (which is heavy on pasta, chicken,
-# Thai/coconut curries, Italian, Mediterranean fish, slow braises). Any language.
+# Query pool — HOME-COOK style from famous chefs and beloved home cooks around the world (English,
+# Italian, French; a few Israeli), rotated daily. The catalog is heavy on pasta/chicken/Thai curries, so
+# the pool leans on other cuisines and formats too. Studio/brand productions are filtered out (BRAND_RX).
 QUERY_POOL = [
-    # East / Southeast Asia
-    "korean braised chicken jjimdak recipe", "korean bulgogi home recipe", "korean kimchi jjigae recipe",
-    "japanese oyakodon recipe", "japanese chicken karaage recipe", "japanese nikujaga recipe",
-    "vietnamese caramel pork thit kho recipe", "vietnamese lemongrass chicken recipe", "bun cha recipe",
-    "chinese mapo tofu recipe", "chinese cumin lamb stir fry", "cantonese steamed fish ginger scallion",
-    "sichuan dry fried green beans", "chinese tomato egg stir fry", "chinese braised pork belly recipe",
-    "thai larb recipe", "thai massaman curry recipe", "thai tom kha soup recipe", "pad see ew recipe",
-    "filipino chicken adobo recipe", "malaysian rendang recipe", "indonesian nasi goreng recipe",
-    # South Asia
-    "chicken biryani easy recipe", "dal tadka recipe", "chana masala recipe", "keema matar recipe",
-    "palak paneer recipe", "goan fish curry recipe", "chicken korma recipe", "aloo gobi recipe",
-    # Middle East / Levant / Israel / Persia / Turkey
-    "מתכון קל לארוחת ערב", "מתכון סיר אחד", "תבשיל ערבי מתכון", "מתכון מקלובה", "מתכון פריקה",
-    "מתכון שקשוקה מיוחדת", "מתכון קציצות ברוטב", "מתכון סלט ערבי", "מתכון דג לשישי",
-    "turkish menemen recipe", "turkish kofte recipe", "turkish lentil soup mercimek", "iskender kebab recipe",
-    "persian ghormeh sabzi recipe", "persian tahchin recipe", "fesenjan recipe", "persian kuku sabzi",
-    "lebanese fatteh recipe", "lebanese mujadara recipe", "syrian kibbeh recipe", "iraqi tbit chicken rice",
-    "moroccan chicken tagine olives lemon", "moroccan harira soup recipe", "tunisian shakshuka recipe",
-    "yemeni chicken mandi recipe", "georgian chakhokhbili recipe", "georgian lobio recipe",
-    # Europe
-    "spanish paella recipe easy", "spanish garlic shrimp gambas al ajillo", "spanish tortilla recipe",
-    "greek moussaka recipe", "greek lemon chicken soup avgolemono", "greek gemista stuffed vegetables",
-    "italian risotto recipe home", "italian ossobuco recipe", "italian eggplant parmigiana", "gnocchi recipe from scratch",
-    "italian minestrone recipe", "ricetta veloce cena", "ricetta pollo alla cacciatora", "pasta e fagioli ricetta",
-    "french coq au vin recipe", "french ratatouille recipe", "french onion soup recipe", "recette facile poulet",
-    "hungarian goulash recipe", "polish pierogi recipe", "russian borscht recipe", "german schnitzel recipe",
-    "portuguese piri piri chicken", "portuguese bacalhau recipe", "receta pollo al chilindron",
-    # Americas
-    "mexican chicken tinga recipe", "mexican pozole recipe", "birria tacos recipe", "carnitas recipe",
-    "mexican enchiladas verdes recipe", "receta pollo con mole", "peruvian lomo saltado recipe",
-    "peruvian aji de gallina recipe", "brazilian moqueca recipe", "brazilian feijoada recipe",
-    "argentinian empanadas recipe", "cuban ropa vieja recipe", "jamaican jerk chicken recipe",
-    "louisiana gumbo recipe", "shrimp and grits recipe", "cajun jambalaya recipe",
-    # Africa
-    "ethiopian doro wat recipe", "west african jollof rice recipe", "south african bobotie recipe",
-    "nigerian egusi soup recipe", "senegalese chicken yassa recipe",
-    # ingredient / technique-led (widen: lamb, seafood, legumes, rice, dumplings, vegetables)
-    "lamb shoulder slow roast recipe", "lamb chops recipe pan", "mussels white wine garlic recipe",
-    "squid stir fry recipe", "whole roasted cauliflower recipe", "stuffed peppers recipe",
-    "eggplant recipe easy dinner", "lentil stew recipe", "white bean stew recipe", "chickpea stew recipe",
-    "dumplings recipe homemade", "fried rice recipe restaurant style", "sheet pan dinner recipe",
-    "one pot rice chicken recipe", "meatballs recipe sauce", "stuffed cabbage rolls recipe",
-    "pumpkin soup recipe", "roasted vegetables salad recipe", "grain bowl recipe", "fish tacos recipe",
-    "shrimp curry recipe", "crispy tofu recipe", "zucchini recipe dinner", "leek recipe dinner",
-    "baked fish recipe mediterranean", "chicken thighs recipe dinner", "ground beef recipe dinner",
+    # --- English-speaking chefs & home cooks
+    "Jamie Oliver 5 ingredients recipe", "Jamie Oliver one pan dinner", "Jamie Oliver fish recipe",
+    "Gennaro Contaldo pasta recipe", "Gennaro Contaldo chicken", "Gennaro Contaldo risotto",
+    "Nigella Lawson recipe", "Nigella Lawson chicken", "Yotam Ottolenghi recipe", "Ottolenghi vegetables recipe",
+    "Sami Tamimi Palestinian recipe", "Rick Stein fish recipe", "Rick Stein curry", "Nigel Slater recipe",
+    "Jacques Pepin chicken", "Jacques Pepin simple recipe", "Jacques Pepin eggs omelette",
+    "Ina Garten dinner recipe", "Ina Garten chicken", "Lidia Bastianich recipe", "Lidia Bastianich pasta",
+    "Marcella Hazan tomato sauce", "Pasquale Sciarappa recipe", "Vincenzo's Plate recipe",
+    "Chef John Food Wishes recipe", "Food Wishes chicken", "Kenji Lopez-Alt home cooking", "Kenji stir fry",
+    "Andy Cooks recipe", "Adam Liaw recipe", "Adam Liaw stir fry", "Marion's Kitchen recipe", "Marion Grasby thai",
+    "Nagi RecipeTin Eats dinner", "Alison Roman recipe", "Samin Nosrat recipe", "Vivian Howard recipe",
+    "Marco Pierre White recipe", "Gordon Ramsay home cooking", "Gordon Ramsay 10 minute recipe",
+    "Jose Andres recipe spanish", "Jose Andres home cooking", "Nadiya Hussain recipe", "Mary Berry dinner recipe",
+    "Hairy Bikers recipe", "Tom Kerridge recipe", "Rachel Khoo recipe", "Julius Roberts recipe farm",
+    "Big Has recipe", "Poppy Cooks recipe", "Pasta Grannies", "Maangchi recipe", "Chef Wang Gang recipe",
+    "Ranveer Brar recipe", "Kunal Kapur recipe", "Sanjeev Kapoor recipe", "Rick Bayless mexican recipe",
+    "Pati Jinich recipe", "Claudia Roden recipe", "Anthony Bourdain cooks", "Ottolenghi Test Kitchen",
+    # --- Italian (in Italian)
+    "Benedetta Rossi ricetta secondo", "Fatto in casa da Benedetta pasta", "Fatto in casa da Benedetta pollo",
+    "Giallozafferano ricetta primo", "Giallozafferano secondo piatto", "Sonia Peronaci ricetta",
+    "Max Mariola ricetta", "Max Mariola pasta", "Bruno Barbieri ricetta", "Antonino Cannavacciuolo ricetta",
+    "Carlo Cracco ricetta", "Alessandro Borghese ricetta", "Italia Squisita ricetta", "Luca Pappagallo ricetta",
+    "Casa Pappagallo secondo", "Cucina con Ruben ricetta", "Stefano Barbato ricetta", "Simone Rugiati ricetta",
+    "Csaba dalla Zorza ricetta", "ricetta della nonna", "ricetta veloce cena in famiglia", "ricetta pesce al forno",
+    "ricetta spezzatino", "ricetta polpette al sugo", "ricetta parmigiana", "ricetta minestra", "ricetta risotto",
+    # --- French (in French; plus French chefs in English)
+    "Cyril Lignac recette", "Cyril Lignac tous en cuisine poulet", "Philippe Etchebest recette",
+    "Philippe Etchebest recette facile", "Alain Ducasse recette", "Laurent Mariotte recette",
+    "Helene Darroze recette", "Jean-Francois Piege recette", "Thierry Marx recette", "Norbert Tarayre recette",
+    "Julie Andrieu recette", "Herve Cuisine recette", "Guillaume Gomez recette", "Chef Simon recette",
+    "Anne-Sophie Pic recette", "Mory Sacko recette", "recette de grand-mere", "recette plat familial",
+    "recette poulet facile", "recette poisson au four", "recette gratin", "recette mijote", "recette soupe maison",
+    "Chef Jean-Pierre recipe", "Bruno Albouze recipe", "French Cooking Academy", "Alex French Guy Cooking recipe",
+    # --- Israeli chefs (Hebrew) — authentic local flavor
+    "חיים כהן מתכון", "אייל שני מתכון", "ישראל אהרוני מתכון", "מאיר אדוני מתכון", "יונתן רושפלד מתכון",
+    "אסף גרניט מתכון", "רותי רוסו מתכון", "ערן שוורצברד מתכון",
 ]
+
+# Studio / brand channels the family finds too polished — dropped before scoring
+BRAND_RX = re.compile(r"\b(tasty|food network|allrecipes|delish|buzzfeed|twisted|tastemade|coles|woolworths|"
+                      r"williams sonoma|hellofresh|blue apron|food fusion|hebbars kitchen|recipes in one minute|"
+                      r"cookist|so yummy|5-minute crafts)\b", re.I)
 
 # YouTube "sp" filters: under 4 minutes (relevance), then under 4 minutes uploaded this year
 SP_FILTERS = ["EgIYAQ%253D%253D", "EgQIBRgB"]  # short+relevance, short+this-year
@@ -222,6 +219,13 @@ def _score_prompt(items):
 The family already has these {len(cat)} dishes (category counts: {json.dumps(counts, ensure_ascii=False)}):
 {names}
 
+STYLE (most important): the family wants HOME-COOK style — a real person, ideally a famous chef or a beloved
+home cook, cooking in a real kitchen and talking to the camera (Jamie Oliver, Gennaro Contaldo, Jacques Pepin,
+Nigella, Ottolenghi, Rick Stein, Benedetta Rossi, Max Mariola, Cannavacciuolo, Cyril Lignac, Etchebest,
+Chef Jean-Pierre, nonnas and grandmothers...). English, Italian and French videos are all welcome (authenticity!).
+Penalize heavily: studio/brand productions, faceless hands-only "food porn" edits, over-produced viral formats,
+supermarket or media-brand channels, clickbait titles.
+
 Their taste, inferred from the catalog: savory home cooking for weeknights and Shabbat; lots of pasta
 (lemon/butter/chili-crisp/creamy), chicken (Thai & coconut curries, braises, one-pot), beef braises and
 "set-and-forget" pots, Mediterranean fish, Chinese/Thai/Korean home-style stir fries, Israeli & Levantine
@@ -236,13 +240,13 @@ chicken, alfredo, lemon pasta, Mongolian beef or chimichurri should get LOW nove
 
 Score each YouTube candidate below from title + channel only. Be CALIBRATED and use the whole range:
 a typical decent recipe video is fit 6 / novelty 5; reserve 9-10 for the few that are truly exceptional.
-Differentiate between candidates: the same dish from a well-known, trusted channel (RecipeTin Eats,
-Jamie Oliver, Kenji, The Mediterranean Dish, Maangchi, Chef John, established native cooks...) beats a
-generic one; a clear title with a real dish name beats clickbait.
+Differentiate between candidates: the same dish from a famous chef or an established native home cook
+beats a generic one; a clear title with a real dish name beats clickbait.
 - is_recipe: true only if this looks like an actual cooking recipe video (not a review/vlog/eating video).
 - fit 0-10: would this family love to cook and eat it (delicious, home-cookable, savory, in their spirit,
-  weeknight-feasible or a worthy Shabbat pot). Penalize: gimmicks, giant-batch/outdoor cooking, very
-  hard or exotic-ingredient recipes, low-effort content.
+  weeknight-feasible or a worthy Shabbat pot) AND is it home-cook style by a real chef/cook (see STYLE).
+  Penalize: studio productions, gimmicks, giant-batch/outdoor cooking, very hard or exotic-ingredient
+  recipes, low-effort content.
 - novelty 0-10: how much it adds to the catalog (10 = new cuisine/technique/ingredient; 0 = near duplicate
   of an existing dish). Judge against the catalog only, not against other candidates.
 - dish: canonical dish name in lowercase English (e.g. "mujadara", "ratatouille", "chicken carnitas") so
@@ -332,7 +336,7 @@ def scan(n_queries=None):
         have = {r["id"] for r in c.execute("SELECT id FROM cands")}
     cands = [i for i in raw if i["id"] not in known and i["id"] not in have
              and 15 <= i["duration"] <= MAX_DUR and i["views"] >= MIN_VIEWS
-             and not BLOCK_RX.search(i["title"] + " " + i["channel"])]
+             and not BLOCK_RX.search(i["title"] + " " + i["channel"]) and not BRAND_RX.search(i["channel"])]
     scores, tokens = score(cands) if cands else ({}, 0)
     kept = low = 0
     now = now_iso()

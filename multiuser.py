@@ -843,6 +843,81 @@ def _is_av1(path):
     return b"av01" in head and b"avc1" not in head
 
 
+YT_RE = re.compile(r"(?:youtu\.be/|youtube\.com/(?:shorts/|watch\?v=|embed/|live/))([A-Za-z0-9_-]{11})")
+
+
+def _yt_id(u):
+    m = YT_RE.search(u or "")
+    return m.group(1) if m else None
+
+
+def _fetch(url, dest, timeout=30):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (cookin)"})
+    with urllib.request.urlopen(req, timeout=timeout) as r, open(dest, "wb") as f:
+        f.write(r.read())
+    return dest
+
+
+def _finish(did, data, tokens, creator, canonical, has_video):
+    he, en = _clean_lang(data.get("he") or {}, "he"), _clean_lang(data.get("en") or {}, "en")
+    if not he.get("creator"):
+        he["creator"] = creator
+    if not en.get("creator"):
+        en["creator"] = creator
+    # keep category/diet consistent across languages (trust Hebrew)
+    en["category"] = CAT_HE2EN.get(he["category"], en["category"])
+    en["diet"] = DIET_HE2EN.get(he["diet"], en["diet"])
+    keys = ingredient_keys()
+    needs = [k for k in dict.fromkeys(data.get("needs") or []) if k in keys][:30]
+    with db() as c:
+        c.execute("UPDATE dishes SET he=?, en=?, needs=?, has_video=?, status='ready', error=NULL, "
+                  "source_url=?, tokens=?, updated_at=? WHERE id=?",
+                  (json.dumps(he, ensure_ascii=False), json.dumps(en, ensure_ascii=False),
+                   json.dumps(needs), int(has_video), canonical, tokens, now_iso(), did))
+    return he
+
+
+def _process_youtube(did, url):
+    """YouTube dishes are EMBEDDED, never rehosted (user decision 2026-09-11): Gemini reads the public
+    video straight from its URL (no yt-dlp download — Render's IP is bot-blocked by YouTube anyway),
+    metadata via yt-dlp --skip-download with an oEmbed fallback, thumbnail from i.ytimg.com."""
+    vid = _yt_id(url)
+    canonical = f"https://www.youtube.com/watch?v={vid}"
+    tmp = tempfile.mkdtemp(prefix="cookin-yt-")
+    try:
+        info = {}
+        try:
+            out = _run([sys.executable, "-m", "yt_dlp", "--no-playlist", "--no-warnings", "--skip-download",
+                        "--print-json", canonical], timeout=120)
+            info = json.loads(out.strip().splitlines()[-1])
+        except Exception as e:
+            log(f"{did} yt-dlp metadata failed ({str(e)[:120]}); using oEmbed")
+            try:
+                with urllib.request.urlopen("https://www.youtube.com/oembed?format=json&url=" +
+                                            urllib.parse.quote(canonical, safe=""), timeout=20) as r:
+                    o = json.loads(r.read().decode())
+                info = {"title": o.get("title"), "uploader": o.get("author_name")}
+            except Exception as e2:
+                log(f"{did} oEmbed failed too ({str(e2)[:120]})")
+        caption = (info.get("description") or info.get("title") or "")[:6000]
+        creator = info.get("uploader") or info.get("channel") or info.get("uploader_id") or ""
+        data, tokens = gemini_extract(None, caption, creator, canonical, file_uri=canonical)
+        thumb = None
+        for name in ("maxresdefault", "hq720", "hqdefault"):
+            try:
+                thumb = _fetch(f"https://i.ytimg.com/vi/{vid}/{name}.jpg", os.path.join(tmp, "thumb.jpg"))
+                if os.path.getsize(thumb) > 2000:   # ytimg returns a tiny placeholder for missing sizes
+                    break
+            except Exception:
+                thumb = None
+        if thumb:
+            _save_thumb(thumb, os.path.join(UIMAGES_DIR, did + ".jpg"))
+        he = _finish(did, data, tokens, creator, canonical, has_video=False)
+        log(f"{did} ready (youtube embed): {he['name']} ({tokens} tokens)")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def process_dish(did):
     with db() as c:
         r = c.execute("SELECT * FROM dishes WHERE id=?", (did,)).fetchone()
@@ -850,6 +925,9 @@ def process_dish(did):
         return
     url = r["source_url"]
     log(f"{did} start {url}")
+    if _yt_id(url):
+        _process_youtube(did, url)
+        return
     tmp = tempfile.mkdtemp(prefix="cookin-")
     try:
         ff = _ffmpeg()
@@ -895,21 +973,7 @@ def process_dish(did):
         shutil.copyfile(video, os.path.join(VIDEOS_DIR, did + ".mp4.part"))
         os.replace(os.path.join(VIDEOS_DIR, did + ".mp4.part"), os.path.join(VIDEOS_DIR, did + ".mp4"))
         _save_thumb(thumb, os.path.join(UIMAGES_DIR, did + ".jpg"))
-        he, en = _clean_lang(data.get("he") or {}, "he"), _clean_lang(data.get("en") or {}, "en")
-        if not he.get("creator"):
-            he["creator"] = creator
-        if not en.get("creator"):
-            en["creator"] = creator
-        # keep category/diet consistent across languages (trust Hebrew)
-        en["category"] = CAT_HE2EN.get(he["category"], en["category"])
-        en["diet"] = DIET_HE2EN.get(he["diet"], en["diet"])
-        keys = ingredient_keys()
-        needs = [k for k in dict.fromkeys(data.get("needs") or []) if k in keys][:30]
-        with db() as c:
-            c.execute("UPDATE dishes SET he=?, en=?, needs=?, has_video=1, status='ready', error=NULL, "
-                      "source_url=?, tokens=?, updated_at=? WHERE id=?",
-                      (json.dumps(he, ensure_ascii=False), json.dumps(en, ensure_ascii=False),
-                       json.dumps(needs), canonical, tokens, now_iso(), did))
+        he = _finish(did, data, tokens, creator, canonical, has_video=True)
         log(f"{did} ready: {he['name']} ({size//1024} KB, {tokens} tokens)")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -1038,16 +1102,20 @@ Rules:
 Return only JSON matching the schema."""
 
 
-def gemini_extract(video_path, caption, creator, url):
+def gemini_extract(video_path, caption, creator, url, file_uri=None):
+    """video_path → upload via the Files API; file_uri (public YouTube URL) → Gemini fetches it itself."""
     key = secret("GEMINI_API_KEY")
     if not key:
         raise RuntimeError("GEMINI_API_KEY missing")
-    finfo = _gemini_upload(video_path, key)
+    finfo = None
+    if file_uri:
+        part = {"file_data": {"file_uri": file_uri}}
+    else:
+        finfo = _gemini_upload(video_path, key)
+        part = {"file_data": {"mime_type": finfo.get("mimeType", "video/mp4"), "file_uri": finfo["uri"]}}
     try:
         body = {
-            "contents": [{"role": "user", "parts": [
-                {"file_data": {"mime_type": finfo.get("mimeType", "video/mp4"), "file_uri": finfo["uri"]}},
-                {"text": _prompt(caption, creator, url)}]}],
+            "contents": [{"role": "user", "parts": [part, {"text": _prompt(caption, creator, url)}]}],
             "generationConfig": {"temperature": 0.3, "response_mime_type": "application/json",
                                  "response_schema": SCHEMA_JSON, "maxOutputTokens": 8192},
         }
@@ -1075,7 +1143,8 @@ def gemini_extract(video_path, caption, creator, url):
             raise RuntimeError("gemini returned no recipe")
         return data, tokens
     finally:
-        _gemini_delete(finfo["name"], key)
+        if finfo:
+            _gemini_delete(finfo["name"], key)
 
 
 # ------------------------------------------------------- dynamic dish page ---
@@ -1230,7 +1299,8 @@ def dish_page(handler, user, did, qs):
         hero = f'<video controls playsinline preload="metadata" poster="/images/{did}.jpg" src="/videos/{did}.mp4"></video>'
     elif emb:
         hero = f'<iframe src="{e(emb)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>'
-        embed_note = f'<div class="dsub">{t["cr_embed_note"]}</div>'
+        if r["has_video"]:   # YouTube dishes are embed-only for everyone — no "members see a local player" note
+            embed_note = f'<div class="dsub">{t["cr_embed_note"]}</div>'
     else:
         hero = f'<img src="/images/{did}.jpg" alt="">'
     ing = "\n".join(f'<div class="ing-group">{e(l["group"])}</div>' if l.get("group") else f'<li>{e(l.get("text", ""))}</li>'
