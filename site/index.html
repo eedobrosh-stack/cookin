@@ -284,6 +284,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <script src="videos.js"></script>
 <script src="gf.js"></script>
 <script src="dishlinks.js"></script>
+<script src="user.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 function retryImg(img){
@@ -336,19 +337,20 @@ for(let i = shuffleOrder.length - 1; i > 0; i--){
 
 function renderGallery(){
   const q = $("#search").value.trim();
-  let items = RECIPES.filter(r =>
+  let items = VIS(true).filter(r =>
     (activeCat==="הכל" || r.category===activeCat) && (!gfOn || isGlutenFree(r)) &&
     (!q || (r.name+r.creator+(r.searchAlias||"")).includes(q)));
   if(shuffleOrder) items = items.slice().sort((a,b)=>shuffleOrder.indexOf(a.id)-shuffleOrder.indexOf(b.id));
   $("#gfNote").style.display = gfOn ? "block" : "none";
   $("#grid").innerHTML = items.map(r => `
-    <div class="card" onclick="openDish('${r.id}')">
-      <img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">
+    <div class="card${cardClass(r)}" onclick="openDish('${r.id}')">
+      ${r._user && r._status!=="ready" ? `<div class="thumb"></div>` : `<img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">`}${cardExtras(r)}
       <div class="cbody">
         <div class="cname">${r.name}</div>
         <div class="cmeta">
-          <span class="badge cat-b">${r.category}</span>
-          ${dietBadge(r)}
+          ${ownerBadge(r)}
+          ${r.category?`<span class="badge cat-b">${r.category}</span>`:""}
+          ${r.diet?dietBadge(r):""}
           ${r.time?`<span class="badge">⏱ ${r.time}</span>`:""}
           <span>${r.creator}</span>
         </div>
@@ -359,6 +361,7 @@ function renderGallery(){
 function ingLabel(key){ return (INGREDIENTS[key]||{}).label || key; }
 
 function openDish(id){
+  if(id.startsWith("u")){ location.href = "/d/" + id; return; }
   /* Each dish now lives on its own page (site/dish/<name>.html, built by
      build-dish-pages.js) so URLs are shareable and the browser back button works. */
   if (typeof DISH_PAGE !== "undefined" && DISH_PAGE[id]) { location.href = DISH_PAGE[id]; return; }
@@ -432,7 +435,7 @@ function renderPantry(){
 
   // results
   const can=[], almost=[];
-  RECIPES.forEach(r=>{
+  VIS().forEach(r=>{
     const missing=[], subs=[];
     r.needs.forEach(k=>{
       const h = haveIngredient(k, basicsOn);
@@ -564,7 +567,7 @@ function renderPicker(){
   $("#dietChips").innerHTML = diets.map(d=>
     `<button class="cat ${d===pickerDiet?'active':''}" onclick="pickerDiet='${d}';renderPicker()">${d==="הכל"?d:(DIET_EMOJI[d]+" "+d)}</button>`).join("");
   const q = $("#pickerSearch").value.trim();
-  const items = RECIPES.filter(r=>(pickerDiet==="הכל"||r.diet===pickerDiet)&&(!q||(r.name+r.creator).includes(q)));
+  const items = VIS().filter(r=>(pickerDiet==="הכל"||r.diet===pickerDiet)&&(!q||(r.name+r.creator).includes(q)));
   $("#pickerGrid").innerHTML = items.map(r=>`
     <div class="pcard" onclick="pickDish('${r.id}')">
       <img src="images/${r.image}" alt="">
