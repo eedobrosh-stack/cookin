@@ -9,9 +9,9 @@ const S = LANG === "he" ? {
   signin:"התחברות", signout:"התנתקות", add:"➕ מנה חדשה", settings:"⚙️ המנות והמקורות שלי",
   addTitle:"הוספת מנה מסרטון", addHint:"הדביקו קישור לריל מפייסבוק / אינסטגרם / טיקטוק / יוטיוב. הסרטון יורד, ג'מיני יכתוב את המתכון בעברית ובאנגלית, ותוכלו לערוך. המנה נשמרת פרטית — אתם מחליטים אם לפרסם.",
   addBtn:"הוספה", adding:"שולח…", usage:(a,b)=>`נותרו היום ${Math.max(0,b-a)} מתוך ${b}`,
-  processing:"בהכנה… ⏳", failed:"העיבוד נכשל ✗", queued:"ממתין לטיפול של אידו ⏳",
+  processing:"בהכנה… ⏳", failed:"העיבוד נכשל ✗", queued:"המנה תעלה בקרוב… ⏳",
   myDishes:"המנות שלי", noMine:"עדיין לא הוספתם מנות.", allPublic:"🌍 כולן ציבוריות", allPrivate:"🔒 כולן פרטיות",
-  pub:"🌍 ציבורי", priv:"🔒 פרטי", makePub:"פרסום", makePriv:"הסתרה", del:"מחיקה", retry:"נסו שוב", toQueue:"שלחו לאידו",
+  pub:"🌍 ציבורי", priv:"🔒 פרטי", makePub:"פרסום", makePriv:"הסתרה", del:"מחיקה", retry:"נסו שוב", toQueue:"שלחו לעידו",
   confirmDel:"למחוק את המנה לצמיתות?",
   base:"מנות הבסיס (Cookin)", showBase:"הצג את מנות הבסיס", hiddenN:n=>`מנות מוסתרות: ${n}`, restore:"החזר", restoreAll:"החזר הכל",
   hideDish:"הסתר מנה זו", others:"מנות של משתמשים אחרים (ציבוריות)", noOthers:"עדיין אין מנות ציבוריות של משתמשים אחרים.",
@@ -29,16 +29,16 @@ const S = LANG === "he" ? {
   howTo:"איך מייצאים מנות שמורות מפייסבוק ואינסטגרם?",
   howToHtml:`<p><b>דרך מהירה (כמה מנות):</b> פותחים את הסרטון השמור ← ⋯ / שיתוף ← <b>העתקת קישור</b> ← מדביקים כאן, שורה לכל קישור.</p>
 <p><b>ייצוא מלא של כל השמורים (פייסבוק):</b> פייסבוק ← הגדרות ופרטיות ← הגדרות ← <b>מרכז החשבונות</b> ← המידע וההרשאות שלך ← <b>הורדת המידע שלך</b> ← "הורדה או העברה של מידע" ← בוחרים את פרופיל הפייסבוק ← "מידע מסוים" ← מסמנים <b>פריטים שמורים ואוספים</b> (Saved items and collections) ← פורמט <b>JSON</b>, טווח "כל הזמן" ← יוצרים קבצים. אחרי כמה דקות מגיע מייל עם ZIP; מחלצים ומעלים כאן את הקובץ <code>saved_items_and_collections.json</code> (או את כל ה-ZIP המחולץ, קובץ אחר קובץ) בכפתור "ייבוא מקובץ".</p>
-<p><b>אינסטגרם:</b> אותו מסלול במרכז החשבונות ← בוחרים את חשבון האינסטגרם ← "מידע מסוים" ← <b>שמורים</b> (Saved) ← JSON. הקובץ הוא <code>saved/saved_posts.json</code>. שימו לב: אינסטגרם חוסמת לפעמים הורדת סרטונים ללא התחברות — מנות כאלה ייכנסו לתור של אידו במקום להיכשל.</p>
+<p><b>אינסטגרם:</b> אותו מסלול במרכז החשבונות ← בוחרים את חשבון האינסטגרם ← "מידע מסוים" ← <b>שמורים</b> (Saved) ← JSON. הקובץ הוא <code>saved/saved_posts.json</code>. שימו לב: אינסטגרם חוסמת לפעמים הורדת סרטונים ללא התחברות — מנות כאלה ייכנסו לתור של עידו במקום להיכשל.</p>
 <p>הקובץ נקרא רק בדפדפן שלכם: שולפים ממנו את הקישורים ומדביקים אותם בתיבה למעלה. המכסה היומית (15 מנות ביום) נשמרת — השאר פשוט לא ייכנסו, אפשר להדביק שוב מחר.</p>`,
-  submitted:n=>`${n===1?"המנה נשלחה":"המנות נשלחו"} להכנה ⏳ בדרך כלל זה לוקח דקה-שתיים. אם העיבוד האוטומטי לא יצליח, המנה תעבור לתור של אידו ותתווסף ידנית מאוחר יותר.`,
-  queuedNote:"ממתין לטיפול של אידו — המנה תתווסף ידנית בהמשך",
+  submitted:n=>`${n===1?"המנה נשלחה":"המנות נשלחו"} להכנה ⏳ בדרך כלל זה לוקח דקה-שתיים. אם העיבוד האוטומטי לא יצליח, המנה תעבור לתור של עידו ותתווסף ידנית מאוחר יותר.`,
+  queuedNote:"המנה תעלה בקרוב…",
   bulkResult:(a,l,d)=>`נוספו ${a} מנות` + (l?` · ${l} לא נוספו (מכסה יומית)`:"") + (d?` · ${d} כבר קיימות`:""),
 } : {
   signin:"Sign in", signout:"Sign out", add:"➕ New dish", settings:"⚙️ My dishes & sources",
   addTitle:"Add a dish from a video", addHint:"Paste a Facebook / Instagram / TikTok / YouTube reel link. The video is downloaded, Gemini writes the recipe in Hebrew and English, and you can edit it. The dish is saved private — you decide whether to publish.",
   addBtn:"Add", adding:"Sending…", usage:(a,b)=>`${Math.max(0,b-a)} of ${b} left today`,
-  processing:"Preparing… ⏳", failed:"Processing failed ✗", queued:"Waiting for Eedo ⏳",
+  processing:"Preparing… ⏳", failed:"Processing failed ✗", queued:"Dish will be up soon… ⏳",
   myDishes:"My dishes", noMine:"You haven't added dishes yet.", allPublic:"🌍 All public", allPrivate:"🔒 All private",
   pub:"🌍 Public", priv:"🔒 Private", makePub:"Publish", makePriv:"Unpublish", del:"Delete", retry:"Retry", toQueue:"Send to Eedo",
   confirmDel:"Delete this dish permanently?",
@@ -61,7 +61,7 @@ const S = LANG === "he" ? {
 <p><b>Instagram:</b> same path in Accounts Center → pick the Instagram account → "Some of your information" → <b>Saved</b> → JSON. The file is <code>saved/saved_posts.json</code>. Note: Instagram sometimes blocks anonymous video downloads; those dishes go to Eedo's queue instead of failing.</p>
 <p>The file is read only in your browser: the links are extracted and pasted into the box above. The daily cap (15 dishes a day) still applies; the rest are simply not added, paste again tomorrow.</p>`,
   submitted:n=>`${n===1?"Dish sent":"Dishes sent"} for preparation ⏳ It usually takes a minute or two. If automatic processing fails, the dish goes to Eedo's queue and is added manually later.`,
-  queuedNote:"Waiting for Eedo — this dish will be added manually later",
+  queuedNote:"Dish will be up soon…",
   bulkResult:(a,l,d)=>`Added ${a} dishes` + (l?` · ${l} not added (daily cap)`:"") + (d?` · ${d} already existed`:""),
 };
 
@@ -156,7 +156,7 @@ window.cardExtras = function(r){
 };
 window.ownerBadge = function(r){
   if(!r._user) return "";
-  if(r._mine) return `<span class="ubadge ${r._vis==='public'?'pub':'priv'}">${r._vis==='public'?S.pub:S.priv}</span>`;
+  if(r._mine) return r._vis==='public' ? "" : `<span class="ubadge priv">${S.priv}</span>`;   // no "public" chip on cards (user, 2026-09-11)
   const o = r._owner || {};
   return `<span class="ubadge">${avatar(o.avatar, o.name, "")} ${esc(o.name||"")}</span>`;
 };
