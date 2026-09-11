@@ -2,7 +2,7 @@
 // A dish is gluten-free when none of its `needs` keys is a hard-gluten ingredient
 // and it is not manually excluded. Pasta / soy-based sauces are ALLOWED — GF users
 // swap in gluten-free pasta / tamari; the UI shows a note when the filter is on.
-const GLUTEN_KEYS = new Set(["flour","breadcrumbs","semolina","noodles","dumplings"]);
+const GLUTEN_KEYS = new Set(["flour","breadcrumbs","semolina","noodles","dumplings","bread","ravioli"]);
 const GLUTEN_EXCLUDE_IDS = new Set([
   "68238", // סאטה של ג'ירף — served on schnitzel (breaded)
 ]);
