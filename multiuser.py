@@ -695,7 +695,8 @@ def api_admin_media(handler, user, qs):
         return handler._json({"error": "forbidden"}, 403)
     did = qs.get("id", [""])[0]
     kind = qs.get("kind", [""])[0]
-    if not re.fullmatch(r"u[0-9a-f]{10}", did) or kind not in ("video", "image"):
+    base = bool(re.fullmatch(r"[0-9]{3,7}", did))  # built-in (static data*.js) dish: video only, no DB row
+    if not (base or re.fullmatch(r"u[0-9a-f]{10}", did)) or kind not in ("video", "image") or (base and kind != "video"):
         return handler._json({"error": "bad params"}, 400)
     n = int(handler.headers.get("Content-Length", 0))
     if n <= 0 or n > MAX_VIDEO_MB * 1024 * 1024:
@@ -711,7 +712,7 @@ def api_admin_media(handler, user, qs):
             f.write(chunk)
             left -= len(chunk)
     os.replace(tmp, dest)
-    if kind == "video":
+    if kind == "video" and not base:
         with db() as c:
             c.execute("UPDATE dishes SET has_video=1 WHERE id=?", (did,))
     return handler._json({"ok": True, "bytes": n})
