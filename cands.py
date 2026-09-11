@@ -262,7 +262,7 @@ def _gemini_json(prompt, schema, timeout=180):
         raise RuntimeError("GEMINI_API_KEY missing")
     body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.2, "response_mime_type": "application/json",
-                                 "response_schema": schema, "maxOutputTokens": 8192}}
+                                 "response_schema": schema, "maxOutputTokens": 32768}}
     req = urllib.request.Request(
         f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={key}",
         data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
@@ -279,7 +279,18 @@ def _gemini_json(prompt, schema, timeout=180):
                 continue
             raise RuntimeError(f"gemini {e.code}: {last}")
     text = res["candidates"][0]["content"]["parts"][0]["text"]
-    return json.loads(text), int((res.get("usageMetadata") or {}).get("totalTokenCount") or 0)
+    tokens = int((res.get("usageMetadata") or {}).get("totalTokenCount") or 0)
+    try:
+        return json.loads(text), tokens
+    except json.JSONDecodeError:
+        # truncated output: salvage the complete objects of the array
+        cut = text.rfind("},")
+        if cut > 0:
+            try:
+                return json.loads(text[:cut + 1] + "]"), tokens
+            except json.JSONDecodeError:
+                pass
+        raise
 
 
 def _heuristic(items):
@@ -290,8 +301,8 @@ def _heuristic(items):
 
 def score(items):
     out, tokens = {}, 0
-    for i in range(0, len(items), 40):
-        chunk = items[i:i + 40]
+    for i in range(0, len(items), 20):
+        chunk = items[i:i + 20]
         try:
             arr, t = _gemini_json(_score_prompt(chunk), SCORE_SCHEMA)
             tokens += t
