@@ -22,7 +22,7 @@ const S = LANG === "he" ? {
   copy:"📋 העתקה", copied:"הועתק!", askBtn:"📨 בקשת אישור", creatorOk:"✅ אושר ע\"י היוצר/ת", creatorRm:"🚫 היוצר/ת ביקש/ה הסרה", creatorPend:"⏳ בקשת הסרה בבדיקה",
   nameTitle:"השם שלי בקהילה", nameHint:"כך תופיעו ליד המנות שפרסמתם. ברירת המחדל: ראשי תיבות.", save:"שמירה",
   claimsTitle:n=>`בקשות מיוצרים (${n})`, approve:"אישור", deny:"דחייה",
-  adminSec:"🛡️ ניהול הקהילה (אדמין)", adminPublic:n=>`מנות ציבוריות (${n})`, adminAll:n=>`כל מנות המשתמשים (${n})`, adminNone:"אין מנות של משתמשים.", unpublish:"הסתר מהקהילה", publish:"פרסם", by:"מאת",
+  adminSec:"🛡️ ניהול הקהילה (אדמין)", stats:(t,b,u)=>`סה"כ ${t} מנות באתר (${b} בסיס + ${u} מהקהילה)`, candsLink:n=>`🍳 מועמדים חדשים מיוטיוב${n!=null?` (${n} ממתינים)`:""}`, adminPublic:n=>`מנות ציבוריות (${n})`, adminAll:n=>`כל מנות המשתמשים (${n})`, adminNone:"אין מנות של משתמשים.", unpublish:"הסתר מהקהילה", publish:"פרסם", by:"מאת",
   community:"👥 קהילה", communityTitle:"👥 מנות מהקהילה", communityHint:"מנות שמשתמשים אחרים הוסיפו ובחרו לפרסם. התחברו כדי להוסיף משלכם.",
   urlsPh:"קישור אחד בכל שורה — פייסבוק / אינסטגרם / טיקטוק / יוטיוב",
   importFile:"📂 ייבוא מקובץ ייצוא (פייסבוק / אינסטגרם)", found:n=>`נמצאו ${n} קישורים בקובץ`, noneFound:"לא נמצאו קישורים בקובץ",
@@ -51,7 +51,7 @@ const S = LANG === "he" ? {
   copy:"📋 Copy", copied:"Copied!", askBtn:"📨 Ask creator", creatorOk:"✅ Creator approved", creatorRm:"🚫 Creator requested removal", creatorPend:"⏳ Removal request under review",
   nameTitle:"My community name", nameHint:"How you appear next to dishes you publish. Default: your initials.", save:"Save",
   claimsTitle:n=>`Creator requests (${n})`, approve:"Approve", deny:"Deny",
-  adminSec:"🛡️ Community admin", adminPublic:n=>`Public dishes (${n})`, adminAll:n=>`All user dishes (${n})`, adminNone:"No user dishes.", unpublish:"Unpublish", publish:"Publish", by:"by",
+  adminSec:"🛡️ Community admin", stats:(t,b,u)=>`${t} dishes on the site (${b} base + ${u} community)`, candsLink:n=>`🍳 New YouTube candidates${n!=null?` (${n} waiting)`:""}`, adminPublic:n=>`Public dishes (${n})`, adminAll:n=>`All user dishes (${n})`, adminNone:"No user dishes.", unpublish:"Unpublish", publish:"Publish", by:"by",
   community:"👥 Community", communityTitle:"👥 Dishes from the community", communityHint:"Dishes other users added and chose to publish. Sign in to add your own.",
   urlsPh:"One link per line — Facebook / Instagram / TikTok / YouTube",
   importFile:"📂 Import from an export file (Facebook / Instagram)", found:n=>`Found ${n} links in the file`, noneFound:"No links found in the file",
@@ -447,7 +447,18 @@ async function renderAdmin(){
       </div></div>`;
   };
   const pub = dishes.filter(d => d.visibility === "public" && d.status === "ready");
+  // site stats: base catalog (static data*.js) + public community dishes, per category
+  const base = (typeof RECIPES !== "undefined" ? RECIPES : []).filter(r => !r._user);
+  const cats = {};
+  base.forEach(r => { cats[r.category] = (cats[r.category] || 0) + 1; });
+  pub.forEach(d => { const c = ((d[LANG] || d.he || {}).category) || "?"; cats[c] = (cats[c] || 0) + 1; });
+  const catRow = Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<span class="mini" style="cursor:default">${esc(c)} <b>${n}</b></span>`).join(" ");
+  let candsN = null;
+  try { candsN = ((await api("/api/admin/cands?status=new")).counts || {}).new || 0; } catch(e){}
   box.innerHTML = `<h4>${S.adminSec}</h4>
+    <div class="hint" style="margin-bottom:6px"><b>${S.stats(base.length + pub.length, base.length, pub.length)}</b></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${catRow}</div>
+    <div style="margin-bottom:14px"><a class="mini on" href="/cands" style="text-decoration:none;display:inline-block">${S.candsLink(candsN)}</a></div>
     ${claims.length ? `<div class="hint" style="margin-bottom:6px"><b>${S.claimsTitle(pending.length)}</b></div><div class="ulist" style="margin-bottom:12px">${claims.slice(0, 20).map(claimItem).join("")}</div>` : ""}
     <div class="hint" style="margin-bottom:6px"><b>${S.adminPublic(pub.length)}</b></div>
     <div class="ulist">${pub.map(item).join("") || `<div class="hint">${S.adminNone}</div>`}</div>
