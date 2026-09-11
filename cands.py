@@ -9,7 +9,7 @@ Data: table `cands` in the same SQLite DB (multiuser.db()).
 Schedule: one scan per day (COOKIN_CANDS_HOUR_UTC, default 4 = 07:00 Israel),
 plus "Scan now" on the page / POST /api/admin/cands/scan.
 """
-import datetime, glob, html as _html, json, os, random, re, subprocess, sys, threading, time, traceback
+import datetime, glob, json, math, os, random, re, subprocess, sys, threading, time, traceback
 import urllib.request, urllib.parse, urllib.error
 
 import multiuser
@@ -20,7 +20,8 @@ MAX_DUR = int(os.environ.get("COOKIN_CANDS_MAX_SEC", "240"))      # reels/shorts
 MIN_VIEWS = int(os.environ.get("COOKIN_CANDS_MIN_VIEWS", "300"))
 PER_QUERY = int(os.environ.get("COOKIN_CANDS_PER_QUERY", "15"))
 QUERIES_PER_SCAN = int(os.environ.get("COOKIN_CANDS_QUERIES", "10"))
-KEEP_SCORE = float(os.environ.get("COOKIN_CANDS_KEEP", "6"))       # below this → stored as 'low', hidden
+KEEP_SCORE = float(os.environ.get("COOKIN_CANDS_KEEP", "7"))       # below this → stored as 'low', hidden
+PER_DISH = int(os.environ.get("COOKIN_CANDS_PER_DISH", "2"))       # max videos of the same dish per scan
 SCAN_HOUR_UTC = int(os.environ.get("COOKIN_CANDS_HOUR_UTC", "4"))
 SCAN_ENABLED = os.environ.get("COOKIN_CANDS_SCAN", "on").lower() not in ("off", "0", "false")
 
@@ -28,7 +29,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS cands(
   id TEXT PRIMARY KEY, url TEXT, title TEXT, channel TEXT, duration INTEGER, views INTEGER,
   thumb TEXT, query TEXT, lang TEXT, cuisine TEXT, category TEXT, score REAL, fit REAL, novelty REAL,
-  reason TEXT, status TEXT DEFAULT 'new', dish_id TEXT, found_at TEXT, decided_at TEXT);
+  reason TEXT, status TEXT DEFAULT 'new', dish_id TEXT, found_at TEXT, decided_at TEXT, dish TEXT);
 CREATE INDEX IF NOT EXISTS cands_status ON cands(status, score);
 CREATE TABLE IF NOT EXISTS cands_meta(k TEXT PRIMARY KEY, v TEXT);
 """
@@ -100,6 +101,9 @@ _lock = threading.Lock()
 def init():
     with db() as c:
         c.executescript(SCHEMA)
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(cands)")}
+        if "dish" not in cols:
+            c.execute("ALTER TABLE cands ADD COLUMN dish TEXT")
 
 
 def _meta(k, v=None):
@@ -200,9 +204,9 @@ def _pick_queries(n):
 # ----------------------------------------------------------------- scoring ---
 SCORE_SCHEMA = {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
     "id": {"type": "STRING"}, "is_recipe": {"type": "BOOLEAN"},
-    "fit": {"type": "NUMBER"}, "novelty": {"type": "NUMBER"},
+    "fit": {"type": "NUMBER"}, "novelty": {"type": "NUMBER"}, "dish": {"type": "STRING"},
     "cuisine": {"type": "STRING"}, "category": {"type": "STRING"}, "lang": {"type": "STRING"},
-    "reason": {"type": "STRING"}}, "required": ["id", "is_recipe", "fit", "novelty", "reason"]}}
+    "reason": {"type": "STRING"}}, "required": ["id", "is_recipe", "fit", "novelty", "dish", "reason"]}}
 
 
 def _score_prompt(items):
@@ -229,10 +233,19 @@ new proteins and formats (lamb, mussels/squid/shrimp, legumes, rice dishes, dump
 soups, salads as a meal), new techniques. A candidate that is basically another aglio e olio, red curry
 chicken, alfredo, lemon pasta, Mongolian beef or chimichurri should get LOW novelty.
 
-Score each YouTube candidate below from title + channel only:
+Score each YouTube candidate below from title + channel only. Be CALIBRATED and use the whole range:
+a typical decent recipe video is fit 6 / novelty 5; reserve 9-10 for the few that are truly exceptional.
+Differentiate between candidates: the same dish from a well-known, trusted channel (RecipeTin Eats,
+Jamie Oliver, Kenji, The Mediterranean Dish, Maangchi, Chef John, established native cooks...) beats a
+generic one; a clear title with a real dish name beats clickbait.
 - is_recipe: true only if this looks like an actual cooking recipe video (not a review/vlog/eating video).
-- fit 0-10: would this family love to cook and eat it (delicious, home-cookable, savory, in their spirit).
-- novelty 0-10: how much it adds to the catalog (10 = new cuisine/technique/ingredient; 0 = near duplicate).
+- fit 0-10: would this family love to cook and eat it (delicious, home-cookable, savory, in their spirit,
+  weeknight-feasible or a worthy Shabbat pot). Penalize: gimmicks, giant-batch/outdoor cooking, very
+  hard or exotic-ingredient recipes, low-effort content.
+- novelty 0-10: how much it adds to the catalog (10 = new cuisine/technique/ingredient; 0 = near duplicate
+  of an existing dish). Judge against the catalog only, not against other candidates.
+- dish: canonical dish name in lowercase English (e.g. "mujadara", "ratatouille", "chicken carnitas") so
+  videos of the same dish can be grouped.
 - cuisine: short label in Hebrew (e.g. "קוריאני", "מקסיקני"). category: the best of {", ".join(multiuser.CATS_HE)}.
 - lang: probable language of the video (ISO code like en/he/it/es/ko).
 - reason: ONE short Hebrew sentence for the admin (why yes / why not), max 120 chars.
@@ -282,7 +295,7 @@ def score(items):
         try:
             arr, t = _gemini_json(_score_prompt(chunk), SCORE_SCHEMA)
             tokens += t
-            for row in arr if isinstance(arr, list) else []:
+            for row in arr if isinstance(arr, list) else []:  # noqa
                 if isinstance(row, dict) and row.get("id"):
                     out[str(row["id"])] = row
         except Exception as e:
@@ -311,18 +324,33 @@ def scan(n_queries=None):
     scores, tokens = score(cands) if cands else ({}, 0)
     kept = low = 0
     now = now_iso()
+    # final score: taste fit + variety + a popularity signal (300 views → 0, 10k → 4, 100k → 7, 1M+ → 10)
+    for i in cands:
+        s = scores.get(i["id"]) or {"is_recipe": True, "fit": 5, "novelty": 5, "reason": "", "dish": ""}
+        i["s"] = s
+        fit, nov = float(s.get("fit") or 0), float(s.get("novelty") or 0)
+        pop = min(10.0, max(0.0, (math.log10(i["views"] + 1) - 2.5) * 2.86))
+        i["final"] = round(0.5 * fit + 0.3 * nov + 0.2 * pop, 1) if s.get("is_recipe", True) else 0.0
+        i["dish"] = (s.get("dish") or "").strip().lower()[:60] or i["query"]
+    # same dish → keep only the best PER_DISH videos as candidates, the rest are duplicates
+    per_dish = {}
+    for i in sorted(cands, key=lambda x: (-x["final"], -x["views"])):
+        n = per_dish.get(i["dish"], 0)
+        i["dup"] = n >= PER_DISH
+        per_dish[i["dish"]] = n + 1
     with db() as c:
         for i in cands:
-            s = scores.get(i["id"]) or {"is_recipe": True, "fit": 5, "novelty": 5, "reason": ""}
-            fit, nov = float(s.get("fit") or 0), float(s.get("novelty") or 0)
-            final = round(0.6 * fit + 0.4 * nov, 1) if s.get("is_recipe", True) else 0.0
-            st = "new" if final >= KEEP_SCORE else "low"
+            s, final = i["s"], i["final"]
+            reason = (s.get("reason") or "")[:300]
+            st = "new" if final >= KEEP_SCORE and not i["dup"] else "low"
+            if i["dup"] and final >= KEEP_SCORE:
+                reason = f"כפילות ({i['dish']}) · " + reason
             kept += st == "new"; low += st == "low"
             c.execute("INSERT OR IGNORE INTO cands(id,url,title,channel,duration,views,thumb,query,lang,cuisine,category,"
-                      "score,fit,novelty,reason,status,found_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                      "score,fit,novelty,reason,status,found_at,dish) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                       (i["id"], i["url"], i["title"], i["channel"], i["duration"], i["views"], i["thumb"], i["query"],
                        (s.get("lang") or "")[:8], (s.get("cuisine") or "")[:40], (s.get("category") or "")[:40],
-                       final, fit, nov, (s.get("reason") or "")[:300], st, now))
+                       final, float(s.get("fit") or 0), float(s.get("novelty") or 0), reason, st, now, i["dish"]))
         # keep the table small: drop old 'low' rows after 60 days
         cutoff = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=60)).isoformat()
         c.execute("DELETE FROM cands WHERE status='low' AND found_at<?", (cutoff,))
@@ -333,11 +361,15 @@ def scan(n_queries=None):
     return res
 
 
-def start_scan(n_queries=None):
+def start_scan(n_queries=None, reset=False):
     with _lock:
         if _state["running"]:
             return False
         _state["running"] = True
+    if reset:  # drop undecided rows (new/low) so the next scan re-evaluates from scratch
+        with db() as c:
+            c.execute("DELETE FROM cands WHERE status IN ('new','low')")
+        _meta("recent_queries", "[]")
 
     def run():
         try:
@@ -420,7 +452,7 @@ def _rows(status, limit=200):
         rows = [dict(r) for r in c.execute(
             "SELECT c.*, d.status AS dish_status, d.he AS dish_he, d.error AS dish_error FROM cands c "
             "LEFT JOIN dishes d ON d.id=c.dish_id WHERE c.status=? "
-            "ORDER BY CASE WHEN c.status='new' THEN c.score END DESC, c.decided_at DESC, c.found_at DESC LIMIT ?",
+            "ORDER BY CASE WHEN c.status IN ('new','low') THEN c.score END DESC, c.views DESC, c.decided_at DESC, c.found_at DESC LIMIT ?",
             (status, limit))]
     for r in rows:
         try:
@@ -473,7 +505,7 @@ def handle_post(handler, path, qs, read_json):
         if not _require_admin(handler, redirect=False):
             return True
         req = read_json()
-        started = start_scan(int(req.get("queries") or 0) or None)
+        started = start_scan(int(req.get("queries") or 0) or None, reset=bool(req.get("reset")))
         handler._json({"ok": True, "started": started, "running": _state["running"]})
         return True
     if path == "/api/admin/cands/decide":
@@ -563,7 +595,7 @@ function render(rows){
    <div class="b">
     <div class="t">${esc(x.title)}</div>
     <div class="c">${esc(x.channel)}${x.lang?' · '+esc(x.lang):''}</div>
-    <div class="tags">${x.cuisine?`<span>${esc(x.cuisine)}</span>`:''}${x.category?`<span>${esc(x.category)}</span>`:''}<span>fit ${x.fit} · novelty ${x.novelty}</span></div>
+    <div class="tags">${x.dish?`<span>${esc(x.dish)}</span>`:''}${x.cuisine?`<span>${esc(x.cuisine)}</span>`:''}${x.category?`<span>${esc(x.category)}</span>`:''}<span>fit ${x.fit} · novelty ${x.novelty}</span></div>
     <div class="r">${esc(x.reason)}</div>
     ${x.dish_id?`<div class="st">מנה ${esc(x.dish_id)} · ${esc(x.dish_status||'')}${x.dish_name?' · '+esc(x.dish_name):''}${x.dish_error?' · '+esc(x.dish_error):''}</div>`:''}
     <div class="act">
