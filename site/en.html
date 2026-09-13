@@ -225,6 +225,8 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <script src="data4-en.js"></script>
 <script src="data5-en.js"></script>
 <script src="data6-en.js"></script>
+<script src="data7-en.js"></script>
+<script src="embed.js"></script>
 <script src="videos.js"></script>
 <script src="gf.js"></script>
 <script src="user.js"></script>
@@ -312,7 +314,7 @@ function openDish(id, skipPush){
   const hero = hasVid
     ? `<video controls playsinline preload="metadata" poster="images/${r.image}" src="videos/${r.id}.mp4"></video>`
     : (r._embed ? `<iframe src="${r._embed}" style="width:100%;aspect-ratio:9/16;max-height:560px;border:0;background:#111;display:block" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`
-                : `<img src="images/${r.image}" alt="">`);
+                : ((typeof embedHero === "function" && embedHero(r.video, "images/" + r.image)) || `<img src="images/${r.image}" alt="">`));
   $("#dishBox").innerHTML = `
     <div class="dimg">${hero}</div>
     <div class="dmain">
