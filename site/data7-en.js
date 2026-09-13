@@ -277,7 +277,7 @@ RECIPES.push(
   "Tadka: heat coconut oil, splutter the mustard seeds, add shallots, curry leaves and coconut slices and fry golden. Pour over the curry and serve."],
  tips:"Fresh curry leaves are sold in Indian grocers; if unavailable, leave them out (don't substitute bay leaves or curry powder). Bone-in chicken makes a deeper gravy."},
 
-{id:"72466", diet:"Fish", image:"72466.jpg", category:"Fish", name:"Mediterranean Pan-Cooked Cod Fillets (reconstructed)", searchAlias:"פילה בקלה ים-תיכוני במחבת", creator:"La Cucina Sapore Vero",
+{id:"72466", diet:"Fish", image:"72466.jpg", category:"Fish", name:"Mediterranean Pan-Cooked Cod Fillets", searchAlias:"פילה בקלה ים-תיכוני במחבת", creator:"La Cucina Sapore Vero",
  time:"20 min", serves:"Serves 2", video:"https://www.facebook.com/reel/1035572925759060",
  intro:"Soft, flavourful cod ready in 20 minutes in one pan: olive oil, cherry tomatoes and garlic, the fish goes in, then black and green olives and capers on top. 10 minutes on low heat and parsley to finish. Reconstructed from the video (quantities approximate).",
  needs:["cod","olive-oil","cherry-tomatoes","garlic","olives","capers","parsley","salt","pepper"],
@@ -297,7 +297,7 @@ RECIPES.push(
   "Sprinkle with chopped parsley and serve with good bread for the sauce."],
  tips:"If the sauce gets too dry, add a splash of water or white wine while cooking. Works with sea bass, bream or any white fish."},
 
-{id:"72479", diet:"Meat", image:"72479.jpg", category:"Chicken", name:"Vivaldi Restaurant Butter Chicken (reconstructed)", searchAlias:"באטר צ'יקן של מסעדת ויוואלדי", creator:"Vivaldi",
+{id:"72479", diet:"Meat", image:"72479.jpg", category:"Chicken", name:"Vivaldi Restaurant Butter Chicken", searchAlias:"באטר צ'יקן של מסעדת ויוואלדי", creator:"Vivaldi",
  time:"45 min + marinating", serves:"Serves 4", video:"https://www.facebook.com/reel/1398185688922917",
  intro:"\"You're coming to an Italian restaurant run by two Greeks to learn how to make butter chicken. Make sense?\" A simple restaurant version: cubed chicken marinated in ginger-garlic paste, turmeric and Kashmiri chilli, seared, then a sauce of onion, fresh tomatoes, garlic, garam masala, kasuri methi and cream. Reconstructed from the video (quantities approximate).",
  needs:["chicken","ginger","garlic","turmeric","paprika","olive-oil","onion","tomatoes-fresh","salt","sugar","spices","water","cashews","cream","coriander"],
@@ -353,7 +353,7 @@ RECIPES.push(
   "Pour the sauce evenly over the vegetables and toss over high heat until it thickens and coats everything. Serve immediately."],
  tips:"The cornstarch must be mixed into cold water before it hits the wok or it will clump. Napa cabbage works in place of bok choy."},
 
-{id:"72750", diet:"Meat", image:"72750.jpg", category:"Chicken", name:"Chicken au Poivre in Creamy Pepper Sauce (reconstructed)", searchAlias:"עוף או פואבר ברוטב שמנת ופלפל", creator:"Cory Armstead",
+{id:"72750", diet:"Meat", image:"72750.jpg", category:"Chicken", name:"Chicken au Poivre in Creamy Pepper Sauce", searchAlias:"עוף או פואבר ברוטב שמנת ופלפל", creator:"Cory Armstead",
  time:"35 min", serves:"Serves 4", video:"https://www.facebook.com/reel/1093545493617577",
  intro:"A spinoff of steak au poivre, the 1960s French bistro classic, with chicken thighs instead of steak: cracked black pepper seared into a golden crust, then a pan sauce of butter, shallots, garlic, Dijon, stock, sherry, thyme and cream. Steakhouse flavour, weeknight effort. Reconstructed from the video (quantities approximate).",
  needs:["chicken","pepper","salt","spices","oil","butter","onion","garlic","mustard","stock","wine-white","thyme","cream","scallion"],
@@ -379,7 +379,7 @@ RECIPES.push(
   "Serve with mashed potatoes, rice or bread."],
  tips:"Cognac instead of sherry makes it deeper. The sauce works on any protein, steak and salmon included."},
 
-{id:"72766", diet:"Vegetarian", image:"72766.jpg", category:"Soups & Sauces", name:"Mexican Salsa Verde (reconstructed)", searchAlias:"סלסה ורדה מקסיקנית", creator:"MoreforSandris",
+{id:"72766", diet:"Vegetarian", image:"72766.jpg", category:"Soups & Sauces", name:"Mexican Salsa Verde", searchAlias:"סלסה ורדה מקסיקנית", creator:"MoreforSandris",
  time:"20 min", serves:"About 2 cups", video:"https://www.facebook.com/reel/3070773969791116",
  intro:"\"Mexicans make this at least once a week\": tomatillos, onion, green chillies, garlic and tomatoes charred in a dry pan, blended with cilantro, and you have a green salsa that goes on everything. Reconstructed from the video (quantities approximate).",
  needs:["tomatillo","onion","chili","garlic","tomatoes-fresh","coriander","salt","lime","water"],
@@ -400,7 +400,7 @@ RECIPES.push(
   "Serve with tacos, chips, eggs, grilled chicken, anything."],
  tips:"No tomatillos? Use unripe green tomatoes with a little extra lime. Keeps a week in the fridge."},
 
-{id:"73016", diet:"Meat", image:"73016.jpg", category:"Chicken", name:"Grandma's Creamy Garlic-Lime Chicken Breast (reconstructed)", searchAlias:"חזה עוף ברוטב שום שמנת וליים של סבתא", creator:"Comidas Caseras",
+{id:"73016", diet:"Meat", image:"73016.jpg", category:"Chicken", name:"Grandma's Creamy Garlic-Lime Chicken Breast", searchAlias:"חזה עוף ברוטב שום שמנת וליים של סבתא", creator:"Comidas Caseras",
  time:"25 min", serves:"Serves 3-4", video:"https://www.facebook.com/reel/1556516539319645",
  intro:"\"My 70-year-old grandmother taught me this secret\": seasoned chicken breast seared in olive oil and butter with whole garlic cloves, the garlic gets mashed, then onion, stock, cream, oregano, pepper, lime and cilantro. 8 minutes in the sauce and it's done. Reconstructed from the video (quantities approximate).",
  needs:["chicken","olive-oil","butter","garlic","onion","stock","salt","cream","oregano","pepper","lime","coriander","spices"],
@@ -424,7 +424,7 @@ RECIPES.push(
   "Serve over white rice."],
  tips:"The whole garlic that cooks in the fat and gets mashed afterwards is the secret: deep flavour without sharpness."},
 
-{id:"73037", diet:"Vegetarian", image:"73037.jpg", category:"Pasta", name:"Caffè Italia Ricotta Gnocchi in Sage Butter (reconstructed)", searchAlias:"ניוקי ריקוטה בחמאת מרווה של קפה איטליה", creator:"חדשות האוכל · Nadav Bornstein",
+{id:"73037", diet:"Vegetarian", image:"73037.jpg", category:"Pasta", name:"Caffè Italia Ricotta Gnocchi in Sage Butter", searchAlias:"ניוקי ריקוטה בחמאת מרווה של קפה איטליה", creator:"חדשות האוכל · Nadav Bornstein",
  time:"2¼ hours (mostly baking)", serves:"Serves 4", video:"https://www.facebook.com/reel/1364216985909738",
  intro:"\"Allegedly the best gnocchi in Israel\": at Caffè Italia the gnocchi start with potatoes baked two hours on a bed of coarse salt, mashed hot, and kneaded with flour, Parmesan, ricotta and egg yolks. Rolled into thin ropes, cut, straight into boiling water, and tossed with butter, sage, chilli and the gnocchi water. Fifteen minutes of work. Reconstructed from the video (quantities approximate).",
  needs:["potato","salt","flour","parmesan","ricotta","eggs","butter","sage","pepper","chili"],
@@ -450,7 +450,7 @@ RECIPES.push(
   "When the gnocchi float, transfer to the pan and toss until the sauce is glossy and coats them. Serve immediately."],
  tips:"Baking on salt dries the potatoes, so less flour is needed and the gnocchi stay soft. Don't over-knead."},
 
-{id:"73050", diet:"Vegetarian", image:"73050.jpg", category:"Soups & Sauces", name:"Foil-Roasted Italian Tomato Sauce (reconstructed)", searchAlias:"רוטב עגבניות איטלקי בנייר אלומיניום", creator:"Comidas Caseras",
+{id:"73050", diet:"Vegetarian", image:"73050.jpg", category:"Soups & Sauces", name:"Foil-Roasted Italian Tomato Sauce", searchAlias:"רוטב עגבניות איטלקי בנייר אלומיניום", creator:"Comidas Caseras",
  time:"55 min", serves:"About 2 cups", video:"https://www.facebook.com/reel/1557433665861141",
  intro:"Did you know that wrapping tomatoes in foil makes an amazing sauce? Tomatoes, onion, red pepper and garlic seasoned with oregano, paprika, thyme and parsley, wrapped and cooked 45 minutes in a pan on low heat, then blended with cilantro and olive oil. Reconstructed from the video (quantities approximate).",
  needs:["tomatoes-fresh","onion","pepper-red","garlic","salt","oregano","pepper","paprika","parsley","thyme","coriander","olive-oil"],
