@@ -957,6 +957,21 @@ def process_dish(did):
                   "-vf", "scale='min(1080,iw)':-2", "-c:a", "aac", "-b:a", "128k",
                   "-movflags", "+faststart", fixed], timeout=1500)
             video = fixed
+        # Platform thumbnails often show the creator's face. Prefer a frame
+        # from the middle/later part of the actual dish video for the card and
+        # poster image, where the food is normally on screen.
+        if ff:
+            food_thumb = os.path.join(tmp, "food-thumb.jpg")
+            try:
+                # -sseof seeks from the end without a separate duration probe.
+                # This avoids the opening creator shot while working for both
+                # short reels and longer uploaded videos.
+                _run([ff, "-y", "-sseof", "-4", "-i", video,
+                      "-frames:v", "1", food_thumb], timeout=120)
+                if os.path.exists(food_thumb) and os.path.getsize(food_thumb) > 1000:
+                    thumb = food_thumb
+            except Exception as e:
+                log(f"food thumbnail extraction failed ({str(e)[:120]})")
         if not thumb and ff:
             thumb = os.path.join(tmp, "thumb.jpg")
             _run([ff, "-y", "-ss", "1", "-i", video, "-frames:v", "1", thumb])

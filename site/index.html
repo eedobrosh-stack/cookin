@@ -330,19 +330,32 @@ function toggleGf(){
   renderCats(); renderGallery();
 }
 
-// Gallery order is randomized once per page load (Fisher-Yates)
+// Gallery order is randomized once per page load (Fisher-Yates). Use the
+// browser CSPRNG when available so a reload cannot keep reproducing the same
+// apparent order because of a weak/predictable Math.random seed.
+function randomIndex(max){
+  if(max <= 0) return 0;
+  if(window.crypto && crypto.getRandomValues){
+    const n = new Uint32Array(1);
+    const limit = Math.floor(0x100000000 / max) * max;
+    do { crypto.getRandomValues(n); } while(n[0] >= limit);
+    return n[0] % max;
+  }
+  return Math.floor(Math.random() * max);
+}
 const shuffleOrder = RECIPES.map(r => r.id);
 for(let i = shuffleOrder.length - 1; i > 0; i--){
-  const j = Math.floor(Math.random() * (i + 1));
+  const j = randomIndex(i + 1);
   [shuffleOrder[i], shuffleOrder[j]] = [shuffleOrder[j], shuffleOrder[i]];
 }
+const shuffleRank = new Map(shuffleOrder.map((id, i) => [id, i]));
 
 function renderGallery(){
   const q = $("#search").value.trim();
   let items = VIS(true).filter(r =>
     (activeCat==="הכל" || r.category===activeCat) && (!gfOn || isGlutenFree(r)) &&
     (!q || (r.name+r.creator+(r.searchAlias||"")).includes(q)));
-  if(shuffleOrder) items = items.slice().sort((a,b)=>shuffleOrder.indexOf(a.id)-shuffleOrder.indexOf(b.id));
+  items = items.slice().sort((a,b)=>shuffleRank.get(a.id)-shuffleRank.get(b.id));
   $("#gfNote").style.display = gfOn ? "block" : "none";
   $("#grid").innerHTML = items.map(r => `
     <div class="card${cardClass(r)}" onclick="openDish('${r.id}')">

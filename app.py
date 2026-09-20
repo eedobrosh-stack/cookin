@@ -672,6 +672,11 @@ class Handler(SimpleHTTPRequestHandler):
         p = self.path.split("?")[0].lower()
         if p.endswith(self._CACHEABLE_EXT):
             self.send_header("Cache-Control", "public, max-age=86400")
+        elif p.endswith((".html", ".js")):
+            # The gallery order is generated during page/script evaluation;
+            # stale HTML/JS can otherwise make a refresh look non-random after
+            # a deploy or while a CDN/browser still serves an older asset.
+            self.send_header("Cache-Control", "no-store, max-age=0")
         super().end_headers()
 
     # --- HTTP Range support (required by Safari/iOS for <video>) ---
