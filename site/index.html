@@ -30,15 +30,20 @@ h1 .em{font-size:1.7rem;}
 .lang.active{background:#fff; opacity:1; filter:none; box-shadow:0 1px 4px rgba(80,60,40,.18);}
 main{max-width:1200px; margin:0 auto; padding:22px 20px 80px;}
 /* category chips — sticky right below the (sticky) header on desktop */
-.cats{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px;
-      position:sticky; top:var(--hh,64px); z-index:55;
+.catsWrap{position:sticky; top:var(--hh,64px); z-index:55; margin-bottom:20px;
       background:rgba(250,247,242,.95); backdrop-filter:blur(8px);
       padding:10px 0 12px; border-bottom:1px solid var(--line);}
+.cats{display:flex; gap:8px; flex-wrap:wrap;}
+.cats.dietbar{margin-top:8px;}
 .cat{border:1px solid var(--line); background:var(--card); border-radius:999px; padding:6px 14px; cursor:pointer; font-size:.92rem; color:var(--ink); font-family:inherit;}
 .cat.active{background:var(--ink); color:#fff; border-color:var(--ink);}
 .catsep{width:1px; align-self:stretch; background:var(--line); margin:0 4px; flex:0 0 auto;}
 .cat.gf{border-color:#8aa64a; color:#4f6b1f; background:#f4f8ea;}
 .cat.gf.active{background:#4f6b1f; border-color:#4f6b1f; color:#fff;}
+.cat.veg{border-color:#7fb08a; color:#24613a; background:#eaf6ee;}
+.cat.veg.active{background:#24613a; border-color:#24613a; color:#fff;}
+.cat.vegan{border-color:#5ea37a; color:#1d5c3a; background:#e3f3ea;}
+.cat.vegan.active{background:#1d5c3a; border-color:#1d5c3a; color:#fff;}
 /* gallery */
 .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:18px;}
 .card{background:var(--card); border-radius:16px; overflow:hidden; box-shadow:var(--shadow); cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; border:1px solid var(--line); display:flex; flex-direction:column;}
@@ -166,9 +171,10 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
   #search{flex:1; min-width:120px; width:auto;}
   main{padding:14px 14px 60px;}
   /* category chips: frozen at the top, one scrollable row */
-  .cats{position:sticky; top:0; z-index:60; background:rgba(250,247,242,.97); backdrop-filter:blur(8px);
-        margin:0 -14px 12px; padding:10px 14px; flex-wrap:nowrap; overflow-x:auto;
-        -webkit-overflow-scrolling:touch; border-bottom:1px solid var(--line); scrollbar-width:none;}
+  .catsWrap{position:sticky; top:0; z-index:60; background:rgba(250,247,242,.97); backdrop-filter:blur(8px);
+        margin:0 -14px 12px; padding:8px 0 8px; border-bottom:1px solid var(--line);}
+  .cats{flex-wrap:nowrap; overflow-x:auto; padding:2px 14px; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+  .cats.dietbar{margin-top:6px;}
   .cats::-webkit-scrollbar{display:none;}
   .cat{flex:0 0 auto;}
   /* dishes: compact single-line rows (thumbnail + name + diet badge) */
@@ -205,7 +211,8 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 </header>
 <main>
   <section id="galleryView">
-    <div class="cats" id="catBar"></div>
+    <div class="catsWrap"><div class="cats" id="catBar"></div><div class="cats dietbar" id="dietBar"></div></div>
+    <div class="gfnote" id="veganNote" style="display:none">🌱 <b>טבעוני:</b> מנות צמחוניות ללא חלב, גבינות, ביצים, דבש ורטבי דגים/צדפות. במנות עם ציר, דבש/סילאן או נודלס — השתמשו בציר ירקות, סילאן/מייפל ונודלס ללא ביצים.</div>
     <div class="gfnote" id="gfNote" style="display:none">🌾 <b>ללא גלוטן:</b> מנות ללא קמח, פירורי לחם, סולת, נודלס או כיסונים. במנות פסטה ורטבי סויה/טריאקי/הויסין/צדפות — השתמשו בגרסה ללא גלוטן (פסטה ללא גלוטן, טמרי).</div>
     <div class="grid" id="grid"></div>
   </section>
@@ -286,6 +293,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <script src="embed.js"></script>
 <script src="videos.js"></script>
 <script src="gf.js"></script>
+<script src="diet.js"></script>
 <script src="dishlinks.js"></script>
 <script src="user.js"></script>
 <script>
@@ -303,6 +311,8 @@ let pantry = new Set(JSON.parse(localStorage.getItem("cookin-pantry-v1")||"[]"))
 const CAT_ORDER = ["הכל","פסטה","עוף","בקר","דגים","סלטים","ירקות ותוספות","מרקים ורטבים"];
 // Gluten-free is an independent toggle (combines with any category); persisted per browser.
 let gfOn = false; try{ gfOn = localStorage.getItem("cookin-gf")==="1"; }catch(e){}
+// Diet filter: "" (off) | "veg" | "vegan" — one at a time (vegan is a subset of vegetarian); persisted per browser.
+let dietMode = ""; try{ dietMode = localStorage.getItem("cookin-diet")||""; if(!["veg","vegan"].includes(dietMode)) dietMode=""; }catch(e){}
 
 function showView(v){
   $("#galleryView").style.display = v==="gallery" ? "block":"none";
@@ -323,7 +333,15 @@ function dietBadge(r){ return `<span class="badge ${DIET_CLS[r.diet]||''}">${DIE
 function renderCats(){
   $("#catBar").innerHTML = CAT_ORDER.map(c =>
     `<button class="cat ${c===activeCat?'active':''}" onclick="activeCat='${c.replace(/'/g,"\\'")}';renderCats();renderGallery()">${c}</button>`).join("")
-    + `<span class="catsep"></span><button class="cat gf ${gfOn?'active':''}" role="switch" aria-checked="${gfOn}" title="הצג רק מנות ללא גלוטן (משתלב עם כל קטגוריה)" onclick="toggleGf()">🌾 ללא גלוטן</button>`;
+;
+  $("#dietBar").innerHTML = `<button class="cat gf ${gfOn?'active':''}" role="switch" aria-checked="${gfOn}" title="הצג רק מנות ללא גלוטן (משתלב עם כל קטגוריה)" onclick="toggleGf()">🌾 ללא גלוטן</button>`
+    + `<button class="cat veg ${dietMode==='veg'?'active':''}" role="switch" aria-checked="${dietMode==='veg'}" title="הצג רק מנות צמחוניות" onclick="toggleDiet('veg')">🥦 צמחוני</button>`
+    + `<button class="cat vegan ${dietMode==='vegan'?'active':''}" role="switch" aria-checked="${dietMode==='vegan'}" title="הצג רק מנות טבעוניות (ללא חלב, ביצים, דבש)" onclick="toggleDiet('vegan')">🌱 טבעוני</button>`;
+}
+function toggleDiet(m){
+  dietMode = dietMode===m ? "" : m;
+  try{ localStorage.setItem("cookin-diet", dietMode); }catch(e){}
+  renderCats(); renderGallery();
 }
 function toggleGf(){
   gfOn = !gfOn;
@@ -355,9 +373,11 @@ function renderGallery(){
   const q = $("#search").value.trim();
   let items = VIS(true).filter(r =>
     (activeCat==="הכל" || r.category===activeCat) && (!gfOn || isGlutenFree(r)) &&
+    (!dietMode || (dietMode==="vegan" ? isVegan(r) : isVegetarian(r))) &&
     (!q || (r.name+r.creator+(r.searchAlias||"")).includes(q)));
   items = items.slice().sort((a,b)=>shuffleRank.get(a.id)-shuffleRank.get(b.id));
   $("#gfNote").style.display = gfOn ? "block" : "none";
+  $("#veganNote").style.display = dietMode==="vegan" ? "block" : "none";
   $("#grid").innerHTML = items.map(r => `
     <div class="card${cardClass(r)}" onclick="openDish('${r.id}')">
       ${r._user && r._status!=="ready" ? `<div class="thumb"></div>` : `<img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">`}${cardExtras(r)}
