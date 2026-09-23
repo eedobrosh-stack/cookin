@@ -661,7 +661,7 @@ def api_admin_queue(handler, user):
     with db() as c:
         rows = [dict(_dish_public(r), owner_name=r["name"], owner_email=r["email"],
                      has_image=os.path.exists(os.path.join(UIMAGES_DIR, r["id"] + ".jpg"))) for r in c.execute(
-            "SELECT d.*, u.name, u.email FROM dishes d JOIN users u ON u.id=d.owner_id "
+            "SELECT d.*, u.name, u.email FROM dishes d LEFT JOIN users u ON u.id=d.owner_id "
             "WHERE d.status IN ('queued','failed') ORDER BY d.created_at")]
         processing = c.execute("SELECT COUNT(*) FROM dishes WHERE status='processing'").fetchone()[0]
         claims = [dict(r) for r in c.execute("SELECT id, dish_id, action, email, created_at FROM claims WHERE status='pending'")]
