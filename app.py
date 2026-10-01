@@ -22,6 +22,7 @@ ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 GAME_PATH = os.path.join(ASSETS, "lielmali.html")
 SUMMER_PATH = os.path.join(ASSETS, "ilsummer.html")
 BARRACE_PATH = os.path.join(ASSETS, "barrace.html")
+SKI2027_PATH = os.path.join(ASSETS, "ski2027.html")
 VIDEOS_DIR = os.path.join(DATA_DIR, "videos")
 STATE_PATH = os.path.join(DATA_DIR, "family.json")
 LOCK = threading.Lock()
@@ -463,6 +464,7 @@ SUMMER_PREFIX = (
 
 # Same wrapper for other artifact-style assets, different favicon.
 BARRACE_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127937;")
+SKI2027_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127935;")
 
 JARCUD_LANDING = """<!doctype html>
 <meta charset="utf-8">
@@ -509,6 +511,7 @@ JARCUD_ARTIFACTS = """<!doctype html>
 <a class="card" href="/ilsummer"><span class="e">&#9728;&#65039;</span><span>IL Summer<small>How much summer is left?</small></span></a>
 <a class="card" href="/lielmali"><span class="e">&#128373;&#65039;</span><span>Where in the World are Liel &amp; Mali?<small>The detective game</small></span></a>
 <a class="card" href="/barrace"><span class="e">&#127937;</span><span>Bar Race<small>7-color racing game</small></span></a>
+<a class="card" href="/ski2027"><span class="e">&#127935;</span><span>Ski 2027<small>chalet candidates, 17–22 Feb 2027</small></span></a>
 <a class="card" href="/vidsum"><span class="e">&#127916;</span><span>Vidsum Discover<small>Topic search &rarr; queue episodes to summarize</small></span></a>
 <a class="home" href="/">&#128081; Jarcud</a>
 """
@@ -816,6 +819,13 @@ class Handler(SimpleHTTPRequestHandler):
         if p == "/api/vidsum/queue":
             with VIDSUM_LOCK:
                 self._json({"ok": True, **vidsum_load_queue()})
+            return
+        if (self._is_main_host() and p in ("/ski2027", "/ski2027/")) or (self.headers.get("Host") or "").split(":")[0].lower() == "ski2027.jarcud.com":
+            try:
+                with open(SKI2027_PATH, encoding="utf-8") as f:
+                    self._html(SKI2027_PREFIX + f.read(), "no-store")
+            except OSError:
+                self._json({"error": "ski2027 page not found"}, 404)
             return
         if self._is_main_host() and p in ("/barrace", "/barrace/", "/race", "/race/"):
             try:
