@@ -227,7 +227,7 @@ RECIPES.push(
   tips:"Works with any cut of chicken. The flour on the thighs thickens the sauce as it bakes."
 },
 {
-  id:"29915", diet:"Fish", image:"29915.jpg", category:"Pasta",
+  id:"29915", diet:"Fish", image:"29915.jpg", tb2:"29915-chef.jpg", category:"Pasta",
   name:"Caramelised Onion and Chilli Prawn Pasta", searchAlias:"פסטה שרימפס צ'ילי ובצל מקורמל",
   creator:"Thegoodbite", time:"45 min", serves:"Serves 3-4",
   video:"https://www.facebook.com/reel/774875524955080",
@@ -738,7 +738,7 @@ RECIPES.push(
   tips:"The zoodles go in only at the end, otherwise they turn watery."
 },
 {
-  id:"31321", diet:"Vegetarian", image:"31321.jpg", category:"Pasta",
+  id:"31321", diet:"Vegetarian", image:"31321.jpg", tb2:"31321-chef.jpg", category:"Pasta",
   name:"Pasta in Tomato and Peach Cream", searchAlias:"פסטה בקרם עגבניות ואפרסקים",
   creator:"Tom Franz", time:"1 hr", serves:"Serves 4-5",
   video:"https://www.facebook.com/reel/1940888196714396",
@@ -939,7 +939,7 @@ RECIPES.push(
   tips:"The longer the chicken and onions stay covered in the oven, the richer the caramel. Add sliced carrot or whole garlic cloves to the bake. Tom's mother served it with spätzle."
 },
 {
-  id:"32911", diet:"Meat", image:"32911.jpg", category:"Beef",
+  id:"32911", diet:"Meat", image:"32911.jpg", tb2:"32911-chef.jpg", category:"Beef",
   name:"Chen Koren's Quick Oshpalov", searchAlias:"אושפלאו זריז של חן קורן",
   creator:"Chen Koren", time:"2-3 hrs", serves:"Serves 6",
   video:"https://www.facebook.com/reel/1298519381881817",
@@ -1162,7 +1162,7 @@ RECIPES.push(
   tips:"It's called drained rice because you drain it midway. The smell in the house is a childhood memory passed to the next generation."
 },
 {
-  id:"32663", diet:"Vegetarian", image:"32663.jpg", category:"Pasta",
+  id:"32663", diet:"Vegetarian", image:"32663.jpg", tb2:"32663-chef.jpg", category:"Pasta",
   name:"Eastern European Jewish Pasta", searchAlias:"פסטה של יהודי מזרח אירופה",
   creator:"Haim Cohen", time:"30 min", serves:"Serves 2",
   video:"https://www.facebook.com/reel/2009556076539991",

@@ -989,7 +989,7 @@ const RECIPES = [
   tips:"From the comments: a garlic clove adds a lot; if you prefer it milder, halve the chili."
 },
 {
-  id:"8600", diet:"Meat", image:"8600.jpg", category:"Beef",
+  id:"8600", diet:"Meat", image:"8600.jpg", tb2:"8600-chef.jpg", category:"Beef",
   name:"Thai Coconut Braised Beef",
   searchAlias:"בקר תאילנדי בקוקוס (Thai Coconut Braised Beef)",
   creator:"Thegoodbite", time:"3 hrs", serves:"Serves 4 (670 calories, 43 g protein)",

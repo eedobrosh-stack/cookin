@@ -5,7 +5,7 @@ Object.assign(INGREDIENTS, {
 });
 
 RECIPES.push(
-{id:"75691", diet:"Fish", image:"75691.jpg", category:"Fish", name:"Baked Tilapia with Garlic and Green Chili", searchAlias:"מושט בתנור עם שום וצ'ילי ירוק", creator:"Haim Cohen",
+{id:"75691", diet:"Fish", image:"75691.jpg", tb2:"75691-chef.jpg", category:"Fish", name:"Baked Tilapia with Garlic and Green Chili", searchAlias:"מושט בתנור עם שום וצ'ילי ירוק", creator:"Haim Cohen",
  time:"25 min", serves:"2 servings", video:"https://www.facebook.com/reel/1759505034655025",
  intro:"Haim Cohen's Tiberias way: salt the fish first and let it sit a few minutes, the same trick as his schnitzel tip, then bake it with grated garlic, hot green chili, olive oil and lemon until it is just done and not a minute more. Reconstructed from the video (quantities approximate).",
  needs:["tilapia","garlic","chili","olive-oil","lemon","salt","pepper","parsley"],

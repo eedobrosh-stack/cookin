@@ -275,6 +275,15 @@ const DIET_CLS = {"Meat":"diet-meat","Fish":"diet-fish","Vegetarian":"diet-veg"}
 const DIET_EMOJI = {"Meat":"🥩","Fish":"🐟","Vegetarian":"🥦"};
 function dietBadge(r){ return `<span class="badge ${DIET_CLS[r.diet]||''}">${DIET_EMOJI[r.diet]||""} ${r.diet||""}</span>`; }
 
+/* Two preview images per dish.
+   TB1 = r.image. The card on the homepage / category page / pantry rows.
+         Those are 4:3 or squarer, so the image must read as food when cropped:
+         a dish close-up.
+   TB2 = r.tb2. The tall still on the video screen before it plays (dish hero + video
+         poster). Portrait, so it can hold the cook and the dish together.
+   Falls back to TB1 whenever a dish has no tb2. */
+function tb2(r){ return r.tb2 || r.image; }
+
 function renderCats(){
   $("#catBar").innerHTML = CAT_ORDER.map(c =>
     `<button class="cat ${c===activeCat?'active':''}" onclick="activeCat='${c.replace(/'/g,"\\'")}';renderCats();renderGallery()">${c}</button>`).join("")
@@ -336,9 +345,9 @@ function openDish(id, skipPush){
     l.group ? `<div class="ing-group">${l.group}</div>` : `<li>${l.text}</li>`).join("");
   const hasVid = (typeof LOCAL_VIDEOS !== "undefined") && LOCAL_VIDEOS.has(r.id);
   const hero = hasVid
-    ? `<video controls playsinline preload="metadata" poster="images/${r.image}" src="videos/${r.id}.mp4"></video>`
+    ? `<video controls playsinline preload="metadata" poster="images/${tb2(r)}" src="videos/${r.id}.mp4"></video>`
     : (r._embed ? `<iframe src="${r._embed}" style="width:100%;aspect-ratio:9/16;max-height:560px;border:0;background:#111;display:block" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`
-                : ((typeof embedHero === "function" && embedHero(r.video, "images/" + r.image)) || `<img src="images/${r.image}" alt="">`));
+                : ((typeof embedHero === "function" && embedHero(r.video, "images/" + tb2(r))) || `<img src="images/${tb2(r)}" alt="">`));
   $("#dishBox").innerHTML = `
     <div class="dimg">${hero}</div>
     <div class="dmain">

@@ -5,7 +5,7 @@ Object.assign(INGREDIENTS, {
 });
 
 RECIPES.push(
-{id:"75691", diet:"דגים", image:"75691.jpg", category:"דגים", name:"מושט בתנור עם שום וצ'ילי ירוק", creator:"חיים כהן",
+{id:"75691", diet:"דגים", image:"75691.jpg", tb2:"75691-chef.jpg", category:"דגים", name:"מושט בתנור עם שום וצ'ילי ירוק", creator:"חיים כהן",
  time:"25 דקות", serves:"2 מנות", video:"https://www.facebook.com/reel/1759505034655025",
  intro:"הדרך הטבריינית של חיים כהן: הדג מומלח קודם ומנוח כמה דקות, בדיוק כמו טיפ השניצל, ואז נכנס לתנור עם שום מגורד, צ'ילי ירוק חריף, שמן זית ולימון, עד שהוא בדיוק מוכן ולא דקה יותר. שוחזר מהסרטון (הכמויות משוערות).",
  needs:["tilapia","garlic","chili","olive-oil","lemon","salt","pepper","parsley"],

@@ -227,7 +227,7 @@ RECIPES.push(
   tips:"מתאים לכל סוג של עוף. הקמח על הפרגיות מסמיך את הרוטב במהלך האפייה."
 },
 {
-  id:"29915", diet:"דגים", image:"29915.jpg", category:"פסטה",
+  id:"29915", diet:"דגים", image:"29915.jpg", tb2:"29915-chef.jpg", category:"פסטה",
   name:"פסטה שרימפס צ'ילי ובצל מקורמל",
   creator:"Thegoodbite", time:"45 דק'", serves:"3-4 מנות",
   video:"https://www.facebook.com/reel/774875524955080",
@@ -738,7 +738,7 @@ RECIPES.push(
   tips:"הזודלס נכנסים רק בסוף, אחרת הם נהיים מימיים."
 },
 {
-  id:"31321", diet:"צמחוני", image:"31321.jpg", category:"פסטה",
+  id:"31321", diet:"צמחוני", image:"31321.jpg", tb2:"31321-chef.jpg", category:"פסטה",
   name:"פסטה בקרם עגבניות ואפרסקים",
   creator:"Tom Franz", time:"שעה", serves:"4-5 מנות",
   video:"https://www.facebook.com/reel/1940888196714396",
@@ -939,7 +939,7 @@ RECIPES.push(
   tips:"ככל שהעוף והבצל מכוסים יותר זמן בתנור, הקרמול עשיר יותר. אפשר להוסיף גזר פרוס או שיני שום שלמות לאפייה. אמא של תום הגישה עם שפצלה."
 },
 {
-  id:"32911", diet:"בשרי", image:"32911.jpg", category:"בקר",
+  id:"32911", diet:"בשרי", image:"32911.jpg", tb2:"32911-chef.jpg", category:"בקר",
   name:"אושפלאו זריז של חן קורן",
   creator:"Chen Koren", time:"2-3 שעות", serves:"6 מנות",
   video:"https://www.facebook.com/reel/1298519381881817",
@@ -1162,7 +1162,7 @@ RECIPES.push(
   tips:"קוראים לזה אורז מסונן כי מסננים אותו באמצע. הריח בבית הוא זיכרון ילדות שעובר לדור הבא."
 },
 {
-  id:"32663", diet:"צמחוני", image:"32663.jpg", category:"פסטה",
+  id:"32663", diet:"צמחוני", image:"32663.jpg", tb2:"32663-chef.jpg", category:"פסטה",
   name:"פסטה של יהודי מזרח אירופה",
   creator:"Haim Cohen", time:"30 דק'", serves:"2 מנות",
   video:"https://www.facebook.com/reel/2009556076539991",

@@ -957,7 +957,7 @@ const RECIPES = [
   tips:"מהתגובות: שן שום מוסיפה המון; מי שמעדיף, חצי כמות צ'ילי."
 },
 {
-  id:"8600", diet:"בשרי", image:"8600.jpg", category:"בקר",
+  id:"8600", diet:"בשרי", image:"8600.jpg", tb2:"8600-chef.jpg", category:"בקר",
   name:"בקר תאילנדי בקוקוס (Thai Coconut Braised Beef)",
   creator:"Thegoodbite", time:"3 שעות", serves:"4 מנות (670 קלוריות, 43 גר' חלבון)",
   video:"https://www.facebook.com/reel/1004011975510269",
