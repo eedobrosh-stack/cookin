@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cookin 🍳 — ספר המתכונים</title>
+<title>Cookin 🍳 | ספר המתכונים</title>
 <style>
 :root{
   --bg:#faf7f2; --card:#ffffff; --ink:#2b2420; --muted:#8a7f74;
@@ -194,7 +194,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <body>
 <header>
   <div class="hwrap">
-    <h1><span class="em">🍳</span> Cookin — ספר המתכונים</h1>
+    <h1><span class="em">🍳</span> Cookin | ספר המתכונים</h1>
     <div class="tabs">
       <button class="tab active" id="tabDishes" onclick="showView('gallery')">המנות</button>
       <button class="tab" id="tabPantry" onclick="showView('pantry')">מה יש לי במטבח? 🔄</button>
@@ -212,8 +212,8 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <main>
   <section id="galleryView">
     <div class="catsWrap"><div class="cats" id="catBar"></div><div class="cats dietbar" id="dietBar"></div></div>
-    <div class="gfnote" id="veganNote" style="display:none">🌱 <b>טבעוני:</b> מנות צמחוניות ללא חלב, גבינות, ביצים, דבש ורטבי דגים/צדפות. במנות עם ציר, דבש/סילאן או נודלס — השתמשו בציר ירקות, סילאן/מייפל ונודלס ללא ביצים.</div>
-    <div class="gfnote" id="gfNote" style="display:none">🌾 <b>ללא גלוטן:</b> מנות ללא קמח, פירורי לחם, סולת, נודלס או כיסונים. במנות פסטה ורטבי סויה/טריאקי/הויסין/צדפות — השתמשו בגרסה ללא גלוטן (פסטה ללא גלוטן, טמרי).</div>
+    <div class="gfnote" id="veganNote" style="display:none">🌱 <b>טבעוני:</b> מנות צמחוניות ללא חלב, גבינות, ביצים, דבש ורטבי דגים/צדפות. במנות עם ציר, דבש/סילאן או נודלס, השתמשו בציר ירקות, סילאן/מייפל ונודלס ללא ביצים.</div>
+    <div class="gfnote" id="gfNote" style="display:none">🌾 <b>ללא גלוטן:</b> מנות ללא קמח, פירורי לחם, סולת, נודלס או כיסונים. במנות פסטה ורטבי סויה/טריאקי/הויסין/צדפות, השתמשו בגרסה ללא גלוטן (פסטה ללא גלוטן, טמרי).</div>
     <div class="grid" id="grid"></div>
   </section>
 
@@ -226,7 +226,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
     <div class="pgrid">
       <div class="panel">
         <h3>סמנו מה יש לכם 🛒</h3>
-        <div class="sub">בחרו את המצרכים הזמינים אצלכם, ומצד שני נדליק את המנות שאפשר להכין. תחליפים מתקבלים — למשל עוף במקום בקר.</div>
+        <div class="sub">בחרו את המצרכים הזמינים אצלכם, ומצד שני נדליק את המנות שאפשר להכין. תחליפים מתקבלים, למשל עוף במקום בקר.</div>
         <div class="basics-row">
           <input type="checkbox" id="basicsChk" checked onchange="renderPantry()">
           <label for="basicsChk">יש לי מצרכי יסוד (מלח, פלפל, שמן, סוכר, קמח, תבלינים יבשים)</label>
@@ -249,7 +249,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
     <div class="fgrid">
       <div class="panel">
         <h3>בני המשפחה 👨‍👩‍👧‍👦</h3>
-        <div class="sub">מוסיפים פעם אחת — השמות נשמרים לריצות הבאות. כל אחד בוחר מנה לארוחת הצהריים של מחר.</div>
+        <div class="sub">מוסיפים פעם אחת, והשמות נשמרים לריצות הבאות. כל אחד בוחר מנה לארוחת הצהריים של מחר.</div>
         <div class="member-add">
           <input id="newMember" placeholder="שם חדש…" onkeydown="if(event.key==='Enter')addMember()">
           <button onclick="addMember()">הוספה</button>
@@ -419,7 +419,7 @@ function openDish(id){
         <h2>${r.name}</h2>
         <div class="dsub">מאת ${r.creator}${r.serves?` · ${r.serves}`:""}${r.time?` · ⏱ ${r.time}`:""}</div>
         ${r.intro?`<div class="dnote">${r.intro}</div>`:""}
-        ${hasVid?`<div class="dsub">▶️ הסרטון מוטמע כאן — לחצו נגן</div>`:""}
+        ${hasVid?`<div class="dsub">▶️ הסרטון מוטמע כאן, לחצו נגן</div>`:""}
       </div>
     </div>
     <div class="dbody">
@@ -487,7 +487,7 @@ function renderPantry(){
   almost.sort((a,b)=>a.missing.length-b.missing.length);
 
   $("#resultSummary").textContent =
-    pantry.size===0 ? "עוד לא סימנתם מצרכים — בחרו כמה דברים שיש במקרר ובמזווה."
+    pantry.size===0 ? "עוד לא סימנתם מצרכים. בחרו כמה דברים שיש במקרר ובמזווה."
     : `סימנתם ${pantry.size} מצרכים · ${can.length} מנות מוכנות להכנה · ${almost.length} מנות במרחק קצר`;
 
   const cardHtml = (r, note) => `
@@ -500,12 +500,12 @@ function renderPantry(){
   html += `<div class="rgroup-title can">✅ אפשר להכין עכשיו (${can.length})</div>`;
   html += can.length ? `<div class="rcards">${can.map(({r,subs})=>cardHtml(r,{cls:"can",
       html: subs.length? `<span class="subnote">עם תחליף: ${subs.map(([a,b])=>`${ingLabel(b)} במקום ${ingLabel(a)}`).join(", ")}</span>` : "כל המצרכים קיימים"
-    })).join("")}</div>` : `<div class="empty">עדיין אין — נסו לסמן עוד מצרכים.</div>`;
-  html += `<div class="rgroup-title almost">🟡 כמעט שם — חסר פריט או שניים (${almost.length})</div>`;
+    })).join("")}</div>` : `<div class="empty">עדיין אין, נסו לסמן עוד מצרכים.</div>`;
+  html += `<div class="rgroup-title almost">🟡 כמעט שם, חסר פריט או שניים (${almost.length})</div>`;
   html += almost.length ? `<div class="rcards">${almost.map(({r,missing,subs})=>cardHtml(r,{cls:"almost",
       html: `<span class="missnote">חסר: ${missing.map(ingLabel).join(", ")}</span>`+
             (subs.length?`<br><span class="subnote">תחליף: ${subs.map(([a,b])=>`${ingLabel(b)}↔${ingLabel(a)}`).join(", ")}</span>`:"")
-    })).join("")}</div>` : `<div class="empty">—</div>`;
+    })).join("")}</div>` : `<div class="empty">אין תוצאות בקבוצה הזו</div>`;
   $("#results").innerHTML = html;
 }
 
@@ -542,7 +542,7 @@ function renderFamily(){
       ${dish?`<button class="pick" onclick="familyAction({action:'unvote',name:'${m.replace(/'/g,"\\'")}'})">ביטול</button>`:""}
       <button class="del" title="הסרה" onclick="if(confirm('להסיר את ${m}?'))familyAction({action:'removeMember',name:'${m.replace(/'/g,"\\'")}'})">✕</button>
     </div>`;
-  }).join("") || `<div class="empty">אין עדיין בני משפחה — הוסיפו למעלה.</div>`;
+  }).join("") || `<div class="empty">אין עדיין בני משפחה, הוסיפו למעלה.</div>`;
 
   // deadline note
   const voted = s.members.filter(m=>s.votes[m]).length;
@@ -557,7 +557,7 @@ function renderFamily(){
   const tally = {};
   Object.values(s.votes).forEach(d=>tally[d]=(tally[d]||0)+1);
   $("#voteTally").innerHTML = Object.entries(tally).sort((a,b)=>b[1]-a[1])
-    .map(([d,n])=>{const r=recipeOf(d); return r?`• ${r.name} — ${n} ${n>1?"קולות":"קול"}`:""}).join("<br>");
+    .map(([d,n])=>{const r=recipeOf(d); return r?`• ${r.name}: ${n} ${n>1?"קולות":"קול"}`:""}).join("<br>");
 
   // winner
   const today = new Date().toISOString().slice(0,10);
@@ -573,7 +573,7 @@ function renderFamily(){
           <span class="wtitle">🏆 ארוחת הצהריים של מחר (${fmtDate(dec.date)})</span>
           <h3>${r.name}</h3>
           <div class="wmeta">${dietBadge(r)} · ${reason} · ${Object.keys(dec.votes||{}).length} מצביעים</div>
-          ${dec.tie?`<div class="tie-note">⚖️ היה תיקו בין ${dec.tiedWith.length} מנות — ${s.tieCounter!==null&&dec.tie?"נבחרה בהגרלה/סבב (round-robin לתיקו הבא)":""}</div>`:""}
+          ${dec.tie?`<div class="tie-note">⚖️ היה תיקו בין ${dec.tiedWith.length} מנות. ${s.tieCounter!==null&&dec.tie?"נבחרה בהגרלה/סבב (round-robin לתיקו הבא)":""}</div>`:""}
           <div class="dactions">
             <button class="btn video" style="background:var(--green)" onclick="openDish('${r.id}')">📖 למתכון המלא</button>
             <a class="btn video" href="${r.video}" target="_blank" rel="noopener">🎬 לסרטון</a>
@@ -589,7 +589,7 @@ function renderFamily(){
   // history
   const hist = (s.history||[]).slice(-5).reverse().slice(1);
   $("#historyBox").innerHTML = hist.length?`<div class="sub" style="margin-top:16px"><b>החלטות קודמות:</b><br>${
-    hist.map(h=>{const r=recipeOf(h.dishId);return r?`${fmtDate(h.date)} — ${r.name}${h.tie?" ⚖️":""}`:""}).join("<br>")}</div>`:"";
+    hist.map(h=>{const r=recipeOf(h.dishId);return r?`${fmtDate(h.date)}: ${r.name}${h.tie?" ⚖️":""}`:""}).join("<br>")}</div>`:"";
 }
 
 /* dish picker */

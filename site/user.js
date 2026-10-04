@@ -7,7 +7,7 @@
 const LANG = document.documentElement.lang === "en" ? "en" : "he";
 const S = LANG === "he" ? {
   signin:"התחברות", signout:"התנתקות", add:"➕ מנה חדשה", settings:"⚙️ המנות והמקורות שלי",
-  addTitle:"הוספת מנה מסרטון", addHint:"הדביקו קישור לריל מפייסבוק / אינסטגרם / טיקטוק / יוטיוב. הסרטון יורד, ג'מיני יכתוב את המתכון בעברית ובאנגלית, ותוכלו לערוך. המנה נשמרת פרטית — אתם מחליטים אם לפרסם.",
+  addTitle:"הוספת מנה מסרטון", addHint:"הדביקו קישור לריל מפייסבוק / אינסטגרם / טיקטוק / יוטיוב. הסרטון יורד, ג'מיני יכתוב את המתכון בעברית ובאנגלית, ותוכלו לערוך. המנה נשמרת פרטית, ואתם מחליטים אם לפרסם.",
   addBtn:"הוספה", adding:"שולח…", usage:(a,b)=>`נותרו היום ${Math.max(0,b-a)} מתוך ${b}`,
   processing:"בהכנה… ⏳", failed:"העיבוד נכשל ✗", queued:"המנה תעלה בקרוב… ⏳",
   myDishes:"המנות שלי", noMine:"עדיין לא הוספתם מנות.", allPublic:"🌍 כולן ציבוריות", allPrivate:"🔒 כולן פרטיות",
@@ -24,19 +24,19 @@ const S = LANG === "he" ? {
   claimsTitle:n=>`בקשות מיוצרים (${n})`, approve:"אישור", deny:"דחייה",
   adminSec:"🛡️ ניהול הקהילה (אדמין)", stats:(t,b,u)=>`סה"כ ${t} מנות באתר (${b} בסיס + ${u} מהקהילה)`, candsLink:n=>`🍳 מועמדים חדשים מיוטיוב${n!=null?` (${n} ממתינים)`:""}`, adminPublic:n=>`מנות ציבוריות (${n})`, adminAll:n=>`כל מנות המשתמשים (${n})`, adminNone:"אין מנות של משתמשים.", unpublish:"הסתר מהקהילה", publish:"פרסם", by:"מאת",
   community:"👥 קהילה", communityTitle:"👥 מנות מהקהילה", communityHint:"מנות שמשתמשים אחרים הוסיפו ובחרו לפרסם. התחברו כדי להוסיף משלכם.",
-  urlsPh:"קישור אחד בכל שורה — פייסבוק / אינסטגרם / טיקטוק / יוטיוב",
+  urlsPh:"קישור אחד בכל שורה: פייסבוק / אינסטגרם / טיקטוק / יוטיוב",
   importFile:"📂 ייבוא מקובץ ייצוא (פייסבוק / אינסטגרם)", found:n=>`נמצאו ${n} קישורים בקובץ`, noneFound:"לא נמצאו קישורים בקובץ",
   howTo:"איך מייצאים מנות שמורות מפייסבוק ואינסטגרם?",
   howToHtml:`<p><b>דרך מהירה (כמה מנות):</b> פותחים את הסרטון השמור ← ⋯ / שיתוף ← <b>העתקת קישור</b> ← מדביקים כאן, שורה לכל קישור.</p>
 <p><b>ייצוא מלא של כל השמורים (פייסבוק):</b> פייסבוק ← הגדרות ופרטיות ← הגדרות ← <b>מרכז החשבונות</b> ← המידע וההרשאות שלך ← <b>הורדת המידע שלך</b> ← "הורדה או העברה של מידע" ← בוחרים את פרופיל הפייסבוק ← "מידע מסוים" ← מסמנים <b>פריטים שמורים ואוספים</b> (Saved items and collections) ← פורמט <b>JSON</b>, טווח "כל הזמן" ← יוצרים קבצים. אחרי כמה דקות מגיע מייל עם ZIP; מחלצים ומעלים כאן את הקובץ <code>saved_items_and_collections.json</code> (או את כל ה-ZIP המחולץ, קובץ אחר קובץ) בכפתור "ייבוא מקובץ".</p>
-<p><b>אינסטגרם:</b> אותו מסלול במרכז החשבונות ← בוחרים את חשבון האינסטגרם ← "מידע מסוים" ← <b>שמורים</b> (Saved) ← JSON. הקובץ הוא <code>saved/saved_posts.json</code>. שימו לב: אינסטגרם חוסמת לפעמים הורדת סרטונים ללא התחברות — מנות כאלה ייכנסו לתור של עידו במקום להיכשל.</p>
-<p>הקובץ נקרא רק בדפדפן שלכם: שולפים ממנו את הקישורים ומדביקים אותם בתיבה למעלה. המכסה היומית (15 מנות ביום) נשמרת — השאר פשוט לא ייכנסו, אפשר להדביק שוב מחר.</p>`,
+<p><b>אינסטגרם:</b> אותו מסלול במרכז החשבונות ← בוחרים את חשבון האינסטגרם ← "מידע מסוים" ← <b>שמורים</b> (Saved) ← JSON. הקובץ הוא <code>saved/saved_posts.json</code>. שימו לב: אינסטגרם חוסמת לפעמים הורדת סרטונים ללא התחברות, ומנות כאלה ייכנסו לתור של עידו במקום להיכשל.</p>
+<p>הקובץ נקרא רק בדפדפן שלכם: שולפים ממנו את הקישורים ומדביקים אותם בתיבה למעלה. המכסה היומית (15 מנות ביום) נשמרת, והשאר פשוט לא ייכנסו, אפשר להדביק שוב מחר.</p>`,
   submitted:n=>`${n===1?"המנה נשלחה":"המנות נשלחו"} להכנה ⏳ בדרך כלל זה לוקח דקה-שתיים. אם העיבוד האוטומטי לא יצליח, המנה תעבור לתור של עידו ותתווסף ידנית מאוחר יותר.`,
   queuedNote:"המנה תעלה בקרוב…",
   bulkResult:(a,l,d)=>`נוספו ${a} מנות` + (l?` · ${l} לא נוספו (מכסה יומית)`:"") + (d?` · ${d} כבר קיימות`:""),
 } : {
   signin:"Sign in", signout:"Sign out", add:"➕ New dish", settings:"⚙️ My dishes & sources",
-  addTitle:"Add a dish from a video", addHint:"Paste a Facebook / Instagram / TikTok / YouTube reel link. The video is downloaded, Gemini writes the recipe in Hebrew and English, and you can edit it. The dish is saved private — you decide whether to publish.",
+  addTitle:"Add a dish from a video", addHint:"Paste a Facebook / Instagram / TikTok / YouTube reel link. The video is downloaded, Gemini writes the recipe in Hebrew and English, and you can edit it. The dish is saved private, and you decide whether to publish.",
   addBtn:"Add", adding:"Sending…", usage:(a,b)=>`${Math.max(0,b-a)} of ${b} left today`,
   processing:"Preparing… ⏳", failed:"Processing failed ✗", queued:"Dish will be up soon… ⏳",
   myDishes:"My dishes", noMine:"You haven't added dishes yet.", allPublic:"🌍 All public", allPrivate:"🔒 All private",
@@ -53,7 +53,7 @@ const S = LANG === "he" ? {
   claimsTitle:n=>`Creator requests (${n})`, approve:"Approve", deny:"Deny",
   adminSec:"🛡️ Community admin", stats:(t,b,u)=>`${t} dishes on the site (${b} base + ${u} community)`, candsLink:n=>`🍳 New YouTube candidates${n!=null?` (${n} waiting)`:""}`, adminPublic:n=>`Public dishes (${n})`, adminAll:n=>`All user dishes (${n})`, adminNone:"No user dishes.", unpublish:"Unpublish", publish:"Publish", by:"by",
   community:"👥 Community", communityTitle:"👥 Dishes from the community", communityHint:"Dishes other users added and chose to publish. Sign in to add your own.",
-  urlsPh:"One link per line — Facebook / Instagram / TikTok / YouTube",
+  urlsPh:"One link per line: Facebook / Instagram / TikTok / YouTube",
   importFile:"📂 Import from an export file (Facebook / Instagram)", found:n=>`Found ${n} links in the file`, noneFound:"No links found in the file",
   howTo:"How do I export my saved dishes from Facebook and Instagram?",
   howToHtml:`<p><b>Quick way (a few dishes):</b> open the saved reel → ⋯ / Share → <b>Copy link</b> → paste here, one link per line.</p>
@@ -483,8 +483,8 @@ window.cookinAsk = function(id, msgs){
     // build locally from the dish (same wording as the server template)
     const link = location.origin + "/d/" + id;
     const he = (d.he||{}).name || "", en = (d.en||{}).name || he;
-    msgs = {en:`Hi! I loved your recipe video (${en}) and saved it to Cookin, a small non-commercial community recipe book. It shows your name, links back to your original post, and hosts a copy of the video so members can cook along. Are you OK with it being public there? You can approve or ask for removal in one click here: ${link}#creator — thank you!`,
-            he:`היי! אהבתי את סרטון המתכון שלך (${he}) ושמרתי אותו ב-Cookin, ספר מתכונים קהילתי קטן וללא מטרות רווח. המנה מציגה את שמך, מקשרת לפוסט המקורי ומארחת עותק של הסרטון כדי שחברי הקהילה יוכלו לבשל לפיו. מסכים/ה שהיא תהיה ציבורית שם? אפשר לאשר או לבקש הסרה בלחיצה אחת כאן: ${link}#creator — תודה!`}; }
+    msgs = {en:`Hi! I loved your recipe video (${en}) and saved it to Cookin, a small non-commercial community recipe book. It shows your name, links back to your original post, and hosts a copy of the video so members can cook along. Are you OK with it being public there? You can approve or ask for removal in one click here: ${link}#creator. Thank you!`,
+            he:`היי! אהבתי את סרטון המתכון שלך (${he}) ושמרתי אותו ב-Cookin, ספר מתכונים קהילתי קטן וללא מטרות רווח. המנה מציגה את שמך, מקשרת לפוסט המקורי ומארחת עותק של הסרטון כדי שחברי הקהילה יוכלו לבשל לפיו. מסכים/ה שהיא תהיה ציבורית שם? אפשר לאשר או לבקש הסרה בלחיצה אחת כאן: ${link}#creator. תודה!`}; }
   modalMode = "ask"; const m = modal(); m.style.display = "flex";
   document.querySelector("#ubox").innerHTML = `
     <h3>${S.askTitle}<button class="x" onclick="cookinOpen('settings')">${S.close}</button></h3>

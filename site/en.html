@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cookin 🍳 — The Recipe Book</title>
+<title>Cookin 🍳 | The Recipe Book</title>
 <style>
 :root{
   --bg:#faf7f2; --card:#ffffff; --ink:#2b2420; --muted:#8a7f74;
@@ -175,7 +175,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <body>
 <header>
   <div class="hwrap">
-    <h1><span class="em">🍳</span> Cookin — The Recipe Book</h1>
+    <h1><span class="em">🍳</span> Cookin | The Recipe Book</h1>
     <div class="tabs">
       <button class="tab active" id="tabDishes" onclick="showView('gallery')">Dishes</button>
       <button class="tab" id="tabPantry" onclick="showView('pantry')">What's in my kitchen? 🔄</button>
@@ -205,7 +205,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
     <div class="pgrid">
       <div class="panel">
         <h3>Tick what you have 🛒</h3>
-        <div class="sub">Select the ingredients you have at home, and we'll light up the dishes you can make. Substitutions count — e.g. chicken instead of beef.</div>
+        <div class="sub">Select the ingredients you have at home, and we'll light up the dishes you can make. Substitutions count, e.g. chicken instead of beef.</div>
         <div class="basics-row">
           <input type="checkbox" id="basicsChk" checked onchange="renderPantry()">
           <label for="basicsChk">I have the basics (salt, pepper, oil, sugar, flour, dry spices)</label>
@@ -423,7 +423,7 @@ function renderPantry(){
   almost.sort((a,b)=>a.missing.length-b.missing.length);
 
   $("#resultSummary").textContent =
-    pantry.size===0 ? "You haven't ticked any ingredients yet — pick a few things from your fridge and pantry."
+    pantry.size===0 ? "You haven't ticked any ingredients yet. Pick a few things from your fridge and pantry."
     : `You ticked ${pantry.size} ingredients · ${can.length} dishes ready to cook · ${almost.length} dishes within reach`;
 
   const cardHtml = (r, note) => `
@@ -436,12 +436,12 @@ function renderPantry(){
   html += `<div class="rgroup-title can">✅ Can make right now (${can.length})</div>`;
   html += can.length ? `<div class="rcards">${can.map(({r,subs})=>cardHtml(r,{cls:"can",
       html: subs.length? `<span class="subnote">With a swap: ${subs.map(([a,b])=>`${ingLabel(b)} instead of ${ingLabel(a)}`).join(", ")}</span>` : "You have everything"
-    })).join("")}</div>` : `<div class="empty">Nothing yet — try ticking more ingredients.</div>`;
-  html += `<div class="rgroup-title almost">🟡 Almost there — missing one or two items (${almost.length})</div>`;
+    })).join("")}</div>` : `<div class="empty">Nothing yet, try ticking more ingredients.</div>`;
+  html += `<div class="rgroup-title almost">🟡 Almost there, missing one or two items (${almost.length})</div>`;
   html += almost.length ? `<div class="rcards">${almost.map(({r,missing,subs})=>cardHtml(r,{cls:"almost",
       html: `<span class="missnote">Missing: ${missing.map(ingLabel).join(", ")}</span>`+
             (subs.length?`<br><span class="subnote">Swap: ${subs.map(([a,b])=>`${ingLabel(b)}↔${ingLabel(a)}`).join(", ")}</span>`:"")
-    })).join("")}</div>` : `<div class="empty">—</div>`;
+    })).join("")}</div>` : `<div class="empty">No dishes in this group</div>`;
   $("#results").innerHTML = html;
 }
 
