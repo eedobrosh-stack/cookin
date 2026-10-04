@@ -55,7 +55,7 @@ RECIPES.push(
 },
 {
   id:"45042", diet:"Vegetarian", image:"45042.jpg", category:"Pasta",
-  name:"Hummus Pasta (NYT: Recipes of the Year)",
+  name:"Hummus Pasta (NYT, Recipes of the Year)",
   searchAlias:"פסטת חומוס (NYT: מתכוני השנה)",
   creator:"foodiligence · NYT Cooking", time:"20 min", serves:"Serves 3-4",
   video:"https://www.facebook.com/reel/1494837178664781",

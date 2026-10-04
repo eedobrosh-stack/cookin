@@ -54,7 +54,7 @@ RECIPES.push(
 },
 {
   id:"45042", diet:"צמחוני", image:"45042.jpg", category:"פסטה",
-  name:"פסטת חומוס (NYT: מתכוני השנה)",
+  name:"פסטת חומוס (NYT, מתכוני השנה)",
   creator:"foodiligence · NYT Cooking", time:"20 דק'", serves:"3-4 מנות",
   video:"https://www.facebook.com/reel/1494837178664781",
   intro:"מ-50 המתכונים המובילים של הניו יורק טיימס ל-2025: ממרח חומוס הופך לרוטב פסטה קרמי-טבעוני.",
