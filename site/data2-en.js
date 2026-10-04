@@ -43,7 +43,7 @@ RECIPES.push(
     {text:"1 cup pasta water + chopped parsley"}
   ],
   steps:[
-    "Cook the pasta one minute short of the package directions — it will finish in the sauce.",
+    "Cook the pasta one minute short of the package directions. It will finish in the sauce.",
     "Heat the olive oil and fry the garlic for 30 seconds.",
     "Add a tablespoon of chili oil and the butter and stir.",
     "Add the cream, salt, and lime juice.",
@@ -55,8 +55,8 @@ RECIPES.push(
 },
 {
   id:"45042", diet:"Vegetarian", image:"45042.jpg", category:"Pasta",
-  name:"Hummus Pasta (NYT — Recipes of the Year)",
-  searchAlias:"פסטת חומוס (NYT — מתכוני השנה)",
+  name:"Hummus Pasta (NYT: Recipes of the Year)",
+  searchAlias:"פסטת חומוס (NYT: מתכוני השנה)",
   creator:"foodiligence · NYT Cooking", time:"20 min", serves:"Serves 3-4",
   video:"https://www.facebook.com/reel/1494837178664781",
   intro:"From the New York Times' top 50 recipes of 2025: hummus spread turns into a creamy, vegan pasta sauce.",
@@ -67,12 +67,12 @@ RECIPES.push(
     {text:"4 garlic cloves"},
     {text:"1 large shallot"},
     {text:"1 cup hummus (smooth spread)"},
-    {text:"1 lemon — zest and juice"},
+    {text:"1 lemon, zest and juice"},
     {text:"Salt"}
   ],
   steps:[
     "Cook the pasta in well-salted water until al dente. Reserve a cup of the cooking water and drain.",
-    "In a large skillet over medium heat: olive oil, garlic, shallot, and a pinch of salt — about 2 minutes until slightly softened.",
+    "In a large skillet over medium heat: olive oil, garlic, shallot, and a pinch of salt, about 2 minutes until slightly softened.",
     "Stir in the hummus and half a cup of pasta water until you have a smooth, loose sauce. Add the lemon zest and juice.",
     "Over medium-low heat, add the pasta and toss well. Adjust the salt and loosen with pasta water as needed.",
     "Serve with a drizzle of olive oil, fresh herbs, and sesame seeds."
@@ -102,7 +102,7 @@ RECIPES.push(
     "Heat the olive oil in a large skillet and cook the onions until soft and translucent. Add the garlic for a minute.",
     "Add the spinach and cover until it wilts down and softens. Season with salt, pepper, and nutmeg.",
     "Pour in the cream and half the mozzarella and stir until the spinach is coated.",
-    "Make wells and crack the eggs into them. Cover over low heat for 7-10 minutes — set whites, runny yolks.",
+    "Make wells and crack the eggs into them. Cover over low heat for 7-10 minutes, set whites, runny yolks.",
     "Scatter the chili and the rest of the mozzarella, cover for a minute to melt, and serve hot with fresh bread."
   ]
 },
@@ -132,7 +132,7 @@ RECIPES.push(
     "Push them aside, add the olive oil, and fry the shallot and garlic for about a minute. Stir everything together.",
     "Over low heat: add the spices and flour and cook for a minute.",
     "Add the pasta water, cream, soy sauce, and Parmesan.",
-    "When the sauce thickens — add the pasta and parsley and toss gently.",
+    "When the sauce thickens, add the pasta and parsley and toss gently.",
     "Drizzle with Calabrian chili and serve with Parmesan and parsley."
   ],
   tips:"From the comments: adding yesterday's roast chicken works great."
@@ -146,18 +146,18 @@ RECIPES.push(
   intro:"What they teach in cooking school: don't shake the coconut can! Scoop the fat off the top and fry the curry paste in it.",
   needs:["coconut-milk","curry-red"],
   ingredientLines:[
-    {text:"1 can coconut milk/cream — unshaken!"},
+    {text:"1 can coconut milk/cream, unshaken!"},
     {text:"Curry paste (red/green)"},
-    {text:"The rest of your curry ingredients (chicken, vegetables, fish sauce, sugar..)"}
+    {text:"The rest of your curry ingredients (chicken, vegetables, fish sauce, sugar.)"}
   ],
   steps:[
-    "Open the coconut can without shaking it — the thick cream sits on top, the water below.",
+    "Open the coconut can without shaking it, the thick cream sits on top, the water below.",
     "Scoop the thick cream into a hot pan and fry it until the fat separates ('cracking the cream').",
-    "Fry the curry paste in the coconut fat — this is the step that unlocks all the aroma.",
+    "Fry the curry paste in the coconut fat. This is the step that unlocks all the aroma.",
     "Only then add the rest of the coconut liquid and the remaining ingredients and cook as usual.",
-    "Bonus: toast whole spices and only then grind them — a game changer for any curry."
+    "Bonus: toast whole spices and only then grind them, a game changer for any curry."
   ],
-  tips:"From the comments (561 likes): this is why you don't shake the can. You can also just reduce it hard over high heat — same result."
+  tips:"From the comments (561 likes): this is why you don't shake the can. You can also just reduce it hard over high heat, same result."
 },
 {
   id:"46137", diet:"Vegetarian", image:"46137.jpg", category:"Pasta",
@@ -210,9 +210,9 @@ RECIPES.push(
   steps:[
     "Cook the fettuccine in salted water until al dente (8-10 min). Reserve 1/2 cup of the cooking water.",
     "Heat the olive oil in a skillet and fry the garlic for 30-60 seconds until fragrant.",
-    "Add the chili flakes, tomatoes, thyme, basil, salt, and pepper — and simmer gently for about 10 minutes until slightly thickened (loosen with pasta water as needed).",
+    "Add the chili flakes, tomatoes, thyme, basil, salt, and pepper, and simmer gently for about 10 minutes until slightly thickened (loosen with pasta water as needed).",
     "Toss the pasta in the sauce with the Parmesan.",
-    "Transfer to a plate and set the whole burrata on top. Black pepper, a drizzle of olive oil — and serve."
+    "Transfer to a plate and set the whole burrata on top. Black pepper, a drizzle of olive oil, and serve."
   ]
 },
 {
@@ -221,7 +221,7 @@ RECIPES.push(
   searchAlias:"צנצנת צ'ימיצ'ורי למקרר",
   creator:"Ani.beshuk", time:"15 min + resting",
   video:"https://www.facebook.com/reel/988677170482257",
-  intro:"Tastiest after a few days of 'resting' in the fridge — perfect for the grill. (Technically closer to salsa criolla — and fantastic on steak.)",
+  intro:"Tastiest after a few days of 'resting' in the fridge, perfect for the grill. (Technically closer to salsa criolla, and fantastic on steak.)",
   needs:["parsley","mint","chili","garlic","red-onion","pepper-red","vinegar"],
   ingredientLines:[
     {text:"1 bunch parsley"},
@@ -236,7 +236,7 @@ RECIPES.push(
     {text:"1/2 cup hot water + 1 level tbsp salt"}
   ],
   steps:[
-    "Chop all the ingredients — by knife or in a food processor with short pulses. Chunks, not a paste.",
+    "Chop all the ingredients, by knife or in a food processor with short pulses. Chunks, not a paste.",
     "Dissolve the salt in half a cup of boiling water and pour into a bowl with the vinegars and oils.",
     "Mix, transfer to an airtight jar, leave out for a day, then refrigerate.",
     "Best made two to three days before the meal."
@@ -260,25 +260,25 @@ RECIPES.push(
   ],
   steps:[
     "Cook the pasta in salted water and reserve a cup of the cooking water.",
-    "Butter and garlic over low heat — don't let it burn.",
+    "Butter and garlic over low heat, don't let it burn.",
     "After ~30 seconds, add the chili oil.",
     "Immediately add the cream, stir, and let it thicken (Parmesan helps).",
-    "Salt, then the pasta — over medium-low heat so the cream doesn't break.",
+    "Salt, then the pasta, over medium-low heat so the cream doesn't break.",
     "Loosen with pasta water as needed and serve hot with the garnishes."
   ],
   tips:"From the comments: fantastic next to steak, roasted zucchini, or mushrooms."
 },
 {
   id:"44813", diet:"Meat", image:"44813.jpg", category:"Chicken",
-  name:"Chicken in Onions — Zwiebelhähnchen (Tom Franz)",
-  searchAlias:"עוף בבצל — צוויבל הנשן (תום פרנץ)",
+  name:"Chicken in Onions: Zwiebelhähnchen (Tom Franz)",
+  searchAlias:"עוף בבצל: צוויבל הנשן (תום פרנץ)",
   creator:"Tom Franz - MasterChef", time:"2.5 hours", serves:"Serves 6",
   video:"https://www.facebook.com/reel/1263700335890906",
   intro:"His late mother Karin's recipe: 5 ingredients, a sweet-savory caramelized onion sauce, and chicken that falls off the bone. Kosher for Passover.",
   needs:["chicken","onion"],
   ingredientLines:[
     {text:"6 chicken thighs"},
-    {text:"1.5 kg onions — halved and thinly sliced"},
+    {text:"1.5 kg onions, halved and thinly sliced"},
     {text:"3 tbsp brown sugar"},
     {text:"Salt and pepper to taste"},
     {text:"3-4 tbsp canola or olive oil"}
@@ -288,7 +288,7 @@ RECIPES.push(
     "Spread a little more than half the onions in a baking dish with a bit of oil. Arrange the chicken skin-side down, season with salt, pepper, and brown sugar, cover with the remaining onions and more oil.",
     "Seal with parchment paper + foil and bake for 1.5-2 hours, until the chicken is tender and the onions are caramelized.",
     "Remove the cover, flip the chicken (skin-side up), spoon the juices over, and roast another 25-35 minutes until the skin is golden.",
-    "Taste the sauce and balance the salt/pepper/sugar — it should be slightly sweet. Serve with rice or mashed potatoes.",
+    "Taste the sauce and balance the salt/pepper/sugar. It should be slightly sweet. Serve with rice or mashed potatoes.",
     "Deep-caramelization tip: you can also do 150°C for 3 hours, covered."
   ]
 },
@@ -340,8 +340,8 @@ RECIPES.push(
   steps:[
     "Cook the ramen one minute short of the package directions and reserve ~2 cups of the cooking water.",
     "In a skillet: peanut butter, chili oil, rice vinegar, soy sauce + 1.5-2 cups of hot noodle water. Stir.",
-    "When the sauce boils, add the noodles — it thickens within 1-2 minutes.",
-    "Garnish with black sesame, chili oil, cilantro, and scallions. Serve fast — the noodles soak up the sauce."
+    "When the sauce boils, add the noodles. It thickens within 1-2 minutes.",
+    "Garnish with black sesame, chili oil, cilantro, and scallions. Serve fast, the noodles soak up the sauce."
   ]
 },
 {
@@ -350,7 +350,7 @@ RECIPES.push(
   searchAlias:"מרק פטריות הונגרי",
   creator:"Chhaya Joshi", time:"40 min", serves:"Serves 4",
   video:"https://www.facebook.com/reel/857035817371044",
-  intro:"The mushroom soup from the Moosewood vegetarian cookbook: dill, sweet paprika, and soy sauce — creamy and warming.",
+  intro:"The mushroom soup from the Moosewood vegetarian cookbook: dill, sweet paprika, and soy sauce, creamy and warming.",
   needs:["butter","onion","mushrooms","dill","garlic","lemon","stock","soy","milk","sour-cream","parsley","flour"],
   ingredientLines:[
     {text:"4 tbsp butter"},
@@ -367,7 +367,7 @@ RECIPES.push(
   steps:[
     "Melt the butter in a pot, sauté the onion for a few minutes, and add the mushrooms. Cook 8-10 minutes over medium heat.",
     "Add the dill, thyme, paprika, garlic, and lemon juice for 2 minutes. Add the stock and soy sauce and cook a few minutes.",
-    "Whisk the flour into the milk until lump-free and add while stirring. Cook until thickened — do not boil!",
+    "Whisk the flour into the milk until lump-free and add while stirring. Cook until thickened, do not boil!",
     "Finish with the sour cream (optional), parsley, and warm bread on the side."
   ],
   tips:"From the comments: roast the mushrooms in the oven (200°C, 30 min) with shallot, brown butter, and white wine = double the depth."
@@ -389,7 +389,7 @@ RECIPES.push(
     {text:"Freshly ground black pepper (be generous!) + parsley"}
   ],
   steps:[
-    "Gently fry the garlic in olive oil over low heat — no browning (the Italian trick: whole cloves you fish out after a minute).",
+    "Gently fry the garlic in olive oil over low heat, no browning (the Italian trick: whole cloves you fish out after a minute).",
     "Add a ladle of pasta water and a splash of cream and let the sauce come together.",
     "Add al dente spaghetti and toss.",
     "Off the heat: Parmesan, stirring vigorously until creamy.",
@@ -402,7 +402,7 @@ RECIPES.push(
   searchAlias:"רוטב סאטה של ג'ירף (על שניצל)",
   creator:"Dana Reicher Moyal", time:"10 min",
   video:"https://www.facebook.com/reel/1038135132524394",
-  intro:"A re-creation of Giraffe's legendary satay dish — with a modern kick of chili crunch. Pour over hot schnitzel next to rice.",
+  intro:"A re-creation of Giraffe's legendary satay dish, with a modern kick of chili crunch. Pour over hot schnitzel next to rice.",
   needs:["curry-red","peanut-butter","coconut-milk","honey-silan","chili-crisp","scallion","peanuts","sesame-oil","chicken"],
   ingredientLines:[
     {group:"Sauce:"},
@@ -411,7 +411,7 @@ RECIPES.push(
     {text:"1/2 tsp yellow curry powder"},
     {text:"1 cup coconut cream"},
     {text:"Pinch of salt + a little honey"},
-    {text:"1 tsp chili crunch — the addition that changes everything"},
+    {text:"1 tsp chili crunch, the addition that changes everything"},
     {group:"On top:"},
     {text:"Chopped scallions, peanuts, a handful of furikake, and a touch of sesame oil"},
     {text:"To serve: hot schnitzel and rice"}
@@ -419,7 +419,7 @@ RECIPES.push(
   steps:[
     "Bring all the sauce ingredients to a boil in a small pot over medium heat until thickened.",
     "Pour over the schnitzel, scatter scallions, peanuts, and furikake, and finish with sesame oil.",
-    "Tip: don't overheat — the peanut butter can split."
+    "Tip: don't overheat, the peanut butter can split."
   ]
 },
 {
@@ -428,7 +428,7 @@ RECIPES.push(
   searchAlias:"עוף קשיו תאילנדי",
   creator:"Don't Go Bacon My Heart", time:"30 min",
   video:"https://www.facebook.com/reel/979491511767379",
-  intro:"A restaurant-style stir-fry from super simple ingredients — crispy chicken, toasted cashews, and a glossy sauce.",
+  intro:"A restaurant-style stir-fry from super simple ingredients, crispy chicken, toasted cashews, and a glossy sauce.",
   needs:["chicken","cashews","pepper-red","onion","garlic","scallion","chili","soy","hoisin","flour"],
   serves:"Serves 4",
   ingredientLines:[
@@ -455,8 +455,8 @@ RECIPES.push(
 },
 {
   id:"68242", diet:"Meat", image:"68242.jpg", category:"Chicken",
-  name:"Black Pepper Chicken — 20 Minutes",
-  searchAlias:"עוף בפלפל שחור — 20 דקות",
+  name:"Black Pepper Chicken: 20 Minutes",
+  searchAlias:"עוף בפלפל שחור: 20 דקות",
   creator:"foodinfivemins", time:"20 min", serves:"Serves 3 (623 calories, 46 g protein)",
   video:"https://www.facebook.com/reel/1076556568205556",
   needs:["chicken","garlic","onion","pepper-red","stock","honey-silan","hoisin","chili","scallion","vinegar","sesame-oil","soy","rice"],
@@ -474,7 +474,7 @@ RECIPES.push(
   steps:[
     "Sear the chicken cubes in a hot skillet.",
     "Add the garlic, onion, and peppers and stir-fry.",
-    "Mix the sauce: stock, honey, oyster sauce, black pepper, vinegar, sesame oil, and soy — and pour it in.",
+    "Mix the sauce: stock, honey, oyster sauce, black pepper, vinegar, sesame oil, and soy, and pour it in.",
     "Reduce to a glossy sauce that coats everything.",
     "Finish with fresh chili and scallions. Serve over rice (great for meal prep)."
   ],
@@ -528,7 +528,7 @@ RECIPES.push(
   steps:[
     "Season the chicken cubes with the herbs and cayenne and sear.",
     "Add the onion and garlic and sauté.",
-    "Add the butter, Worcestershire, Dijon, and stock — reduce to a glossy 'cowboy butter' sauce.",
+    "Add the butter, Worcestershire, Dijon, and stock, reduce to a glossy 'cowboy butter' sauce.",
     "Finish with parsley and lemon juice.",
     "Mash: boil the potatoes and mash with butter and milk. Broccolini: a quick blanch/steam.",
     "Assemble boxes/plates: mash, broccolini, and the chicken with its sauce."
@@ -537,7 +537,7 @@ RECIPES.push(
 {
   id:"68382", diet:"Meat", image:"68382.jpg", category:"Chicken",
   name:"One-Pot Hainanese Chicken & Rice (Douglas Chau)",
-  searchAlias:"עוף האינאן עם אורז — סיר אחד (Douglas Chau)",
+  searchAlias:"עוף האינאן עם אורז: סיר אחד (Douglas Chau)",
   creator:"Douglas Chau", time:"40 min", serves:"Serves 2",
   video:"https://www.facebook.com/reel/884239044756802",
   intro:"The dish that won a 19-contestant one-pot competition on Food Network. 80% of the result with 20% of the work.",
@@ -557,7 +557,7 @@ RECIPES.push(
     "Season the chicken with the sesame oil and salt.",
     "In a pot: rice, garlic, ginger, scallions, stock, bouillon powder, and turmeric. Lay the chicken on top of the rice.",
     "Bring to a boil, lower to a gentle simmer, cover for 20 minutes until the liquid is absorbed.",
-    "The ginger sauce: pour the sizzling oil over the ginger-scallion mixture — it should sizzle — and stir.",
+    "The ginger sauce: pour the sizzling oil over the ginger-scallion mixture (it should sizzle) and stir.",
     "The chili sauce: just mix everything together.",
     "Slice the chicken, let the rice rest for 10 minutes, and serve with both sauces, cucumber, and cilantro."
   ]
@@ -568,7 +568,7 @@ RECIPES.push(
   searchAlias:"עוף האינאן בסיר אורז (הגרסה העצלנית)",
   creator:"Douglas Chau", time:"One cook cycle", serves:"Serves 3-4",
   video:"https://www.facebook.com/reel/1567731744756611",
-  intro:"The same dish — at the press of a button: everything into the rice cooker, chicken on top, and both sauces made in the meantime.",
+  intro:"The same dish, at the press of a button: everything into the rice cooker, chicken on top, and both sauces made in the meantime.",
   needs:["chicken","rice","garlic","ginger","scallion","stock","sesame-oil","sriracha","lime","cucumbers","coriander"],
   ingredientLines:[
     {text:"2 chicken thighs (450 g) + 2 tsp sesame oil + 1/4 tsp salt"},
@@ -597,7 +597,7 @@ RECIPES.push(
     {text:"Olive oil"},
     {text:"2-3 garlic cloves"},
     {text:"1-2 tbsp tomato paste"},
-    {text:"Oregano (or basil — better, per the comments!)"},
+    {text:"Oregano (or basil, better, per the comments!)"},
     {text:"A splash of cream"},
     {text:"Salt; pasta or rice for serving"}
   ],
@@ -605,7 +605,7 @@ RECIPES.push(
     "Sear the tomato halves cut-side down in olive oil until charred and softened.",
     "Add the garlic, tomato paste, oregano, and salt.",
     "Mash the tomatoes into a sauce, add a splash of cream, and cook a few minutes.",
-    "Serve over pasta (or with shrimp sautéed in the same oil — a tip from the comments)."
+    "Serve over pasta (or with shrimp sautéed in the same oil, a tip from the comments)."
   ]
 },
 {
@@ -629,7 +629,7 @@ RECIPES.push(
     {text:"Black sesame seeds for serving"}
   ],
   steps:[
-    "Marinate the chicken cubes in the teriyaki, sweet soy, and sesame oil — overnight in the fridge.",
+    "Marinate the chicken cubes in the teriyaki, sweet soy, and sesame oil, overnight in the fridge.",
     "Cook the rice with salt and cool it completely (a day ahead is best).",
     "Broiler on maximum heat (~250°C): roast the chicken (on skewers or not) ~12 minutes until browned.",
     "In a large, scorching-hot skillet: both oils, lightly beaten eggs, then garlic, ginger, and scallions for a minute.",
@@ -650,12 +650,12 @@ RECIPES.push(
     {text:"3-4 zucchini, thinly sliced"},
     {text:"A generous amount of olive oil"},
     {text:"2-3 garlic cloves"},
-    {text:"Basil (+ mint — a Greek twist from the comments)"},
+    {text:"Basil (+ mint, a Greek twist from the comments)"},
     {text:"Parmesan + cooking water"},
     {text:"Salt and pepper"}
   ],
   steps:[
-    "Fry the zucchini slices slowly in olive oil until soft and golden — the partial caramelization is the secret.",
+    "Fry the zucchini slices slowly in olive oil until soft and golden, the partial caramelization is the secret.",
     "Add the garlic and lightly mash the zucchini.",
     "Add al dente spaghetti, cooking water, and Parmesan and toss into a creamy sauce.",
     "Finish with basil/mint, salt, and pepper."
@@ -722,11 +722,11 @@ RECIPES.push(
 },
 {
   id:"68886", diet:"Meat", image:"68886.jpg", category:"Soups & Sauces",
-  name:"Cheater's Kubbeh — Beet Soup with Beef-Semolina Meatballs",
-  searchAlias:"קובה בלוף — מרק סלק עם קציצות בשר וסולת",
+  name:"Cheater's Kubbeh: Beet Soup with Beef-Semolina Meatballs",
+  searchAlias:"קובה בלוף: מרק סלק עם קציצות בשר וסולת",
   creator:"Liza Panelim", time:"1 hour",
   video:"https://www.facebook.com/reel/1540152123759967",
-  intro:"All the flavor of beet kubbeh soup — without the rolling: simple beef-semolina meatballs instead of kubbeh dumplings.",
+  intro:"All the flavor of beet kubbeh soup, without the rolling: simple beef-semolina meatballs instead of kubbeh dumplings.",
   needs:["beef","semolina","beets","onion","garlic","lemon","coriander","eggs","tomato-paste"],
   ingredientLines:[
     {group:"Soup:"},
@@ -746,12 +746,12 @@ RECIPES.push(
     "Preheat the oven to 190°C.",
     "The semolina dough: mix the semolina, boiling water, oil, and salt and let it rest about 5 minutes.",
     "The soup: in a quarter cup of olive oil, cook the onion, celery, and beets about 10 minutes without liquid, stirring. Add the seasoned water, bring to a boil, cover, and lower the heat.",
-    "The meatballs: mix the semolina dough with the meat, onion, cilantro, egg, and seasonings — and knead really well (the kneading step is critical).",
+    "The meatballs: mix the semolina dough with the meat, onion, cilantro, egg, and seasonings, and knead really well (the kneading step is critical).",
     "With wet hands, form tight, uniform meatballs on a parchment-lined baking sheet and bake for 20 minutes to firm up.",
     "Slide the meatballs into the soup only once they are cool and firm (otherwise they fall apart). Raise the heat and cook 15 minutes, uncovered.",
-    "Taste and adjust — more lemon or salt as needed. Serve with white rice."
+    "Taste and adjust, more lemon or salt as needed. Serve with white rice."
   ],
-  tips:"From the comments: you can flatten the mixture, freeze it slightly, and cut it into cubes — 'geometric meatballs'."
+  tips:"From the comments: you can flatten the mixture, freeze it slightly, and cut it into cubes, 'geometric meatballs'."
 },
 {
   id:"68893", diet:"Meat", image:"68893.jpg", category:"Beef",

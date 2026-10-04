@@ -95,7 +95,7 @@ const RECIPES = [
   searchAlias:"פסטה בחמאת לימון, צנוברים ובזיליקום",
   creator:"Dor Peleg", time:"25 min", serves:"Serves 4",
   video:"https://www.facebook.com/reel/1737078344368899",
-  intro:"The restaurant secret: add the pasta water first, then the butter — that's how you get an emulsion that makes the sauce silky and creamy.",
+  intro:"The restaurant secret: add the pasta water first, then the butter. That's how you get an emulsion that makes the sauce silky and creamy.",
   needs:["pasta","garlic","butter","lemon","basil","pine-nuts","parmesan"],
   ingredientLines:[
     {text:"250 g dried pasta of your choice"},
@@ -106,15 +106,15 @@ const RECIPES = [
     {text:"Handful of basil leaves, finely chopped"},
     {text:"50 g toasted pine nuts"},
     {text:"Salt and black pepper"},
-    {text:"To serve — grated Parmesan"}
+    {text:"To serve, grated Parmesan"}
   ],
   steps:[
     "Bring a pot of water to a boil, and once it's boiling, salt it generously. Add the pasta and stir so it doesn't stick.",
-    "In a skillet over medium heat, warm the olive oil with the garlic and cook for a minute or two. Carefully add a ladle of the pasta water — then the butter cubes.",
+    "In a skillet over medium heat, warm the olive oil with the garlic and cook for a minute or two. Carefully add a ladle of the pasta water, then the butter cubes.",
     "Stir until the butter melts in and the sauce comes together. Add the lemon zest and basil, and season gently with black pepper and a little salt (the pasta water is already salty).",
     "When the pasta is almost done, transfer it to the sauce and cook another 3-4 minutes to reduce, stirring as you go. Add the pine nuts, toss, and serve hot with plenty of Parmesan."
   ],
-  tips:"Careful not to burn the garlic — several commenters noted that frying it too long makes it bitter."
+  tips:"Careful not to burn the garlic, several commenters noted that frying it too long makes it bitter."
 },
 {
   id:"8891", diet:"Vegetarian", image:"8891.jpg", category:"Pasta",
@@ -131,17 +131,17 @@ const RECIPES = [
     {text:"2 cups milk"},
     {text:"3/4 cup heavy cream"},
     {text:"3/4 cup grated Parmesan"},
-    {text:"1 tsp salt + 1 tsp garlic powder (optional: a pinch of turmeric for color — just a tiny bit!)"},
+    {text:"1 tsp salt + 1 tsp garlic powder (optional: a pinch of turmeric for color, just a tiny bit!)"},
     {text:"1/4 cup chili oil / chili crisp"},
     {text:"Parsley for garnish"}
   ],
   steps:[
-    "Cook the pasta al dente (a minute or two less than the package says — it will keep cooking in the sauce). Reserve a bit of the cooking water.",
+    "Cook the pasta al dente (a minute or two less than the package says. It will keep cooking in the sauce). Reserve a bit of the cooking water.",
     "In a skillet, melt the butter with the flour and stir until lightly golden, a minute or two over medium-low heat.",
     "Whisking constantly, gradually add the milk.",
     "Add the cream, Parmesan, cream cheese, salt, and garlic powder.",
     "Let the sauce simmer and thicken.",
-    "Once the sauce is ready — stir in the chili oil.",
+    "Once the sauce is ready, stir in the chili oil.",
     "Add the pasta and toss gently until everything is coated. If it's too thick, loosen with pasta water.",
     "Serve immediately with parsley and another drizzle of chili oil."
   ],
@@ -153,7 +153,7 @@ const RECIPES = [
   searchAlias:"צ'ימיצ'ורי אדום",
   creator:"Vilde Olsen", time:"10 min",
   video:"https://www.facebook.com/reel/814920217525095",
-  intro:"A fresh, punchy sauce for grilled meats — a red version with roasted pepper and red onion.",
+  intro:"A fresh, punchy sauce for grilled meats, a red version with roasted pepper and red onion.",
   needs:["parsley","coriander","garlic","chili","capsicum-roasted","red-onion","vinegar","lime"],
   ingredientLines:[
     {text:"1 bunch fresh parsley"},
@@ -182,7 +182,7 @@ const RECIPES = [
   searchAlias:"פסטה בחמאת לימון צ'ילי",
   creator:"Coral Hota", time:"25 min", serves:"Serves 4-5",
   video:"https://www.facebook.com/reel/1296280915967572",
-  intro:"Spicy, tangy, salty — a winning dish for company. Take care with the gentle emulsion of the cold butter.",
+  intro:"Spicy, tangy, salty, a winning dish for company. Take care with the gentle emulsion of the cold butter.",
   needs:["pasta","garlic","lemon","chili","butter","parsley"],
   ingredientLines:[
     {text:"1 package linguine (500 g)"},
@@ -205,7 +205,7 @@ const RECIPES = [
     "Add the drained pasta and the parsley with the heat off or on very low.",
     "Toss, taste, and adjust the seasoning. Your perfect pasta is ready."
   ],
-  tips:"From the comments: any herb works here — fresh za'atar is especially recommended."
+  tips:"From the comments: any herb works here, fresh za'atar is especially recommended."
 },
 {
   id:"9354", diet:"Meat", image:"9354.jpg", category:"Chicken",
@@ -232,15 +232,15 @@ const RECIPES = [
     "Coat the chicken thighs with smoked paprika, salt, and pepper.",
     "Sear in coconut oil in a hot pan until golden on both sides, then remove.",
     "In the same pan, sauté the shallot with the grated garlic and ginger.",
-    "Add the coconut milk, stock, soy, honey, and plenty of lime zest and juice — stir into a silky sauce.",
+    "Add the coconut milk, stock, soy, honey, and plenty of lime zest and juice, stir into a silky sauce.",
     "Return the chicken and simmer gently for 10-12 minutes until cooked through. Finish with cilantro and lime.",
-    "Serve over rice with the pickled cucumber salad and sliced almonds. (Recipe reconstructed from the video — exact quantities are in the creator's app.)"
+    "Serve over rice with the pickled cucumber salad and sliced almonds. (Recipe reconstructed from the video, exact quantities are in the creator's app.)"
   ]
 },
 {
   id:"9510", diet:"Meat", image:"9510.jpg", category:"Chicken",
-  name:"The Afghan Dish — Chicken & Bacon in a Wok",
-  searchAlias:"המנה האפגנית — פרגית ובייקון בווק",
+  name:"The Afghan Dish: Chicken & Bacon in a Wok",
+  searchAlias:"המנה האפגנית: פרגית ובייקון בווק",
   creator:"דנה רייכר", time:"45 min + marinating", serves:"Serves 4",
   video:"https://www.facebook.com/reel/1664771871444024",
   intro:"One of Dana Reicher's oldest and simplest recipes. Regular bacon for the original version, or goose bacon for a kosher one.",
@@ -348,7 +348,7 @@ const RECIPES = [
     {text:"6 tbsp cold butter, cubed"},
     {text:"110 g mixed pecorino and Parmesan (or just one of them)"},
     {text:"Salt to taste"},
-    {text:"Optional — lemon oil: 1/3 cup neutral oil blended with the peel of half a lemon, strained"},
+    {text:"Optional, lemon oil: 1/3 cup neutral oil blended with the peel of half a lemon, strained"},
     {text:"Optional: thinly sliced mint for garnish"}
   ],
   steps:[
@@ -356,9 +356,9 @@ const RECIPES = [
     "Zest the lemons and squeeze the juice into the same bowl.",
     "Cook the spaghetti in moderately salted water (not too salty).",
     "In a wide skillet over very low heat: 1/3 cup of the starchy cooking water, then whisk in the cold butter cubes gradually, about 3 minutes, until emulsified.",
-    "Just before the pasta is done, add the lemon juice and zest to the emulsion (late — to keep the lemon flavor fresh).",
+    "Just before the pasta is done, add the lemon juice and zest to the emulsion (late, to keep the lemon flavor fresh).",
     "Drain the pasta 30 seconds before the package time and transfer to the skillet. Cook about a minute until the liquid is absorbed.",
-    "Add the cheese gradually, stirring, until the pasta is glossy and creamy — no cream needed. If it dries out, add a splash of cooking water.",
+    "Add the cheese gradually, stirring, until the pasta is glossy and creamy, no cream needed. If it dries out, add a splash of cooking water.",
     "Adjust the salt, finish with a drizzle of lemon oil and mint, and serve."
   ],
   tips:"From the comments: no pecorino? Pasta water + a little cream works. Add capers and grilled chicken and it becomes a piccata."
@@ -369,7 +369,7 @@ const RECIPES = [
   searchAlias:"ספגטי אל לימונה (תום פרנץ)",
   creator:"תום פרנץ - מאסטר שף", time:"10 min", serves:"Serves 2-3",
   video:"https://www.facebook.com/reel/1026004606594050",
-  intro:"Browned butter, garlic, and fresh lemon — Amalfi Coast flavors in 10 minutes of work.",
+  intro:"Browned butter, garlic, and fresh lemon, Amalfi Coast flavors in 10 minutes of work.",
   needs:["pasta","garlic","butter","lemon","basil","parmesan"],
   ingredientLines:[
     {text:"250 g good-quality spaghetti"},
@@ -417,8 +417,8 @@ const RECIPES = [
 },
 {
   id:"10460", diet:"Meat", image:"10460.jpg", category:"Beef",
-  name:"Oven Brisket — the 'Set It & Go to the Beach' Method",
-  searchAlias:"בריסקט בתנור — שיטת 'שימו ולכו לים'",
+  name:"Oven Brisket: the 'Set It & Go to the Beach' Method",
+  searchAlias:"בריסקט בתנור: שיטת 'שימו ולכו לים'",
   creator:"Chen koren", time:"6 hrs (10 min work)",
   video:"https://www.facebook.com/reel/1331260028983256",
   needs:["beef","onion","potato","mustard","honey-silan","parsley"],
@@ -432,9 +432,9 @@ const RECIPES = [
     {text:"1 bunch parsley"}
   ],
   steps:[
-    "Mix everything together in a roasting pan — the brisket, onions, potatoes, mustard, honey, salt, pepper, and parsley.",
+    "Mix everything together in a roasting pan, the brisket, onions, potatoes, mustard, honey, salt, pepper, and parsley.",
     "Wrap it well in parchment paper and then in foil, nice and tight.",
-    "Bake 6 hours in a conventional (static) oven at 160°C (320°F). Set it — and go to the beach 🏖️."
+    "Bake 6 hours in a conventional (static) oven at 160°C (320°F). Set it, and go to the beach 🏖️."
   ]
 },
 {
@@ -443,25 +443,25 @@ const RECIPES = [
   searchAlias:"מרק מיסו ב-5 דקות",
   creator:"Itai Dagan", time:"10 min", serves:"2 bowls",
   video:"https://www.facebook.com/reel/846772164754668",
-  intro:"A bowl full of umami in a few minutes. A great protein hit — 200-300 g of tofu.",
+  intro:"A bowl full of umami in a few minutes. A great protein hit, 200-300 g of tofu.",
   needs:["dashi","soy","tofu","wakame","miso","scallion"],
   ingredientLines:[
     {text:"1 packet dashi powder"},
     {text:"500-700 ml water"},
     {text:"2 tbsp soy sauce"},
     {text:"250-300 g tofu in small cubes"},
-    {text:"Dried wakame (just a little — it swells!)"},
+    {text:"Dried wakame (just a little. It swells!)"},
     {text:"1 heaping tsp white miso paste"},
     {text:"Scallions to serve (optional)"},
     {text:"Mushrooms (optional)"}
   ],
   steps:[
-    "Put the water, dashi, and soy in a pot. Add the tofu cubes (small cubes — perfect in every spoonful).",
+    "Put the water, dashi, and soy in a pot. Add the tofu cubes (small cubes, perfect in every spoonful).",
     "Add a little dried wakame. Want mushrooms? Now's the time. Bring to a boil and cook until the tofu softens.",
-    "Take off the heat. Dissolve the miso in a small bowl with 2 tbsp of the hot soup until smooth — this prevents lumps.",
+    "Take off the heat. Dissolve the miso in a small bowl with 2 tbsp of the hot soup until smooth, this prevents lumps.",
     "Return the dissolved miso to the pot, stir, and serve hot with scallions."
   ],
-  tips:"Viral comment from Ben Matsumura: never boil the miso (it burns off the flavor) and you don't need the soy — miso is salty enough. Vegan dashi version: grind dried wakame + shiitake in a blender."
+  tips:"Viral comment from Ben Matsumura: never boil the miso (it burns off the flavor) and you don't need the soy, miso is salty enough. Vegan dashi version: grind dried wakame + shiitake in a blender."
 },
 {
   id:"8367", diet:"Meat", image:"8367.jpg", category:"Chicken",
@@ -476,7 +476,7 @@ const RECIPES = [
     {text:"6 chicken drumsticks"},
     {text:"4 slices ginger"},
     {text:"3 scallions, cut into 5 cm pieces"},
-    {text:"1 tbsp Shaoxing wine (optional — or mirin)"},
+    {text:"1 tbsp Shaoxing wine (optional, or mirin)"},
     {text:"2 tsp salt"},
     {group:"Ginger sauce:"},
     {text:"3 tbsp neutral oil"},
@@ -488,8 +488,8 @@ const RECIPES = [
   ],
   steps:[
     "Put the drumsticks in a pot with just enough cold water to cover + ginger, scallions, wine, and salt. Bring to a boil, lower the heat, and simmer 8-10 minutes until the chicken is just done.",
-    "Transfer straight to an ice bath to stop the cooking. Once cooled — shred the chicken by hand onto a plate.",
-    "For the sauce: fry the scallion whites and ginger in the oil for 5-7 minutes until browned. Strain, keeping the hot oil. Pour it over the chopped scallion greens in a heatproof bowl — it should sizzle. Stir in the soy, oyster sauce, water, sugar, and salt.",
+    "Transfer straight to an ice bath to stop the cooking. Once cooled, shred the chicken by hand onto a plate.",
+    "For the sauce: fry the scallion whites and ginger in the oil for 5-7 minutes until browned. Strain, keeping the hot oil. Pour it over the chopped scallion greens in a heatproof bowl. It should sizzle. Stir in the soy, oyster sauce, water, sugar, and salt.",
     "Gently reheat the chicken if it has cooled, pour the sauce over, and toss gently. Serve with rice and cucumbers."
   ]
 },
@@ -499,7 +499,7 @@ const RECIPES = [
   searchAlias:"עוף בקוקוס וליים (Herman at Home)",
   creator:"Herman at Home", time:"40 min", serves:"Serves 4",
   video:"https://www.facebook.com/reel/1694452798212334",
-  intro:"Chicken drumsticks in a citrusy coconut sauce with mushrooms and chili — cheap, simple, and addictive.",
+  intro:"Chicken drumsticks in a citrusy coconut sauce with mushrooms and chili, cheap, simple, and addictive.",
   needs:["chicken","garlic","ginger","chili","scallion","onion","mushrooms","coconut-milk","stock","fish-sauce","lime"],
   ingredientLines:[
     {text:"1 kg chicken drumsticks"},
@@ -543,7 +543,7 @@ const RECIPES = [
   steps:[
     "Heat the oven to 220°C (425°F) with a rack in the middle.",
     "Oil a pie dish (23 cm) with 2 tbsp of the oil and scatter half the garlic over the bottom.",
-    "Arrange the tomato slices in tight, overlapping circles — they shrink a lot in the oven.",
+    "Arrange the tomato slices in tight, overlapping circles. They shrink a lot in the oven.",
     "Salt generously (the salting drains off the flavorless liquid), add pepper, scatter the remaining garlic, tuck in the basil sprigs, and drizzle with the remaining oil (4 tbsp).",
     "Bake until the tomatoes are bubbling, browned at the edges, and shrunken (about an hour and a half total).",
     "Cool slightly and serve warm on crusty country bread with cheese. Keeps in the fridge up to a week."
@@ -556,7 +556,7 @@ const RECIPES = [
   searchAlias:"בולונז טונה (בולונז בלי בשר!)",
   creator:"תום פרנץ - מאסטר שף", time:"60-75 min", serves:"Serves 5-6",
   video:"https://www.facebook.com/reel/1587658772708205",
-  intro:"The secret: fry the onion and garlic in the oil from the tuna cans — all those deep flavors go straight into the sauce. Tom has been making this for 25 years.",
+  intro:"The secret: fry the onion and garlic in the oil from the tuna cans, all those deep flavors go straight into the sauce. Tom has been making this for 25 years.",
   needs:["pasta","tuna","onion","garlic","canned-tomatoes","tomato-paste"],
   ingredientLines:[
     {text:"500 g dried pasta of your choice"},
@@ -575,7 +575,7 @@ const RECIPES = [
     "Add the garlic and all the spices + the tomato paste. Fry about a minute until it smells rich.",
     "Add the crushed tomatoes and the tuna, flaking it well into the sauce.",
     "Simmer over low heat for 30 minutes to an hour, until the sauce reduces and thickens. Taste and balance the salt/sugar/heat.",
-    "If the sauce is too thick — loosen with pasta water. Toss with hot pasta and serve immediately, with mozzarella or Parmesan if you like."
+    "If the sauce is too thick, loosen with pasta water. Toss with hot pasta and serve immediately, with mozzarella or Parmesan if you like."
   ]
 },
 {
@@ -584,7 +584,7 @@ const RECIPES = [
   searchAlias:"מרק עוף קוריאני עם ג'ינסנג (סמגיה-טאנג)",
   creator:"Alon Sharaby", time:"4 hrs (15 min work)",
   video:"https://www.facebook.com/reel/1677310753389048",
-  intro:"A Korean summer ritual: not a drop of water — all the broth comes from the chicken and cabbage, concentrated and rich.",
+  intro:"A Korean summer ritual: not a drop of water, all the broth comes from the chicken and cabbage, concentrated and rich.",
   needs:["chicken","ginseng","jujube","cabbage-napa","onion","garlic","ginger","coriander"],
   ingredientLines:[
     {text:"1 whole chicken or leg quarters"},
@@ -600,7 +600,7 @@ const RECIPES = [
   steps:[
     "In a large, wide pot (ideally oven-safe): line the bottom with the vegetables in layers.",
     "Arrange the aromatics on top, and the chicken above them.",
-    "Add no liquid at all! The cabbage and chicken release all the broth — concentrated and rich.",
+    "Add no liquid at all! The cabbage and chicken release all the broth, concentrated and rich.",
     "Cover and cook in the oven or over low heat at 180°C (350°F) for 4 hours.",
     "Arrange the chicken in a bowl, pour the broth over it, and finish with cilantro."
   ]
@@ -611,7 +611,7 @@ const RECIPES = [
   searchAlias:"פסטת הקיץ של אמא (Mom's Summer Pasta)",
   creator:"Maxi's Kitchen", time:"30 min", serves:"Serves 4",
   video:"https://www.facebook.com/reel/2389296691597487",
-  intro:"Inspired by The Silver Palate cookbook: a fresh tomato-basil sauce that never touches the stove — the hot pasta does all the work.",
+  intro:"Inspired by The Silver Palate cookbook: a fresh tomato-basil sauce that never touches the stove, the hot pasta does all the work.",
   needs:["pasta","pine-nuts","tomatoes-fresh","basil","parmesan","garlic"],
   ingredientLines:[
     {text:"1/2 cup pine nuts"},
@@ -628,7 +628,7 @@ const RECIPES = [
     "Bring a generously salted pot of water to a boil.",
     "Toast the pine nuts in a small skillet over medium heat for 3-5 minutes, stirring constantly, until golden, and transfer immediately to a large bowl (they burn easily).",
     "Add the tomatoes, basil, Parmesan, garlic, olive oil, salt, and pepper to the bowl and mix.",
-    "Cook the linguine al dente, drain, and transfer immediately to the bowl with the sauce. Toss with tongs until evenly distributed — the heat lightly melts the cheese.",
+    "Cook the linguine al dente, drain, and transfer immediately to the bowl with the sauce. Toss with tongs until evenly distributed, the heat lightly melts the cheese.",
     "Plate, sprinkle with flaky salt, and enjoy."
   ],
   tips:"From the comments: a drop of balsamic vinegar is an upgrade; mozzarella works instead of Parmesan; try sweet cherry tomatoes + grated cheese; lemon juice adds freshness. Worried about raw garlic? Give it a quick toss in oil."
@@ -639,7 +639,7 @@ const RECIPES = [
   searchAlias:"חמוצים ביתיים בכבישה טבעית 🥒",
   creator:"פרי דן", time:"20 min + 3-7 days",
   video:"https://www.facebook.com/reel/1017927461044811",
-  intro:"Natural fermentation in salt brine — no vinegar. Bubbles and cloudy liquid = healthy fermentation, not mold!",
+  intro:"Natural fermentation in salt brine, no vinegar. Bubbles and cloudy liquid = healthy fermentation, not mold!",
   needs:["cucumbers","lemon","garlic","dill"],
   ingredientLines:[
     {text:"1 kg small cucumbers"},
@@ -655,9 +655,9 @@ const RECIPES = [
     "Dissolve the salt in the water and pour it in until all the vegetables are completely covered.",
     "Place a small weight on top so the cucumbers stay below the liquid.",
     "Close loosely and leave at room temperature for 3-7 days (release the gases once a day), until they taste the way you like.",
-    "Move to the fridge — fermentation slows down and the pickles keep for weeks."
+    "Move to the fridge, fermentation slows down and the pickles keep for weeks."
   ],
-  tips:"From the comments: a hot pepper in the jar + dill on top = wow; bay leaves and allspice are nice additions; a grape leaf keeps them crunchy. Seasonal baladi cucumbers are best — regular greenhouse cucumbers turn soft and spongy."
+  tips:"From the comments: a hot pepper in the jar + dill on top = wow; bay leaves and allspice are nice additions; a grape leaf keeps them crunchy. Seasonal baladi cucumbers are best, regular greenhouse cucumbers turn soft and spongy."
 },
 {
   id:"9426", diet:"Fish", image:"9426.jpg", category:"Pasta",
@@ -665,7 +665,7 @@ const RECIPES = [
   searchAlias:"פסטת האנשובי של גאבה (Back-Pocket Pasta)",
   creator:"Food Network · Gabriele Bertaccini", time:"15 min",
   video:"https://www.facebook.com/reel/1327921729422686",
-  intro:"'No recipe needed' — four ingredients you always have at home, aglio e olio style with anchovy depth.",
+  intro:"'No recipe needed', four ingredients you always have at home, aglio e olio style with anchovy depth.",
   needs:["pasta","anchovy","garlic","chili"],
   ingredientLines:[
     {text:"Spaghetti or linguine"},
@@ -681,7 +681,7 @@ const RECIPES = [
     "Cook the pasta al dente and transfer it to the sauce with a little of the cooking water.",
     "Toss until the sauce coats the pasta and serve."
   ],
-  tips:"From the comments: lemon zest and juice at the end are an upgrade; to make it a puttanesca — crushed tomatoes, Kalamata olives, capers, and parsley."
+  tips:"From the comments: lemon zest and juice at the end are an upgrade; to make it a puttanesca, crushed tomatoes, Kalamata olives, capers, and parsley."
 },
 {
   id:"9589", diet:"Meat", image:"9589.jpg", category:"Chicken",
@@ -710,7 +710,7 @@ const RECIPES = [
     "Mix the date syrup with a little salt and pepper and brush over the top of the chicken.",
     "Bake 40-50 minutes until the chicken is browned and the sauce is reduced and caramelized. Finish with 15 minutes under the broiler for nice browning."
   ],
-  tips:"From the comments: works with drumsticks/leg quarters too. Chicken breast can dry out — if you use it, shorten the baking time."
+  tips:"From the comments: works with drumsticks/leg quarters too. Chicken breast can dry out, if you use it, shorten the baking time."
 },
 {
   id:"9456", diet:"Vegetarian", image:"9456.jpg", category:"Vegetables & Sides",
@@ -718,7 +718,7 @@ const RECIPES = [
   searchAlias:"ברוקולי מוקפץ עם שום בסגנון סיני 🥦",
   creator:"שחר ואורן", time:"5 min",
   video:"https://www.facebook.com/reel/27980752161529545",
-  intro:"You don't like broccoli because you've been making it wrong! Healthy, vegan, gluten-free — and the first thing to disappear from the table.",
+  intro:"You don't like broccoli because you've been making it wrong! Healthy, vegan, gluten-free, and the first thing to disappear from the table.",
   needs:["broccoli","garlic","cornflour"],
   ingredientLines:[
     {text:"400 g broccoli in small florets"},
@@ -729,9 +729,9 @@ const RECIPES = [
     {text:"1/2 tbsp cornstarch mixed with 2 tbsp water"}
   ],
   steps:[
-    "Heat a wok with the oil and add the garlic right away, while the oil is still cold — you're not browning it, just drawing out the flavor.",
+    "Heat a wok with the oil and add the garlic right away, while the oil is still cold. You're not browning it, just drawing out the flavor.",
     "When the garlic bubbles gently, add the broccoli and toss so the oil coats it.",
-    "Add 1/4 cup water and cover for 1.5-2 minutes until the broccoli is bright green — don't overcook, you want crunch.",
+    "Add 1/4 cup water and cover for 1.5-2 minutes until the broccoli is bright green, don't overcook, you want crunch.",
     "Uncover, season with the salt and sugar, and toss.",
     "Add the dissolved cornstarch and stir-fry 30 seconds until the sauce thickens and coats. Serve immediately."
   ]
@@ -763,10 +763,10 @@ const RECIPES = [
     "Stir in the chili crisp, soy, and honey.",
     "Lower the heat and pour in the cream. Add the spices and cook 5 minutes until slightly thickened.",
     "Stir in the Parmesan until melted and smooth.",
-    "Add the pasta and toss until fully coated — loosen with pasta water as needed.",
+    "Add the pasta and toss until fully coated, loosen with pasta water as needed.",
     "Serve with chili oil and parsley."
   ],
-  tips:"From the comments: low heat + a little pasta water keep the cream from breaking; recommended upgrades — shrimp, mushrooms, or chicken."
+  tips:"From the comments: low heat + a little pasta water keep the cream from breaking; recommended upgrades, shrimp, mushrooms, or chicken."
 },
 {
   id:"9779", diet:"Vegetarian", image:"9779.jpg", category:"Pasta",
@@ -774,11 +774,11 @@ const RECIPES = [
   searchAlias:"ספגטי אל לימונה (השף גיאנלוקה)",
   creator:"Gianluca Ruggieri Private Chef", time:"20 min", serves:"1 serving (scale up)",
   video:"https://www.facebook.com/reel/2223339705153783",
-  intro:"From the Amalfi Coast — easy to make, hard to master. The trick: a cold-butter emulsion at the end.",
+  intro:"From the Amalfi Coast, easy to make, hard to master. The trick: a cold-butter emulsion at the end.",
   needs:["pasta","lemon","basil","butter","parmesan"],
   ingredientLines:[
     {text:"85 g spaghetti (per serving)"},
-    {text:"1 whole lemon — zest + juice"},
+    {text:"1 whole lemon, zest + juice"},
     {text:"7-8 basil leaves"},
     {text:"5 tbsp cold butter, divided"},
     {text:"1 tbsp olive oil"},
@@ -803,7 +803,7 @@ const RECIPES = [
   searchAlias:"דג מאודה על מצע ירוקים עם רוטב אסייתי 🐠",
   creator:"Ofir Shar - Personal chef", time:"25 min",
   video:"https://www.facebook.com/reel/28462868789971918",
-  intro:"Exactly 9 minutes of steaming — the fish stays tender and the greens stay crisp. The sauce is sweet-sour-spicy.",
+  intro:"Exactly 9 minutes of steaming, the fish stays tender and the greens stay crisp. The sauce is sweet-sour-spicy.",
   needs:["fish-white","bok-choy","broccoli","snow-peas","lemongrass","vinegar","lemon","fish-sauce","chili","garlic","coriander"],
   ingredientLines:[
     {text:"1 fresh white fish fillet (sea bass, bream, or grouper)"},
@@ -819,7 +819,7 @@ const RECIPES = [
   ],
   steps:[
     "In a steamer (bamboo if you have one), arrange the greens on the bottom, and lay the fish and lemongrass on top.",
-    "Steam over a pot of boiling water for exactly 9 minutes — the fish is done and the greens stay crisp.",
+    "Steam over a pot of boiling water for exactly 9 minutes, the fish is done and the greens stay crisp.",
     "For the sauce: lightly reduce the brown sugar, water, and vinegar until the sugar dissolves. Cool.",
     "Add the lemon juice, fish sauce, chili, garlic, and cilantro and stir.",
     "Drizzle the sauce generously over the fish and greens and serve."
@@ -849,7 +849,7 @@ const RECIPES = [
     {text:"1 cup coconut milk"}
   ],
   steps:[
-    "Season the chicken with all the spices and sear skin-side down in olive oil until the skin is crisp and browned (over medium heat, patiently — the fat renders). Remove.",
+    "Season the chicken with all the spices and sear skin-side down in olive oil until the skin is crisp and browned (over medium heat, patiently, the fat renders). Remove.",
     "In the same pan, sauté the onion and jalapeño until softened, then add the garlic and ginger for a minute.",
     "Add the gochujang, crushed tomatoes, salt, and lemon juice and cook a few minutes.",
     "Pour in the coconut milk and stir into a smooth sauce.",
@@ -863,7 +863,7 @@ const RECIPES = [
   searchAlias:"סלמון מבושל ברוטב שמנת (The Vivaldi Way)",
   creator:"Vivaldi Restaurant", time:"20 min", serves:"1 serving (scale up)",
   video:"https://www.facebook.com/reel/1445758344259595",
-  intro:"The 'everything in the pan at once' method — just simmer and reduce. The chef's father's recipe.",
+  intro:"The 'everything in the pan at once' method, just simmer and reduce. The chef's father's recipe.",
   needs:["salmon","scallion","leek","spinach","stock","wine-white","cream"],
   ingredientLines:[
     {text:"225 g salmon fillet (skinless)"},
@@ -905,13 +905,13 @@ const RECIPES = [
   ],
   steps:[
     "Season the fish with salt and pepper, drizzle with half the oil, and gently massage it in. Set aside.",
-    "In a large skillet over medium-high heat: the remaining oil, onion, garlic, and a pinch of salt — 3 minutes to soften.",
-    "Add half the capers, the cherry tomatoes, and the oregano. Lower the heat and cook until the tomatoes burst — crush them with a fork into a thick ragout, and stir in half the olives.",
+    "In a large skillet over medium-high heat: the remaining oil, onion, garlic, and a pinch of salt, 3 minutes to soften.",
+    "Add half the capers, the cherry tomatoes, and the oregano. Lower the heat and cook until the tomatoes burst, crush them with a fork into a thick ragout, and stir in half the olives.",
     "Nestle the fish into the ragout and scatter the roasted pepper on top.",
     "Cover and cook over low heat for 10-12 minutes until the fish is just cooked.",
     "Serve with the remaining capers and olives, parsley, and lemon."
   ],
-  tips:"From the comments: puttanesca-style — the sauce is also great on pasta; a splash of white wine is an upgrade; it's even better the next day."
+  tips:"From the comments: puttanesca-style, the sauce is also great on pasta; a splash of white wine is an upgrade; it's even better the next day."
 },
 {
   id:"8165", diet:"Fish", image:"8165.jpg", category:"Fish",
@@ -922,7 +922,7 @@ const RECIPES = [
   intro:"A free take on Moroccan fish: peppers and garlic are the base, with tomato and chickpeas. (Chen sends the full steps by DM.)",
   needs:["fish-white","pepper-red","garlic","tomatoes-fresh","coriander"],
   ingredientLines:[
-    {text:"White fish steaks (white grouper/mullet — salmon works too)"},
+    {text:"White fish steaks (white grouper/mullet, salmon works too)"},
     {text:"Red peppers, roughly chopped"},
     {text:"Lots of garlic cloves"},
     {text:"1 tomato, chopped"},
@@ -957,7 +957,7 @@ const RECIPES = [
   ],
   steps:[
     "Heat the oven to 180°C (350°F).",
-    "In a baking dish: a little olive oil, the red onion, cherry tomatoes, olives, and capers — mix.",
+    "In a baking dish: a little olive oil, the red onion, cherry tomatoes, olives, and capers, mix.",
     "Lay the salmon cubes on top and season with salt.",
     "Scatter the thyme (and garlic/chili if using) and drizzle with the remaining olive oil.",
     "Bake 15 minutes until the salmon is just done. Squeeze fresh lemon over and serve with rice or pasta."
@@ -970,7 +970,7 @@ const RECIPES = [
   searchAlias:"פסטה מהירה לעצלנים (David Rocco)",
   creator:"Vivaldi Restaurant", time:"10 min",
   video:"https://www.facebook.com/reel/837912232740331",
-  intro:"'Restaurant-level 10-minute pasta' — tomatoes, fresh chili, and Parmesan. No garlic in the original (but most commenters add it).",
+  intro:"'Restaurant-level 10-minute pasta', tomatoes, fresh chili, and Parmesan. No garlic in the original (but most commenters add it).",
   needs:["pasta","canned-tomatoes","chili","parmesan"],
   ingredientLines:[
     {text:"Spaghetti"},
@@ -986,7 +986,7 @@ const RECIPES = [
     "Cook the spaghetti in well-salted water and transfer to the sauce with a little cooking water.",
     "Toss, finish with plenty of Parmesan, and serve."
   ],
-  tips:"From the comments: a garlic clove adds a lot; if you prefer it milder — halve the chili."
+  tips:"From the comments: a garlic clove adds a lot; if you prefer it milder, halve the chili."
 },
 {
   id:"8600", diet:"Meat", image:"8600.jpg", category:"Beef",
@@ -1024,7 +1024,7 @@ const RECIPES = [
   searchAlias:"פסטת לימון קפוא (4 מרכיבים)",
   creator:"Allrecipes · Nicole McLaughlin", time:"15 min (+ freezing the lemon)", serves:"Serves 2-3",
   video:"https://www.facebook.com/reel/2075575389694968",
-  intro:"The viral trend: grate a whole frozen lemon — zest, pith, and a bit of the white — straight into the sauce.",
+  intro:"The viral trend: grate a whole frozen lemon (zest, pith, and a bit of the white) straight into the sauce.",
   needs:["pasta","lemon","butter","parmesan"],
   ingredientLines:[
     {text:"1 large unwaxed lemon, completely frozen (overnight in the freezer)"},
@@ -1037,11 +1037,11 @@ const RECIPES = [
   steps:[
     "Freeze a washed, dried lemon overnight until completely solid. Cook the spaghetti al dente.",
     "While it cooks: put the butter, Parmesan, and black pepper in a large bowl.",
-    "Grate about a third of the frozen lemon — peel, pith, and a bit of the white — straight into the bowl.",
+    "Grate about a third of the frozen lemon (peel, pith, and a bit of the white) straight into the bowl.",
     "Add the pasta with about a quarter cup of cooking water and toss until the butter melts and the cheese forms a glossy sauce. Add more cooking water as needed.",
     "Taste, add Parmesan, and serve."
   ],
-  tips:"From the comments: the white part is bitter — some grate only the yellow; anti-bitterness trick: boil the lemon before freezing."
+  tips:"From the comments: the white part is bitter, some grate only the yellow; anti-bitterness trick: boil the lemon before freezing."
 },
 {
   id:"8894", diet:"Meat", image:"8894.jpg", category:"Chicken",
@@ -1079,11 +1079,11 @@ const RECIPES = [
 },
 {
   id:"9051", diet:"Meat", image:"9051.jpg", category:"Chicken",
-  name:"Pot Chicken with Grapes — 'Sealed for the Holiday'",
-  searchAlias:"עוף עם ענבים בסיר — 'סגורים לחג'",
+  name:"Pot Chicken with Grapes: 'Sealed for the Holiday'",
+  searchAlias:"עוף עם ענבים בסיר: 'סגורים לחג'",
   creator:"Chen koren", time:"1.5 hrs",
   video:"https://www.facebook.com/reel/951278360535395",
-  intro:"In Chen Koren's signature style: no water — the chicken and grapes cook in their own juices. (.)",
+  intro:"In Chen Koren's signature style: no water, the chicken and grapes cook in their own juices. (.)",
   needs:["chicken","grapes","onion"],
   ingredientLines:[
     {text:"Chicken leg quarters / drumsticks"},
@@ -1094,7 +1094,7 @@ const RECIPES = [
   ],
   steps:[
     "Place the onion, chicken, and grapes in a heavy pot.",
-    "Season and cover — without adding any water.",
+    "Season and cover, without adding any water.",
     "Cook over low heat / in the oven until the chicken is tender and the grapes melt into a sweet sauce.",
     "Serve hot with the sauce that forms in the pot."
   ]
@@ -1121,9 +1121,9 @@ const RECIPES = [
   steps:[
     "Halve the onions and quarter the potatoes. Scatter them in a roasting pan, lay the asado on top, and scatter the garlic cloves around.",
     "Mix all the marinade ingredients with half the water and pour over the asado so it covers the vegetables too.",
-    "Add the rest of the water — up to about half the height of the asado, no more.",
+    "Add the rest of the water, up to about half the height of the asado, no more.",
     "Cover well with parchment paper and then foil, and bake at 160°C (320°F) for 4-5 hours.",
-    "Check after 4 hours — keep going until the asado is tender and falling apart."
+    "Check after 4 hours, keep going until the asado is tender and falling apart."
   ]
 },
 {
@@ -1132,7 +1132,7 @@ const RECIPES = [
   searchAlias:"פרגיות בצ'ימיצ'ורי קליל",
   creator:"Chen koren", time:"1.5 hrs (15 min work)",
   video:"https://www.facebook.com/reel/1815847359824482",
-  intro:"No water at all — the chicken thighs cook in their own juices inside a green chimichurri. Works with chicken breast too (careful not to dry it out).",
+  intro:"No water at all, the chicken thighs cook in their own juices inside a green chimichurri. Works with chicken breast too (careful not to dry it out).",
   needs:["chicken","onion","pepper-red","parsley","coriander"],
   ingredientLines:[
     {text:"Boneless chicken thighs"},
@@ -1145,7 +1145,7 @@ const RECIPES = [
   steps:[
     "Chop very finely: the onion, bell pepper, parsley, and cilantro, and mix with olive oil and the spices into a chimichurri.",
     "Marinate the chicken thighs in the chimichurri.",
-    "Heat a sauté pan and sear the thighs on both sides — without adding water.",
+    "Heat a sauté pan and sear the thighs on both sides, without adding water.",
     "Add the remaining chimichurri, cover, and cook over very low heat for about an hour.",
     "A perfect stew with minimal work."
   ],
@@ -1153,8 +1153,8 @@ const RECIPES = [
 },
 {
   id:"9207", diet:"Meat", image:"9207.jpg", category:"Beef",
-  name:"Mongolian Beef — Just Like the Chinese Restaurant",
-  searchAlias:"מנגוליאן ביף — כמו במסעדה סינית",
+  name:"Mongolian Beef: Just Like the Chinese Restaurant",
+  searchAlias:"מנגוליאן ביף: כמו במסעדה סינית",
   creator:"Tali Bar", time:"25 min", serves:"Serves 3-4",
   video:"https://www.facebook.com/reel/1206277021552177",
   intro:"The restaurant trick for tender beef: baking powder and water that the meat absorbs before stir-frying.",
@@ -1177,19 +1177,19 @@ const RECIPES = [
     {text:"3 scallion stalks, roughly chopped"}
   ],
   steps:[
-    "Mix the beef strips with the baking powder and water until the meat absorbs it all — that's the tenderness secret.",
+    "Mix the beef strips with the baking powder and water until the meat absorbs it all. That's the tenderness secret.",
     "Add the rest of the mixture ingredients and mix.",
     "In a bowl, mix all the sauce ingredients except the scallions.",
     "Heat a wok over high heat until it just starts to smoke. Add ~3 tbsp neutral oil and the beef, and fry until seared and browned on all sides.",
     "Add the sauce and cook over high heat for about 5 minutes until reduced.",
     "Add the scallions for the last minute and serve over hot rice."
   ],
-  tips:"From the comments: some say baking soda (not baking powder) is the real tenderizer — both work, baking soda is several times stronger (use less)."
+  tips:"From the comments: some say baking soda (not baking powder) is the real tenderizer, both work, baking soda is several times stronger (use less)."
 },
 {
   id:"405", diet:"Meat", image:"405.jpg", category:"Beef",
-  name:"Beef & Onion Pot — '2 Minutes of Work'",
-  searchAlias:"קדרת בשר ובצל — '2 דקות עבודה'",
+  name:"Beef & Onion Pot: '2 Minutes of Work'",
+  searchAlias:"קדרת בשר ובצל: '2 דקות עבודה'",
   creator:"Chen koren", time:"Overnight on a hot plate / hours in the oven",
   video:"https://www.facebook.com/reel/1509059813562012",
   intro:"No searing, no frying, no stirring: layers of beef and onion in a heavy pot, and time does everything. Kettle-style slow cooking.",
@@ -1202,7 +1202,7 @@ const RECIPES = [
   ],
   steps:[
     "In a heavy pot, arrange a generous layer of onion with the beef pieces on top. Season with salt and pepper.",
-    "No water and no oil — the juices of the meat and onion make the sauce.",
+    "No water and no oil, the juices of the meat and onion make the sauce.",
     "Cover and cook on a hot plate / very low heat for long hours (Friday to the next day works).",
     "You get melt-in-your-mouth beef in a sweet, rich onion sauce."
   ],

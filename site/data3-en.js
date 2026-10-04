@@ -62,10 +62,10 @@ RECIPES.push(
     "Put the beef in the slow cooker and add everything except the cornstarch: soy sauce, brown sugar, stock, sesame oil, garlic, ginger, vinegar, and chili flakes.",
     "Cover and cook on LOW for 8-9 hours or HIGH for 4-5 hours, until the beef falls apart.",
     "Ladle out about 1/4 cup of the cooking liquid, whisk the cornstarch into it until smooth, and stir it back into the pot.",
-    "Cover and cook on HIGH another 20-30 minutes — the sauce gets body and shine.",
+    "Cover and cook on HIGH another 20-30 minutes, the sauce gets body and shine.",
     "Serve over jasmine rice with scallions, sesame seeds, and something green. Chili crisp for those who like it."
   ],
-  tips:"From the comments (70 likes): sear the beef in a skillet before it goes in the slow cooker — the step everyone skips, and it adds a ton of flavor."
+  tips:"From the comments (70 likes): sear the beef in a skillet before it goes in the slow cooker, the step everyone skips, and it adds a ton of flavor."
 },
 {
   id:"69645", diet:"Vegetarian", image:"69645.jpg", category:"Vegetables & Sides",
@@ -93,7 +93,7 @@ RECIPES.push(
     "Bake covered with foil for about 40 minutes, then uncover and continue another 20-25 minutes until golden.",
     "Check midway that there's enough liquid in the pan. Serve with the sauce left in the bottom."
   ],
-  tips:"From the comments: every Greek home has its own twist — some skip the mustard and garlic ('black pepper is what makes the lemon bloom'), and some add cubes of butter on top."
+  tips:"From the comments: every Greek home has its own twist, some skip the mustard and garlic ('black pepper is what makes the lemon bloom'), and some add cubes of butter on top."
 },
 {
   id:"69646", diet:"Vegetarian", image:"69646.jpg", category:"Vegetables & Sides",
@@ -101,7 +101,7 @@ RECIPES.push(
   searchAlias:"כרובית שלמה בסגנון אייל שני",
   creator:"רובי מיכאל - Rubi Michael", time:"50 min", serves:"Serves 4",
   video:"https://www.facebook.com/reel/1877893009760824",
-  intro:"Just 3 ingredients: cauliflower, olive oil, and sea salt. The secret — a quick boil in water as salty as the sea, then a blazing-hot oven until deeply browned.",
+  intro:"Just 3 ingredients: cauliflower, olive oil, and sea salt. The secret, a quick boil in water as salty as the sea, then a blazing-hot oven until deeply browned.",
   needs:["cauliflower","olive-oil"],
   ingredientLines:[
     {text:"1 cauliflower, as small and young as possible"},
@@ -110,13 +110,13 @@ RECIPES.push(
   ],
   steps:[
     "Preheat the oven to 230°C (convection or top-bottom heat).",
-    "Bring a huge pot of water, 3/4 full, to a boil with salt — the water should be as salty as the sea (like pasta water).",
+    "Bring a huge pot of water, 3/4 full, to a boil with salt, the water should be as salty as the sea (like pasta water).",
     "When the water boils, lower in the cauliflower upside down, leaves on, for exactly 9 minutes and not a second more (worried about worms? remove the leaves).",
-    "Transfer to a tray lined with parchment paper. Don't wipe off the liquid — you need it.",
+    "Transfer to a tray lined with parchment paper. Don't wipe off the liquid. You need it.",
     "Drizzle with the olive oil, sprinkle with the salt, and put straight into the oven for 35 minutes, or until deeply browned.",
     "Serve hot, wrapped in fresh parchment paper."
   ],
-  tips:"From the comments: an upgrade — after the boil, coat the cauliflower in mustard mixed with olive oil, fresh thyme, and salt."
+  tips:"From the comments: an upgrade, after the boil, coat the cauliflower in mustard mixed with olive oil, fresh thyme, and salt."
 },
 {
   id:"69663", diet:"Meat", image:"69663.jpg", category:"Chicken",
@@ -124,7 +124,7 @@ RECIPES.push(
   searchAlias:"באטר צ'יקן עם אורז (ארוחות קלות לזוג)",
   creator:"Foodie.Randy", time:"35 min", serves:"Serves 2-3",
   video:"https://www.facebook.com/reel/1762340964926846",
-  intro:"Episode 4 of 'Easy Meals for Two': chicken marinated in yogurt and garam masala in a creamy tomato sauce. The running joke in the comments: there's no butter in it at all — and it still works.",
+  intro:"Episode 4 of 'Easy Meals for Two': chicken marinated in yogurt and garam masala in a creamy tomato sauce. The running joke in the comments: there's no butter in it at all, and it still works.",
   needs:["chicken","greek-yogurt","onion","ginger","garlic","canned-tomatoes","tomato-paste","cream","rice","coriander"],
   ingredientLines:[
     {group:"Marinade:"},
@@ -141,7 +141,7 @@ RECIPES.push(
     {text:"To serve: rice, a splash of cream, and chopped cilantro"}
   ],
   steps:[
-    "Mix the chicken with the yogurt, garam masala, salt, and pepper (marinate 30 minutes for maximum flavor — or skip it if you're hungry).",
+    "Mix the chicken with the yogurt, garam masala, salt, and pepper (marinate 30 minutes for maximum flavor, or skip it if you're hungry).",
     "Sear the chicken in oil over medium-high heat until browned, 6-8 minutes, without crowding the pan (crowded = watery chicken). It doesn't need to be cooked through.",
     "Pour in 1-2 tablespoons of water and scrape up the browned bits from the bottom of the pan; add the onion, garlic, and ginger for 1-2 minutes.",
     "Add the tomato paste for 1-2 minutes, then the crushed tomatoes and the water.",
@@ -175,7 +175,7 @@ RECIPES.push(
     "Meanwhile, cook the dumplings in boiling water according to the package instructions.",
     "Place the dumplings in a bowl, ladle the broth over, garnish with scallions, and serve."
   ],
-  tips:"From the comments: make the dumplings yourself — it's fun, tastier, and you can do it together."
+  tips:"From the comments: make the dumplings yourself. It's fun, tastier, and you can do it together."
 },
 {
   id:"70229", diet:"Vegetarian", image:"70229.jpg", category:"Pasta",
@@ -203,7 +203,7 @@ RECIPES.push(
     "Over low heat, toss the hot pasta with the garlic cream, adding the cooking water a little at a time until the sauce is silky and glossy.",
     "Serve with more Parmesan and chili flakes."
   ],
-  tips:"Bonus: the leftover confit oil is infused with garlic and rosemary — great for bread and salads."
+  tips:"Bonus: the leftover confit oil is infused with garlic and rosemary, great for bread and salads."
 }
 );
 
@@ -250,11 +250,11 @@ RECIPES.push(
 },
 {
   id:"70579", diet:"Vegetarian", image:"70579.jpg", category:"Pasta",
-  name:"Steve's Pasta — Garlic, Spinach, and Hot Peppers",
-  searchAlias:"הפסטה של סטיב — שום, תרד ופלפלים חריפים",
+  name:"Steve's Pasta: Garlic, Spinach, and Hot Peppers",
+  searchAlias:"הפסטה של סטיב: שום, תרד ופלפלים חריפים",
   creator:"Vivaldi (Chef Steve)", time:"20 min", serves:"Serves 2",
   video:"https://www.facebook.com/reel/1347402237497272",
-  intro:"\"Not everything has to be super technical\": the chef of Vivaldi throws everything into a cold pan — garlic, mushrooms, pickled hot peppers, and spinach — proving great pasta doesn't need rules.",
+  intro:"\"Not everything has to be super technical\": the chef of Vivaldi throws everything into a cold pan (garlic, mushrooms, pickled hot peppers, and spinach) proving great pasta doesn't need rules.",
   needs:["pasta","garlic","olive-oil","mushrooms","cherry-peppers","spinach","wine-white","parmesan","parsley"],
   ingredientLines:[
     {text:"Pasta (about 200 g)"},
@@ -268,14 +268,14 @@ RECIPES.push(
     {text:"Lots of grated cheese + parsley"}
   ],
   steps:[
-    "Drop the pasta into boiling water; meanwhile, build the pan — no preheating.",
+    "Drop the pasta into boiling water; meanwhile, build the pan, no preheating.",
     "Into the pan: a generous pour of olive oil, lots of garlic, the mushrooms, and the hot peppers.",
-    "Add the spinach with salt and pepper — it wilts in seconds, so it doesn't matter whether it goes in first or last.",
+    "Add the spinach with salt and pepper. It wilts in seconds, so it doesn't matter whether it goes in first or last.",
     "When everything is almost done, pour in a splash of white wine and let it reduce.",
     "Transfer the pasta in with a little of the cooking water and toss.",
-    "Finish with lots of cheese and parsley. It has no name — just call it \"Steve's pasta\"."
+    "Finish with lots of cheese and parsley. It has no name, just call it \"Steve's pasta\"."
   ],
-  tips:"From the comments: sun-dried tomatoes and pitted Kalamata olives work great here. The chef loves the vinegar tang and heat of the pickled peppers — don't skip them."
+  tips:"From the comments: sun-dried tomatoes and pitted Kalamata olives work great here. The chef loves the vinegar tang and heat of the pickled peppers, don't skip them."
 },
 {
   id:"70584", diet:"Meat", image:"70584.jpg", category:"Chicken",
@@ -283,7 +283,7 @@ RECIPES.push(
   searchAlias:"עוף בתפוזים, מייפל וקוניאק",
   creator:"Vivaldi (Chef Steve)", time:"30 min", serves:"Serves 2",
   video:"https://www.facebook.com/reel/1519722963271780",
-  intro:"Not the deep-fried takeout Orange Chicken: a chef's version with a real orange sauce — juice, zest, and segments — plus brandy, maple, and butter kneaded with flour.",
+  intro:"Not the deep-fried takeout Orange Chicken: a chef's version with a real orange sauce (juice, zest, and segments) plus brandy, maple, and butter kneaded with flour.",
   needs:["chicken","orange","stock","maple","butter","flour","brandy","olive-oil"],
   ingredientLines:[
     {text:"2 chicken breasts, butterflied"},
@@ -344,7 +344,7 @@ RECIPES.push(
   searchAlias:"פנה אלה וודקה",
   creator:"Ajaya Lama", time:"25 min", serves:"Serves 2",
   video:"https://www.facebook.com/reel/924284176770471",
-  intro:"The Italian-American classic: creamy, spicy, tomatoey, and silky — caramelized tomato paste, vodka, and cream coming together into one pink sauce.",
+  intro:"The Italian-American classic: creamy, spicy, tomatoey, and silky, caramelized tomato paste, vodka, and cream coming together into one pink sauce.",
   needs:["pasta","olive-oil","garlic","onion","chili","tomato-paste","vodka","cream","basil","parmesan"],
   ingredientLines:[
     {text:"150 g penne"},
@@ -365,17 +365,17 @@ RECIPES.push(
     "Add the cream, reduce slightly, and season with salt and pepper.",
     "Add the al dente penne and toss until fully coated.",
     "Finish with basil, Parmesan, and a little pasta water for a silky texture.",
-    "Serve — upgrade with stracciatella, burrata, or mozzarella on top."
+    "Serve, upgrade with stracciatella, burrata, or mozzarella on top."
   ],
   tips:"From the comments: pancetta or bacon fried with the onion adds depth (if you're not keeping it vegetarian)."
 },
 {
   id:"70708", diet:"Vegetarian", image:"70708.jpg", category:"Pasta",
-  name:"Cacio e Pere — Pecorino and Pear Pasta",
-  searchAlias:"קאצ'ו אה פרה — פסטת פקורינו ואגסים",
+  name:"Cacio e Pere: Pecorino and Pear Pasta",
+  searchAlias:"קאצ'ו אה פרה: פסטת פקורינו ואגסים",
   creator:"Gianluca Ruggieri Private Chef", time:"20 min", serves:"Serves 1-2",
   video:"https://www.facebook.com/reel/1404264194883877",
-  intro:"\"Don't tell the farmer how good cheese is with pears\" — an old Italian proverb turned into a pasta: a pecorino-pepper cream with sauteed pear cubes.",
+  intro:"\"Don't tell the farmer how good cheese is with pears\", an old Italian proverb turned into a pasta: a pecorino-pepper cream with sauteed pear cubes.",
   needs:["pear","pecorino","pasta","pepper","olive-oil"],
   ingredientLines:[
     {text:"1 ripe pear"},
@@ -392,7 +392,7 @@ RECIPES.push(
     "Add the pears and the pecorino paste.",
     "Toss over low heat until everything melts and coats the pasta. Serve immediately."
   ],
-  tips:"From the comments: walnuts sauteed along with the pears — a winning upgrade."
+  tips:"From the comments: walnuts sauteed along with the pears, a winning upgrade."
 },
 {
   id:"70709", diet:"Vegetarian", image:"70709.jpg", category:"Pasta",
@@ -448,7 +448,7 @@ RECIPES.push(
     "Return the beef and coat it in the sauce for about 3 minutes, then remove to rest.",
     "Reduce the sauce a little and pour it over the beef."
   ],
-  tips:"From the comments: too-low heat beats too-high — a cream sauce at a hard boil breaks. This is a close cousin of the French steak au poivre."
+  tips:"From the comments: too-low heat beats too-high, a cream sauce at a hard boil breaks. This is a close cousin of the French steak au poivre."
 },
 {
   id:"70851", diet:"Fish", image:"70851.jpg", category:"Fish",
@@ -456,7 +456,7 @@ RECIPES.push(
   searchAlias:"סלמון בגרידת ליים על ירקות צלויים",
   creator:"אבי לוי", time:"50 min", serves:"Serves 4",
   video:"https://www.facebook.com/reel/4600723376870624",
-  intro:"By Avi Levy: a whole salmon fillet on a bed of roasted potatoes and peppers, in a marinade of lime, honey, garlic, and paprika — the aroma from the zest is incredible.",
+  intro:"By Avi Levy: a whole salmon fillet on a bed of roasted potatoes and peppers, in a marinade of lime, honey, garlic, and paprika, the aroma from the zest is incredible.",
   needs:["salmon","potato","pepper-red","chili","spices","garlic","lime","honey-silan","olive-oil"],
   ingredientLines:[
     {text:"1 whole fresh salmon fillet (best left uncut)"},
@@ -477,6 +477,6 @@ RECIPES.push(
     "Bake uncovered at 180-200°C for about 20 minutes.",
     "If you cut the fillet into portions, shorten to 15 minutes."
   ],
-  tips:"The magic is the lime zest in the sauce — don't skip it. You can marinate ahead, but brushing it on right before baking works great too."
+  tips:"The magic is the lime zest in the sauce, don't skip it. You can marinate ahead, but brushing it on right before baking works great too."
 }
 );

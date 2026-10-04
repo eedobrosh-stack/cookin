@@ -36,13 +36,13 @@ RECIPES.push(
     {text:"Toasted sesame seeds and scallion greens, for garnish"}
   ],
   steps:[
-    "Place an upside-down bowl in the center of a wide pot — it lifts the chicken above the liquid that collects during steaming.",
-    "Set the chicken on the bowl with the ginger and the white parts of the scallions, cover, and steam over medium heat for about 20-25 minutes (check that the thickest part reaches 74°C — a larger chicken needs more time).",
+    "Place an upside-down bowl in the center of a wide pot. It lifts the chicken above the liquid that collects during steaming.",
+    "Set the chicken on the bowl with the ginger and the white parts of the scallions, cover, and steam over medium heat for about 20-25 minutes (check that the thickest part reaches 74°C, a larger chicken needs more time).",
     "Let cool slightly, then hand-shred the chicken into strips, skin included.",
-    "Mix the sauce ingredients (feel free to add 2-3 tablespoons of the steaming liquid collected in the pot — it's concentrated chicken broth).",
+    "Mix the sauce ingredients (feel free to add 2-3 tablespoons of the steaming liquid collected in the pot. It's concentrated chicken broth).",
     "Arrange the shredded chicken on a plate, pour the sauce over, and sprinkle with sesame seeds and scallion greens."
   ],
-  tips:"From the comments: the upside-down bowl is there to lift the chicken above the liquid; and make sure to steam long enough — many commenters suspected the chicken in the video wasn't fully cooked."
+  tips:"From the comments: the upside-down bowl is there to lift the chicken above the liquid; and make sure to steam long enough, many commenters suspected the chicken in the video wasn't fully cooked."
 },
 {
   id:"70886", diet:"Meat", image:"70886.jpg", category:"Chicken",
@@ -72,7 +72,7 @@ RECIPES.push(
     "Add the basil and a splash of water and cook until nearly all the liquid has evaporated.",
     "Serve over white rice, topped with a fried egg."
   ],
-  tips:"From the comments: for a more authentic version — holy basil (krapow) and a sauce of 1 tsp oyster sauce, 1 tsp light soy sauce, 1/2 tsp dark soy sauce, 1/2 tsp fish sauce, and 1/4 tsp sugar."
+  tips:"From the comments: for a more authentic version, holy basil (krapow) and a sauce of 1 tsp oyster sauce, 1 tsp light soy sauce, 1/2 tsp dark soy sauce, 1/2 tsp fish sauce, and 1/4 tsp sugar."
 },
 {
   id:"70890", diet:"Vegetarian", image:"70890.jpg", category:"Salads",
@@ -80,11 +80,11 @@ RECIPES.push(
   searchAlias:"סלט ירוק עם חמוציות ואגוזים",
   creator:"רובי מיכאל", time:"20 min", serves:"Serves 4-6",
   video:"https://www.facebook.com/watch/?v=2325360474600667",
-  intro:"A salad of finely chopped greens — celery leaves, mint, cilantro, and parsley — with nuts, cranberries, green apple, and a silan-lemon dressing.",
+  intro:"A salad of finely chopped greens (celery leaves, mint, cilantro, and parsley) with nuts, cranberries, green apple, and a silan-lemon dressing.",
   needs:["celery","mint","coriander","parsley","walnuts","pecans","cranberries-dried","apple","honey-silan","olive-oil","lemon","salt","pepper"],
   ingredientLines:[
     {text:"Leaves from a whole head of celery (leaves only)"},
-    {text:"1 bunch mint — leaves only"},
+    {text:"1 bunch mint, leaves only"},
     {text:"1 bunch cilantro (lower stems removed)"},
     {text:"1 bunch parsley (lower stems removed)"},
     {text:"1/2 cup walnuts (50 g)"},
@@ -103,7 +103,7 @@ RECIPES.push(
     "Dice the apple and add it to the bowl.",
     "Stir the dressing again, pour it over, toss well, and transfer to a serving plate."
   ],
-  tips:"448K views and 4.8K likes. Stir the dressing again right before pouring — the silan settles at the bottom."
+  tips:"448K views and 4.8K likes. Stir the dressing again right before pouring, the silan settles at the bottom."
 },
 {
   id:"70994", diet:"Meat", image:"70994.jpg", category:"Chicken",
@@ -115,7 +115,7 @@ RECIPES.push(
   needs:["coconut-milk","curry-red","stock","sugar","fish-sauce","bamboo-shoots","green-beans","chicken","pepper-red","lime","basil","rice"],
   ingredientLines:[
     {text:"1 can (400 ml) full-fat coconut milk"},
-    {text:"2 tbsp red curry paste (Mae Ploy recommended) — or more"},
+    {text:"2 tbsp red curry paste (Mae Ploy recommended), or more"},
     {text:"1 cup chicken stock"},
     {text:"1 tbsp sugar"},
     {text:"1 tbsp fish sauce"},
@@ -130,11 +130,11 @@ RECIPES.push(
   steps:[
     "Reduce about a third of the coconut milk in a pot over medium heat for 3-5 minutes until it thickens.",
     "Add the curry paste and fry for 1-2 minutes, stirring, until fragrant.",
-    "Add the rest of the coconut milk, the stock, sugar, and fish sauce; whisk and bring to a gentle simmer. Taste — if adding more curry paste, it's best to fry it first in a little oil in a small pan.",
+    "Add the rest of the coconut milk, the stock, sugar, and fish sauce; whisk and bring to a gentle simmer. Taste, if adding more curry paste, it's best to fry it first in a little oil in a small pan.",
     "Add the bamboo shoots and green beans and cook for a minute; add the chicken and cook for 3-5 minutes until done.",
     "Stir in the bell pepper, turn off the heat, and add the lime juice and basil. Serve over jasmine rice."
   ],
-  tips:"Tip from the recipe: freeze the chicken breast for 30-40 minutes before slicing — it comes out extra thin. From the comments: kaffir lime leaves are the secret."
+  tips:"Tip from the recipe: freeze the chicken breast for 30-40 minutes before slicing. It comes out extra thin. From the comments: kaffir lime leaves are the secret."
 },
 {
   id:"70995", diet:"Meat", image:"70995.jpg", category:"Soups & Sauces",
@@ -169,7 +169,7 @@ RECIPES.push(
     "Add the diced bell pepper, carrot, and peas and cook another 5-10 minutes until the vegetables are tender.",
     "For the topping: melt the butter with the paprika and drizzle over when serving."
   ],
-  tips:"Blending the soup after removing the chicken is what makes it creamy — no cream at all."
+  tips:"Blending the soup after removing the chicken is what makes it creamy, no cream at all."
 },
 {
   id:"71112", diet:"Vegetarian", image:"71112.jpg", category:"Salads",
@@ -177,15 +177,15 @@ RECIPES.push(
   searchAlias:"סלט ירוקים קראנצ'י לחג",
   creator:"Elad Levi", time:"20 min", serves:"Serves 4-6",
   video:"https://www.facebook.com/reel/4381618362056491",
-  intro:"A festive salad of firm, crunchy vegetables — cucumber, kohlrabi, and green apple — with loads of fresh herbs, a pomegranate-lemon dressing, and candied pecans.",
+  intro:"A festive salad of firm, crunchy vegetables (cucumber, kohlrabi, and green apple) with loads of fresh herbs, a pomegranate-lemon dressing, and candied pecans.",
   needs:["cucumbers","kohlrabi","apple","celery","scallion","parsley","coriander","mint","olive-oil","lemon","pomegranate-molasses","salt","pepper","pecans"],
   ingredientLines:[
-    {text:"Cucumbers — small dice"},
-    {text:"Kohlrabi — small dice"},
-    {text:"Green apple — small dice"},
+    {text:"Cucumbers, small dice"},
+    {text:"Kohlrabi, small dice"},
+    {text:"Green apple, small dice"},
     {text:"5-6 celery stalks, chopped"},
     {text:"Scallions, very finely chopped"},
-    {text:"1 bunch parsley, 1 bunch cilantro, and 1 bunch mint — a must!"},
+    {text:"1 bunch parsley, 1 bunch cilantro, and 1 bunch mint, a must!"},
     {text:"Dressing: 1/2 cup olive oil"},
     {text:"Juice of a whole lemon"},
     {text:"2 tbsp pomegranate molasses"},
@@ -199,6 +199,6 @@ RECIPES.push(
     "Transfer the vegetables to a large bowl, add the dressing, and toss well.",
     "Plate and top with chopped candied pecans and pomegranate seeds."
   ],
-  tips:"From the comments: the apple browns — the lemony dressing fixes that if you toss right away; no pomegranate molasses? Silan with extra lemon works."
+  tips:"From the comments: the apple browns, the lemony dressing fixes that if you toss right away; no pomegranate molasses? Silan with extra lemon works."
 }
 );

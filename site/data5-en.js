@@ -30,11 +30,11 @@ RECIPES.push(
   steps:[
     "Cut the red onions into strips and arrange them on the bottom of a baking dish. Sprinkle with a little black pepper and drizzle with a little olive oil.",
     "Arrange the chicken drumsticks on top, quarter the figs and scatter them between the chicken pieces. Lay the thyme sprigs on top.",
-    "Make a sauce from the honey, olive oil, boiling water, black pepper, and salt — mix well and pour evenly over the chicken and figs.",
+    "Make a sauce from the honey, olive oil, boiling water, black pepper, and salt, mix well and pour evenly over the chicken and figs.",
     "Cover with parchment paper topped with aluminum foil and bake in an oven preheated to 190°C for an hour and a half.",
-    "Remove the cover and bake another 10-15 minutes on top convection until nicely browned. Serve hot — the sauce is sweet and rich with the caramelized onions and figs."
+    "Remove the cover and bake another 10-15 minutes on top convection until nicely browned. Serve hot, the sauce is sweet and rich with the caramelized onions and figs."
   ],
-  tips:"From the comments: worth making for a holiday, but figs are pricey (35-45 ₪ per kilo) — you can cut the amount or swap some for plums. Also works with whole chicken thighs."
+  tips:"From the comments: worth making for a holiday, but figs are pricey (35-45 ₪ per kilo). You can cut the amount or swap some for plums. Also works with whole chicken thighs."
 },
 {
   id:"71156", diet:"Meat", image:"71156.jpg", category:"Beef",
@@ -68,7 +68,7 @@ RECIPES.push(
     "Add the salt, black pepper, brown sugar, celery leaves, and beet greens. Bring to a boil and simmer over low heat for about an hour and a quarter, until the meatballs are tender and the sauce has thickened (add a little water if needed).",
     "Serve hot with white rice."
   ],
-  tips:"It's important to use meat with a high fat content — the fat melts into the sauce and thickens it. From the comments: if you don't like celery, you can swap in leek."
+  tips:"It's important to use meat with a high fat content, the fat melts into the sauce and thickens it. From the comments: if you don't like celery, you can swap in leek."
 },
 {
   id:"71279", diet:"Meat", image:"71279.jpg", category:"Chicken",
