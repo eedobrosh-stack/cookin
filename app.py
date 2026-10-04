@@ -15,6 +15,21 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 import multiuser
 import cands
 
+# Category landing pages: /salads serves the gallery with the Salads category
+# preselected, so browser "back" from a dish returns to that category rather
+# than the unfiltered homepage. The slug is the English category name lower-
+# cased with hyphens ("Vegetables & Sides" -> "vegetables-sides"); /all is the
+# unfiltered homepage and /salads?lang=en serves the English gallery.
+CATEGORY_SLUGS = {
+    "pasta": "Pasta",
+    "chicken": "Chicken",
+    "beef": "Beef",
+    "fish": "Fish",
+    "salads": "Salads",
+    "vegetables-sides": "Vegetables & Sides",
+    "soups-sauces": "Soups & Sauces",
+}
+
 PORT = int(os.environ.get("PORT", "10000"))
 DATA_DIR = os.environ.get("DATA_DIR", "/var/data")
 SITE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
@@ -841,6 +856,28 @@ class Handler(SimpleHTTPRequestHandler):
                 target = "https://cookin.jarcud.com" + target
             self.send_response(301)
             self.send_header("Location", target)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        # Category landing pages: /salads serves the gallery with that category
+        # preselected (index.html reads the slug off the path). English uses the
+        # same slug with ?lang=en, which is en.html. /all is the plain homepage.
+        cs = p.strip("/").lower()
+        if cs in CATEGORY_SLUGS:
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if (qs.get("lang", [""])[0] or "").lower() == "en":
+                page = "en.html"
+            else:
+                page = "index.html"
+            try:
+                with open(os.path.join(SITE, page), "rb") as f:
+                    self._html(f.read(), "no-store")
+            except OSError:
+                self._json({"error": "gallery not found"}, 404)
+            return
+        if cs == "all":
+            self.send_response(302)
+            self.send_header("Location", "/")
             self.send_header("Content-Length", "0")
             self.end_headers()
             return

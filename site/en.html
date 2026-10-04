@@ -255,6 +255,15 @@ let activeCat = "All";
 let pantry = new Set(JSON.parse(localStorage.getItem("cookin-pantry-v1")||"[]"));
 
 const CAT_ORDER = ["All","Pasta","Chicken","Beef","Fish","Salads","Vegetables & Sides","Soups & Sauces"];
+/* Category URLs: /salads?lang=en is the English gallery filtered to Salads,
+   so "back" from a dish lands on that category instead of the homepage. The
+   slugs are shared with the Hebrew page and with app.py's routing; here they
+   map to the English category names. */
+const CAT_SLUG = {"Pasta":"pasta","Chicken":"chicken","Beef":"beef","Fish":"fish",
+                  "Salads":"salads","Vegetables & Sides":"vegetables-sides",
+                  "Soups & Sauces":"soups-sauces"};
+const SLUG_CAT = Object.fromEntries(Object.entries(CAT_SLUG).map(([c,s])=>[s,c]));
+function catPath(cat){ return cat==="All" ? "/en.html" : "/" + CAT_SLUG[cat] + "?lang=en"; }
 // Gluten-free is an independent toggle (combines with any category); persisted per browser.
 let gfOn = false; try{ gfOn = localStorage.getItem("cookin-gf")==="1"; }catch(e){}
 // Diet filter: "" (off) | "veg" | "vegan" — one at a time (vegan is a subset of vegetarian); persisted per browser.
@@ -284,9 +293,14 @@ function dietBadge(r){ return `<span class="badge ${DIET_CLS[r.diet]||''}">${DIE
    Falls back to TB1 whenever a dish has no tb2. */
 function tb2(r){ return r.tb2 || r.image; }
 
+function goCat(c){
+  activeCat = c;
+  try{ history.replaceState(null, "", catPath(c)); }catch(e){}
+  renderCats(); renderGallery();
+}
 function renderCats(){
   $("#catBar").innerHTML = CAT_ORDER.map(c =>
-    `<button class="cat ${c===activeCat?'active':''}" onclick="activeCat='${c.replace(/'/g,"\\'")}';renderCats();renderGallery()">${c}</button>`).join("")
+    `<button class="cat ${c===activeCat?'active':''}" onclick="goCat('${c.replace(/'/g,"\\'")}')">${c}</button>`).join("")
 ;
   $("#dietBar").innerHTML = `<button class="cat gf ${gfOn?'active':''}" role="switch" aria-checked="${gfOn}" title="Show only gluten-free dishes (combines with any category)" onclick="toggleGf()">🌾 Gluten-free</button>`
     + `<button class="cat veg ${dietMode==='veg'?'active':''}" role="switch" aria-checked="${dietMode==='veg'}" title="Show only vegetarian dishes" onclick="toggleDiet('veg')">🥦 Vegetarian</button>`
@@ -462,6 +476,10 @@ function setHeaderH(){
 }
 window.addEventListener("resize", setHeaderH);
 setHeaderH();
+
+/* Boot: a category URL (/salads?lang=en) preselects that category. */
+{ const s = decodeURIComponent(location.pathname).replace(/^\/+|\/+$/g, "").toLowerCase();
+  if (SLUG_CAT[s]) activeCat = SLUG_CAT[s]; }
 
 renderCats(); renderGallery();
 // deep link: en.html#<dishId>
