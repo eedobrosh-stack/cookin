@@ -60,7 +60,7 @@
   ".cs-dr{position:fixed;z-index:9995;top:0;bottom:0;inset-inline-end:0;width:min(400px,100%);background:#fffdf9;color:#2b2420;box-shadow:-8px 0 30px rgba(0,0,0,.25);display:none;flex-direction:column;font-family:-apple-system,'Segoe UI',Rubik,Arial,sans-serif}"+
   ".cs-dr.open{display:flex}.cs-dr h3{padding:16px 18px;border-bottom:1px solid #eee5d8;display:flex;justify-content:space-between;align-items:center;font-size:1.1rem}"+
   ".cs-dr h3 button{border:0;background:#f3ece1;border-radius:8px;padding:6px 10px;cursor:pointer}"+
-  ".cs-body{flex:1;overflow-y:auto;padding:10px 18px}.cs-g{font-weight:700;color:#6b5d4f;margin:14px 0 4px;font-size:.9rem}.cs-g a{color:inherit}"+
+  ".cs-body{flex:1;overflow-y:auto;padding:10px 18px}.cs-g{font-weight:700;color:#6b5d4f;margin:16px 0 4px;font-size:.92rem;background:#f3ece1;border-radius:8px;padding:5px 10px}.cs-g .n{float:inline-end;color:#8a7f74;font-weight:600}.cs-it small{display:block;color:#8a7f74;font-size:.75rem}.cs-it .tot{font-size:.9rem;white-space:nowrap}"+
   ".cs-it{display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px dashed #eee5d8;font-size:.95rem}.cs-it .t{flex:1;line-height:1.35}"+
   ".cs-it.done .t{text-decoration:line-through;opacity:.45}.cs-it input[type=number]{width:62px;padding:3px 5px;border:1px solid #eee5d8;border-radius:7px;text-align:center}"+
   ".cs-it input[type=checkbox]{width:18px;height:18px;accent-color:#e07a3f}.cs-it .u{min-width:2.4em;font-size:.82rem;color:#8a7f74}.cs-it .x{border:0;background:none;cursor:pointer;color:#a53a2c;font-size:1rem}"+
@@ -80,8 +80,59 @@
   function ready(f){ if(document.body) f(); else document.addEventListener("DOMContentLoaded",f); }
   ready(function(){ document.body.append(fab, dr); fab.onclick=function(){dr.classList.toggle("open"); paint();}; paint(); });
 
+  /* ---------- sections (shopping aisles) ---------- */
+  var SEC = [
+    ["produce","🥬",EN?"Produce":"ירקות ופירות"],["herbs","🌿",EN?"Herbs":"עשבי תיבול"],["meatfish","🥩",EN?"Meat & fish":"בשר ודגים"],
+    ["dairy","🧀",EN?"Dairy & eggs":"חלב וביצים"],["frozen","🧊",EN?"Frozen":"קפואים"],["canned","🥫",EN?"Canned & jarred":"שימורים וצנצנות"],["dry","🍝",EN?"Dry goods & grains":"יבשים ודגנים"],
+    ["oils","🫒",EN?"Oils & sauces":"שמנים ורטבים"],["spices","🧂",EN?"Spices":"תבלינים"],["other","🛒",EN?"Other":"אחר"]];
+  var KW = EN ? [
+    ["herbs",/\b(parsley|cilantro|coriander|basil|mint|dill|chives|thyme|rosemary|sage|tarragon|oregano leaves|herbs?)\b/],
+    ["meatfish",/\b(chicken|beef|lamb|pork|turkey|steak|ribs?|brisket|sausage|bacon|ham|meat|salmon|tuna fillet|fish|cod|tilapia|sea bass|shrimp|prawns?|squid|fillet|mince|ground (beef|meat))\b/],
+    ["dairy",/\b(milk|cream|butter|cheese|yogh?urt|labneh|eggs?|tofu|parmesan|mozzarella|feta|ricotta|margarine)\b/],
+    ["frozen",/\b(frozen)\b/],
+    ["canned",/\b(canned|tinned|tomato paste|coconut (milk|cream)|olives?|pickles?|capers?|tahini|jam)\b/],
+    ["oils",/\b(oil|vinegar|sauce|mustard|ketchup|mayo|honey|wine|beer|stock|broth|water)\b/],
+    ["spices",/\b(salt|pepper|paprika|cumin|turmeric|cinnamon|spice|seasoning|chili flakes|curry powder|za'?atar|nutmeg)\b/],
+    ["dry",/\b(pasta|spaghetti|rice|noodles?|flour|bread|breadcrumbs|sugar|oats|couscous|lentils?|beans|nuts?|almonds?|walnuts?|seeds?|cornstarch|cornflour|baking|chocolate|pita|tortilla|baguette)\b/],
+    ["produce",/\b(onion|garlic|ginger|tomato|potato|carrot|cucumber|lemon|lime|pepper|cabbage|lettuce|spinach|mushroom|zucchini|eggplant|avocado|apple|banana|orange|chili|corn|celery|broccoli|cauliflower|scallion|vegetable|fruit)/]
+  ] : [
+    ["herbs",/(פטרוזיליה|כוסברה|בזיליקום|נענע|שמיר|עירית|טימין|רוזמרין|מרווה|עשבי|אזוב)/],
+    ["meatfish",/(עוף|חזה|שוק|כנפיים|בקר|בשר|כבש|הודו|סטייק|צלע|אנטריקוט|נקניק|בייקון|דג|סלמון|טונה טרייה|פילה|שרימפס|סרטנ|קלמרי|טחון|בריסקט|מושט|דניס|לברק)/],
+    ["dairy",/(חלב|שמנת|חמאה|גבינ|יוגורט|לאבנה|ביצ|טופו|פרמזן|מוצרלה|פטה|ריקוטה|מרגרינה|קשקבל|קוטג)/],
+    ["frozen",/(קפוא)/],
+    ["canned",/(שימורי|משומר|רסק עגבניות|קרם קוקוס|חלב קוקוס|זיתים|מלפפונים חמוצים|חמוצים|צלפים|טחינה|ריבה|במבוק|קופסת)/],
+    ["oils",/(שמן|חומץ|רוטב|חרדל|קטשופ|מיונז|דבש|סילאן|יין|בירה|ציר|מים|סויה)/],
+    ["spices",/(מלח|פלפל שחור|פלפל לבן|פפריקה|כמון|כורכום|קינמון|תבלין|פתיתי צ'ילי|קארי אבקה|זעתר|אגוז מוסקט|אורגנו|קורט)/],
+    ["dry",/(פסטה|ספגטי|אורז|אטריות|קמח|לחם|פירורי|סוכר|שיבולת|קוסקוס|עדשים|שעועית|אגוז|שקד|שומשום|גרעינ|קורנפלור|אבקת אפייה|שוקולד|פיתה|טורטייה|באגט|בגט)/],
+    ["produce",/(בצל|שום|ג'ינג'ר|עגבני|תפוח אדמה|גזר|מלפפון|לימון|ליים|גמבה|פלפל|כרוב|חסה|תרד|פטריות|קישוא|חציל|אבוקדו|תפוח|בננה|תפוז|צ'ילי|תירס|סלרי|ברוקולי|כרובית|ירק|פרי)/]
+  ];
+  var TBL = window.cookinSections || {};
+  function sectionOf(name){
+    var n=String(name||"").trim(), t=(TBL[EN?"en":"he"]||{})[EN?n.toLowerCase():n];
+    if(t) return t;
+    var l=EN?n.toLowerCase():n;
+    for(var i=0;i<KW.length;i++) if(KW[i][1].test(l)) return KW[i][0];
+    return "other";
+  }
+  /* rows: one per (section, name, unit); several dishes asking for the same thing are summed */
+  function rows(){
+    var map={}, order=[];
+    items.forEach(function(it,ix){
+      var sec=sectionOf(it.text), k=sec+"|"+it.text.toLowerCase()+"|"+(it.unit||"");
+      if(!map[k]){map[k]={sec:sec,name:it.text,unit:it.unit||"",ix:[],dishes:[]};order.push(k);}
+      var r=map[k]; r.ix.push(ix); if(it.dishName&&r.dishes.indexOf(it.dishName)<0) r.dishes.push(it.dishName);
+    });
+    return order.map(function(k){return map[k];});
+  }
+  function rowTotal(r){return Math.round(r.ix.reduce(function(a,i){return a+items[i].qty;},0)*100)/100;}
+  function rowAmt(r){var q=rowTotal(r), u=r.unit?I.unitLabel(r.unit,q,EN?"en":"he"):"";return I.num(q)+(u?" "+u:"");}
   function text(){
-    return items.filter(function(i){return !i.done;}).map(function(i){return "• "+amt(i)+" "+i.text;}).join("\n");
+    var all=rows().filter(function(r){return !r.ix.every(function(i){return items[i].done;});}), out=[];
+    SEC.forEach(function(s){
+      var rs=all.filter(function(r){return r.sec===s[0];}); if(!rs.length) return;
+      out.push(s[1]+" "+s[2]); rs.forEach(function(r){out.push("• "+rowAmt(r)+" "+r.name);});
+    });
+    return out.join("\n");
   }
   function toast(m){
     var t=document.createElement("div");t.className="cs-toast";t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove();},2200);
@@ -90,23 +141,29 @@
     if(!fab.isConnected) return;
     fab.innerHTML = "🛒 <b>"+items.filter(function(i){return !i.done;}).length+"</b>";
     if(!dr.classList.contains("open")) return;
-    var groups = {}, order = [];
-    items.forEach(function(i,ix){ var g=i.dish||"-"; if(!groups[g]){groups[g]={name:i.dishName,url:i.dish,rows:[]};order.push(g);} groups[g].rows.push([i,ix]); });
-    var body = !items.length ? '<p style="color:#8a7f74;padding:16px 0">'+S.empty+'</p>' : order.map(function(g){
-      var G=groups[g];
-      return '<div class="cs-g">'+(G.url&&G.url!=="-"?'<a href="'+esc(G.url)+'">':'')+esc(G.name||"")+(G.url&&G.url!=="-"?'</a>':'')+'</div>'+
-        G.rows.map(function(p){var i=p[0];return '<div class="cs-it'+(i.done?' done':'')+'" data-i="'+p[1]+'"><input type="checkbox" '+(i.done?'checked':'')+'><span class="t">'+esc(i.text)+'</span>'+
-          '<input type="number" min="0" step="any" value="'+i.qty+'" title="'+S.qty+'"><span class="u">'+esc(ul(i))+'</span><button class="x" title="'+S.rm+'">✕</button></div>';}).join("");
-    }).join("");
+    var all=rows(), body="";
+    if(!items.length) body='<p style="color:#8a7f74;padding:16px 0">'+S.empty+'</p>';
+    SEC.forEach(function(s){
+      var rs=all.filter(function(r){return r.sec===s[0];}); if(!rs.length) return;
+      body+='<div class="cs-g">'+s[1]+' '+esc(s[2])+' <span class="n">'+rs.length+'</span></div>';
+      rs.forEach(function(r){
+        var done=r.ix.every(function(i){return items[i].done;}), multi=r.ix.length>1, k=all.indexOf(r);
+        body+='<div class="cs-it'+(done?' done':'')+'" data-r="'+k+'"><input type="checkbox" '+(done?'checked':'')+'>'+
+          '<span class="t">'+esc(r.name)+(r.dishes.length?'<small>'+r.dishes.map(esc).join(" · ")+'</small>':'')+'</span>'+
+          (multi?'<b class="tot">'+esc(rowAmt(r))+'</b>':'<input type="number" min="0" step="any" value="'+items[r.ix[0]].qty+'" title="'+S.qty+'"><span class="u">'+esc(r.unit?I.unitLabel(r.unit,items[r.ix[0]].qty,EN?"en":"he"):"")+'</span>')+
+          '<button class="x" title="'+S.rm+'">✕</button></div>';
+      });
+    });
     dr.innerHTML = '<h3>'+S.title+'<button class="cs-close">'+S.close+'</button></h3><div class="cs-body">'+body+'</div>'+
       '<div class="cs-ft"><div>'+(user?S.saved:S.anon+' <a href="/auth/login?next='+encodeURIComponent(location.pathname+location.hash)+'">'+S.signin+'</a>')+'</div>'+
       (items.length?'<div class="r"><button data-a="copy">'+S.copy+'</button><button data-a="wa">'+S.wa+'</button><button data-a="done">'+S.clearDone+'</button><button data-a="all">'+S.clearAll+'</button></div>':'')+'</div>';
     dr.querySelector(".cs-close").onclick=function(){dr.classList.remove("open");};
     [].forEach.call(dr.querySelectorAll(".cs-it"),function(row){
-      var ix=+row.dataset.i, it=items[ix];
-      row.querySelector("input[type=checkbox]").onchange=function(e){it.done=e.target.checked;persist();};
-      row.querySelector("input[type=number]").onchange=function(e){it.qty=Math.max(0.01,parseFloat(e.target.value)||1);persist();};
-      row.querySelector(".x").onclick=function(){items.splice(ix,1);persist();};
+      var r=all[+row.dataset.r];
+      row.querySelector("input[type=checkbox]").onchange=function(e){r.ix.forEach(function(i){items[i].done=e.target.checked;});persist();};
+      var q=row.querySelector("input[type=number]");
+      if(q) q.onchange=function(e){items[r.ix[0]].qty=Math.max(0.01,parseFloat(e.target.value)||1);persist();};
+      row.querySelector(".x").onclick=function(){var drop={};r.ix.forEach(function(i){drop[i]=1;});items=items.filter(function(_,i){return !drop[i];});persist();};
     });
     [].forEach.call(dr.querySelectorAll(".cs-ft button"),function(b){b.onclick=function(){
       var a=b.dataset.a;
