@@ -62,21 +62,6 @@ h1{font-size:1.45rem}
 .dbody{flex:1;min-height:0}
 .ingcol,.stepcol{overflow-y:auto;scrollbar-width:thin}
 }
-
-.wolt-btn{margin-top:16px;width:100%;background:#009de0;color:#fff;border:0;border-radius:12px;padding:12px;font-size:1rem;font-weight:700;cursor:pointer}
-.wolt-btn:hover{background:#0086c0}
-.ing-list.wolt-on li{align-items:center}.ing-list.wolt-on li::before{content:none}
-.ing-list.wolt-on li .wchk{flex:0 0 auto;width:18px;height:18px;accent-color:#009de0}
-.ing-list.wolt-on li .wtxt{flex:1}
-.ing-list.wolt-on li .wqty{flex:0 0 auto;width:56px;padding:4px 6px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;text-align:center}
-.ing-list.wolt-on li.off .wtxt{opacity:.4;text-decoration:line-through}.ing-list.wolt-on li.off .wqty{visibility:hidden}
-.wolt-bar{display:flex;gap:8px;margin-top:14px}.wolt-bar button{flex:1;border:0;border-radius:10px;padding:10px;font-weight:700;cursor:pointer}
-.wolt-go{background:#009de0;color:#fff}.wolt-cancel{background:var(--chip);color:var(--ink)}
-.wolt-panel{margin-top:16px;border:1px solid #bfe3f5;background:#f0f9fe;border-radius:12px;padding:14px;font-size:.92rem;line-height:1.6}
-.wolt-panel a{color:#0073a8;font-weight:600}.wolt-panel ul{list-style:none;margin:8px 0;display:flex;flex-direction:column;gap:4px}
-.wolt-panel .wrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.wolt-panel .wrow a,.wolt-panel .wrow button{border:0;border-radius:10px;padding:8px 12px;background:#009de0;color:#fff;text-decoration:none;font-weight:700;cursor:pointer;font-size:.88rem}
-.wolt-panel .wrow .alt{background:#fff;color:#0073a8;border:1px solid #009de0}
 </style>
 </head>
 <body>
@@ -103,7 +88,7 @@ h1{font-size:1.45rem}
 <li>מיץ מחצי לימון</li>
 <li>½ צרור כוסברה קצוצה</li>
 <li>1 כף מחית קארי אדום</li>
-<li>1 פחית קרם קוקוס</li></ul><button class="wolt-btn" id="woltBtn">🛒 הזמן את המצרכים מוולט</button><div id="woltHost"></div></div>
+<li>1 פחית קרם קוקוס</li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>במחבת גדולה וחמה שמים את השמן ומיד את הבצל והגמבה, וצורבים מעט להוצאת טעם וצבע.</span></li>
 <li><span>מוסיפים שום, ג'ינג'ר ורצועות העוף ומערבבים היטב עד שהעוף כמעט עשוי ומלבין.</span></li>
@@ -116,62 +101,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script>
-(function(){
-  var KEY="cookin-wolt-list", DISH=location.pathname, WOLT="https://wolt.com/he/isr", list=document.querySelector(".ing-list");
-  var btn=document.getElementById("woltBtn"), host=document.getElementById("woltHost");
-  var UNITS=/^(?:\d+[\d\/.,]*|[½¼¾⅓⅔])?\s*(?:גרם|ג'|ק"ג|קילו|מ"ל|ליטר|כפות|כף|כפיות|כפית|כוסות|כוס|שיני|שן|פחיות|פחית|צרורות|צרור|חבילות|חבילה|יחידות|יחידה|קורט|קלח|ענף|ענפים|פרוסות|פרוסה|מיץ\s+מ)?\s*(?:של\s+)?/;
-  function clean(t){return t.replace(UNITS,"").replace(/\(.*?\)/g,"").replace(/,.*$/,"").trim()||t;}
-  function read(){try{return JSON.parse(localStorage.getItem(KEY)||"null");}catch(e){return null;}}
-  function save(v){try{localStorage.setItem(KEY,JSON.stringify(v));}catch(e){}}
-  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
-  var lis=[].slice.call(list.querySelectorAll("li"));
-  function enter(){
-    list.classList.add("wolt-on");
-    lis.forEach(function(li){
-      if(li.querySelector(".wchk"))return;
-      var t=li.textContent; li.textContent="";
-      var c=document.createElement("input");c.type="checkbox";c.checked=true;c.className="wchk";
-      var s=document.createElement("span");s.className="wtxt";s.textContent=t;
-      var q=document.createElement("input");q.type="number";q.min="1";q.value="1";q.className="wqty";q.title="כמות להזמנה";
-      c.onchange=function(){li.classList.toggle("off",!c.checked);};
-      li.append(c,s,q);
-    });
-    btn.style.display="none";
-    var bar=document.createElement("div");bar.className="wolt-bar";bar.id="woltBar";
-    bar.innerHTML='<button class="wolt-go">המשך לוולט ←</button><button class="wolt-cancel">ביטול</button>';
-    bar.querySelector(".wolt-cancel").onclick=leave;bar.querySelector(".wolt-go").onclick=submit;
-    list.after(bar);
-  }
-  function leave(){
-    list.classList.remove("wolt-on");
-    lis.forEach(function(li){var s=li.querySelector(".wtxt");if(s){li.textContent=s.textContent;li.classList.remove("off");}});
-    var b=document.getElementById("woltBar");if(b)b.remove();btn.style.display="";
-  }
-  function submit(){
-    var items=[];
-    lis.forEach(function(li){var c=li.querySelector(".wchk");if(c&&c.checked){
-      var t=li.querySelector(".wtxt").textContent;items.push({text:t,q:clean(t),qty:parseInt(li.querySelector(".wqty").value,10)||1});}});
-    if(!items.length){alert("לא נבחרו מצרכים");return;}
-    var data={dish:DISH,title:document.title,items:items,ts:Date.now()};save(data);
-    try{navigator.clipboard.writeText(items.map(function(i){return i.qty+" x "+i.q;}).join("\n"));}catch(e){}
-    leave();panel(data);window.open(WOLT,"_blank","noopener");
-  }
-  function panel(d){
-    var p=document.getElementById("woltPanel");if(p)p.remove();
-    p=document.createElement("div");p.id="woltPanel";p.className="wolt-panel";
-    p.innerHTML='<b>🛒 רשימת הקניות שלך ('+d.items.length+' מצרכים)</b>'+
-      '<ul>'+d.items.map(function(i){return '<li>'+i.qty+' × <a target="_blank" rel="noopener" href="'+WOLT+'/search?q='+encodeURIComponent(i.q)+'">'+esc(i.q)+'</a> 🔎</li>';}).join("")+'</ul>'+
-      '<div>וולט לא מאפשרת לאתרים חיצוניים למלא את העגלה, אז כל מצרך מקשר לחיפוש בוולט. הרשימה גם הועתקה ללוח, והיא נשמרת כאן גם אחרי התחברות.</div>'+
-      '<div class="wrow"><a target="_blank" rel="noopener" href="'+WOLT+'">יש לי חשבון בוולט, פתח</a>'+
-      '<a class="alt" target="_blank" rel="noopener" href="'+WOLT+'">אין לי חשבון, יצירת חשבון</a>'+
-      '<button class="alt" id="woltCopy">העתק רשימה</button><button class="alt" id="woltClear">נקה</button></div>';
-    host.append(p);
-    p.querySelector("#woltCopy").onclick=function(){try{navigator.clipboard.writeText(d.items.map(function(i){return d.items.length&&i.qty+" x "+i.q;}).join("\n"));}catch(e){}};
-    p.querySelector("#woltClear").onclick=function(){save(null);p.remove();};
-  }
-  btn.onclick=enter;
-  var prev=read();if(prev&&prev.dish===DISH)panel(prev);
-})();</script>
+<script src="../shopping.js"></script>
 </body>
 </html>

@@ -91,6 +91,8 @@ CREATE INDEX IF NOT EXISTS dishes_vis ON dishes(visibility, status);
 CREATE TABLE IF NOT EXISTS prefs(
   user_id TEXT PRIMARY KEY, hidden TEXT DEFAULT '[]', hide_base INTEGER DEFAULT 0,
   sources TEXT DEFAULT '[]');
+CREATE TABLE IF NOT EXISTS shopping(
+  user_id TEXT PRIMARY KEY, items TEXT DEFAULT '[]', updated_at TEXT);
 CREATE TABLE IF NOT EXISTS usage(user_id TEXT, day TEXT, n INTEGER DEFAULT 0,
   PRIMARY KEY(user_id, day));
 CREATE TABLE IF NOT EXISTS claims(
@@ -440,6 +442,41 @@ def api_prefs(handler, user, req):
                   (user["id"], json.dumps(prefs["hidden"]), int(prefs["hideBase"]),
                    json.dumps(prefs["muted"])))
     return handler._json({"ok": True, "prefs": prefs})
+
+
+def api_shopping_get(handler, user):
+    if not user:
+        return handler._json({"error": "sign in"}, 401)
+    with db() as c:
+        r = c.execute("SELECT items FROM shopping WHERE user_id=?", (user["id"],)).fetchone()
+    return handler._json({"items": json.loads(r["items"]) if r else []})
+
+
+def api_shopping_set(handler, user, req):
+    """Replace the signed-in user's shopping list (client sends the merged full list)."""
+    if not user:
+        return handler._json({"error": "sign in"}, 401)
+    out = []
+    for it in (req.get("items") if isinstance(req, dict) else None) or []:
+        if not isinstance(it, dict):
+            continue
+        text = str(it.get("text") or "").strip()[:200]
+        if not text:
+            continue
+        try:
+            qty = max(1, min(999, int(it.get("qty") or 1)))
+        except (TypeError, ValueError):
+            qty = 1
+        out.append({"id": str(it.get("id") or "")[:260], "dish": str(it.get("dish") or "")[:200],
+                    "dishName": str(it.get("dishName") or "")[:160], "text": text, "qty": qty,
+                    "done": bool(it.get("done"))})
+        if len(out) >= 400:
+            break
+    with db() as c:
+        c.execute("INSERT INTO shopping(user_id,items,updated_at) VALUES(?,?,?) "
+                  "ON CONFLICT(user_id) DO UPDATE SET items=excluded.items, updated_at=excluded.updated_at",
+                  (user["id"], json.dumps(out, ensure_ascii=False), now_iso()))
+    return handler._json({"ok": True, "items": out})
 
 
 def api_dish_get(handler, user, did):
@@ -1303,7 +1340,7 @@ def dish_page(handler, user, did, qs):
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Cookin 🍳</title><style>{DISH_CSS}</style></head>
 <body><div class="wrap"><div class="topbar"><a class="back" href="{t['home']}">{t['back']}</a>{own}</div>
 <div class="dish"><div class="dhead"><h1>{msg}</h1>{err}<div class="dsub">{e(r['source_url'] or '')}</div></div></div></div>
-<script>{_ACT_JS}</script></body></html>"""
+<script>{_ACT_JS}</script><script src="/shopping.js"></script></body></html>"""
         return handler._html(body, "no-store")
     # Visitors (not signed in) get the official embed unless the creator approved; members get the rehosted video.
     creator_ok = int(r["creator_ok"] or 0)
@@ -1430,6 +1467,8 @@ def handle_get(handler, path, qs):
         auth_callback(handler, qs); return True
     if path == "/api/me":
         api_me(handler, current_user(handler)); return True
+    if path == "/api/shopping":
+        api_shopping_get(handler, current_user(handler)); return True
     if path.startswith("/api/dishes/"):
         api_dish_get(handler, current_user(handler), path.rsplit("/", 1)[1]); return True
     if path == "/api/admin/queue":
@@ -1450,6 +1489,8 @@ def handle_post(handler, path, qs, read_json):
         auth_logout(handler); return True
     if path == "/api/prefs":
         api_prefs(handler, current_user(handler), read_json()); return True
+    if path == "/api/shopping":
+        api_shopping_set(handler, current_user(handler), read_json()); return True
     if path == "/api/dishes":
         api_dish_create(handler, current_user(handler), read_json()); return True
     if path == "/api/dishes/bulk-visibility":
