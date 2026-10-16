@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -77,15 +78,20 @@ h1{font-size:1.45rem}
         <div class="dnote">סיר אחד שמחמם מטבחים גרמניים כבר דורות: בשר טחון, תפו"א וירקות ברוטב עגבניות-פפריקה.</div>
       </div>
       <div class="dbody">
-        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>500 גרם בשר בקר טחון</li>
-<li>500 גרם תפו"א בקוביות</li>
-<li>2 גזרים פרוסים</li>
-<li>1 פלפל אדום בקוביות + 1 בצל קצוץ</li>
-<li>2 כפות רסק עגבניות</li>
-<li>400 גרם עגבניות מרוסקות</li>
-<li>300 מ"ל ציר</li>
-<li>1 כפית פפריקה, קורט סוכר, מלח ופלפל</li>
-<li>2 כפות פטרוזיליה + כף שמנת חמוצה להגשה</li></ul></div>
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li><span class="iq" data-q="500" data-u="g">500 גרם</span><span class="in" data-n="בשר בקר טחון">בשר בקר טחון</span></li>
+<li><span class="iq" data-q="500" data-u="g">500 גרם</span><span class="in" data-n="תפוחי אדמה">תפוחי אדמה <i class="ip">בקוביות</i></span></li>
+<li><span class="iq" data-q="2" data-u="">2</span><span class="in" data-n="גזר">גזר <i class="ip">פרוס</i></span></li>
+<li><span class="iq" data-q="1" data-u="">1</span><span class="in" data-n="פלפל אדום">פלפל אדום <i class="ip">בקוביות</i></span></li>
+<li><span class="iq" data-q="1" data-u="">1</span><span class="in" data-n="בצל">בצל <i class="ip">קצוץ</i></span></li>
+<li><span class="iq" data-q="2" data-u="tbsp">2 כפות</span><span class="in" data-n="רסק עגבניות">רסק עגבניות</span></li>
+<li><span class="iq" data-q="400" data-u="g">400 גרם</span><span class="in" data-n="עגבניות מרוסקות">עגבניות מרוסקות</span></li>
+<li><span class="iq" data-q="300" data-u="ml">300 מ&quot;ל</span><span class="in" data-n="ציר">ציר</span></li>
+<li><span class="iq" data-q="1" data-u="tsp">1 כפית</span><span class="in" data-n="פפריקה">פפריקה</span></li>
+<li><span class="iq" data-q="1" data-u="pinch">1 קורט</span><span class="in" data-n="סוכר">סוכר</span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="מלח">מלח</span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="פלפל">פלפל</span></li>
+<li><span class="iq" data-q="2" data-u="tbsp">2 כפות</span><span class="in" data-n="פטרוזיליה">פטרוזיליה</span></li>
+<li><span class="iq" data-q="1" data-u="tbsp">1 כף</span><span class="in" data-n="שמנת חמוצה">שמנת חמוצה <i class="ip">להגשה</i></span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>משחימים את הבשר הטחון בסיר גדול.</span></li>
 <li><span>מוסיפים בצל ל-2-3 דקות, ואז את רסק העגבניות.</span></li>
@@ -100,6 +106,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

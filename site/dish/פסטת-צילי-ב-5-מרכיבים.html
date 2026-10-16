@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -77,13 +78,15 @@ h1{font-size:1.45rem}
         
       </div>
       <div class="dbody">
-        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>150 גרם פסטה (בוקטיני)</li>
-<li>1-2 כפות חמאה</li>
-<li>7-8 שיני שום כתושות</li>
-<li>2 כפיות גדושות שמן צ'ילי / צ'ילי קריספ</li>
-<li>3/4 כוס שמנת מתוקה</li>
-<li>1 כפית מלח</li>
-<li>לקישוט: עוד שמן צ'ילי, פטרוזיליה, פרמזן</li></ul></div>
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li><span class="iq" data-q="150" data-u="g">150 גרם</span><span class="in" data-n="פסטה">פסטה <i class="ip">בוקטיני</i></span></li>
+<li><span class="iq" data-q="2" data-u="tbsp">1-2 כפות</span><span class="in" data-n="חמאה">חמאה</span></li>
+<li><span class="iq" data-q="8" data-u="clove">7-8</span><span class="in" data-n="שום">שיני שום <i class="ip">כתוש</i></span></li>
+<li><span class="iq" data-q="2" data-u="tsp">2 כפיות</span><span class="in" data-n="שמן צ'ילי / צ'ילי קריספ">שמן צ'ילי / צ'ילי קריספ <i class="ip">גדושות</i></span></li>
+<li><span class="iq" data-q="0.75" data-u="cup">¾ כוס</span><span class="in" data-n="שמנת מתוקה">שמנת מתוקה</span></li>
+<li><span class="iq" data-q="1" data-u="tsp">1 כפית</span><span class="in" data-n="מלח">מלח</span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="שמן צ'ילי">שמן צ'ילי <i class="ip">לקישוט, עוד</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="פטרוזיליה">פטרוזיליה <i class="ip">לקישוט</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="פרמזן">פרמזן <i class="ip">לקישוט</i></span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מבשלים את הפסטה במים מומלחים ושומרים כוס מי בישול.</span></li>
 <li><span>חמאה ושום על אש נמוכה, לא לשרוף.</span></li>
@@ -98,6 +101,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

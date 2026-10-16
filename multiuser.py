@@ -464,11 +464,12 @@ def api_shopping_set(handler, user, req):
         if not text:
             continue
         try:
-            qty = max(1, min(999, int(it.get("qty") or 1)))
+            qty = round(max(0.01, min(99999.0, float(it.get("qty") or 1))), 2)
         except (TypeError, ValueError):
             qty = 1
         out.append({"id": str(it.get("id") or "")[:260], "dish": str(it.get("dish") or "")[:200],
                     "dishName": str(it.get("dishName") or "")[:160], "text": text, "qty": qty,
+                    "unit": re.sub(r"[^a-z]", "", str(it.get("unit") or "").lower())[:10],
                     "done": bool(it.get("done"))})
         if len(out) >= 400:
             break
@@ -1340,7 +1341,7 @@ def dish_page(handler, user, did, qs):
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Cookin 🍳</title><style>{DISH_CSS}</style></head>
 <body><div class="wrap"><div class="topbar"><a class="back" href="{t['home']}">{t['back']}</a>{own}</div>
 <div class="dish"><div class="dhead"><h1>{msg}</h1>{err}<div class="dsub">{e(r['source_url'] or '')}</div></div></div></div>
-<script>{_ACT_JS}</script><script src="/shopping.js"></script></body></html>"""
+<script>{_ACT_JS}</script><script src="/ing.js"></script><script src="/shopping.js"></script></body></html>"""
         return handler._html(body, "no-store")
     # Visitors (not signed in) get the official embed unless the creator approved; members get the rehosted video.
     creator_ok = int(r["creator_ok"] or 0)

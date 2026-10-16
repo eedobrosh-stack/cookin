@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -77,14 +78,14 @@ h1{font-size:1.45rem}
         <div class="dnote">קיצור דרך גאוני: כיסונים קפואים מתבשלים בצד, ומעליהם מרק קוקוס-קארי אדום שמוכן ב-10 דקות.</div>
       </div>
       <div class="dbody">
-        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>1 כוס חלב קוקוס</li>
-<li>1 כוס ציר עוף</li>
-<li>2 כפות משחת קארי אדום</li>
-<li>1/2 בצל לבן קצוץ</li>
-<li>5 שיני שום קצוצות</li>
-<li>1 כף ג'ינג'ר קצוץ</li>
-<li>כיסונים קפואים (וונטונים / דמפלינגס)</li>
-<li>בצל ירוק לקישוט</li></ul></div>
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li><span class="iq" data-q="1" data-u="cup">1 כוס</span><span class="in" data-n="חלב קוקוס">חלב קוקוס</span></li>
+<li><span class="iq" data-q="1" data-u="cup">1 כוס</span><span class="in" data-n="ציר עוף">ציר עוף</span></li>
+<li><span class="iq" data-q="2" data-u="tbsp">2 כפות</span><span class="in" data-n="משחת קארי אדום">משחת קארי אדום</span></li>
+<li><span class="iq" data-q="0.5" data-u="">½</span><span class="in" data-n="בצל לבן">בצל לבן <i class="ip">קצוץ</i></span></li>
+<li><span class="iq" data-q="5" data-u="clove">5</span><span class="in" data-n="שום">שיני שום <i class="ip">קצוץ</i></span></li>
+<li><span class="iq" data-q="1" data-u="tbsp">1 כף</span><span class="in" data-n="ג'ינג'ר">ג'ינג'ר <i class="ip">קצוץ</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="כיסונים קפואים">כיסונים קפואים <i class="ip">וונטונים או דמפלינגס</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="בצל ירוק">בצל ירוק <i class="ip">לקישוט</i></span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מטגנים בצל, ג'ינג'ר ושום עד שקוף וריחני.</span></li>
 <li><span>מוסיפים את משחת הקארי, מערבבים ומטגנים 2-3 דקות.</span></li>
@@ -98,6 +99,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

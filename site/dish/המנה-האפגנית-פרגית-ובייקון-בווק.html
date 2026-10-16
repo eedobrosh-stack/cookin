@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -77,18 +78,19 @@ h1{font-size:1.45rem}
         <div class="dnote">אחת הוותיקות והפשוטות של דנה רייכר. בייקון רגיל לגרסה המקורית או בייקון אווז לגרסה כשרה.</div>
       </div>
       <div class="dbody">
-        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>500 גרם פרגית חתוכה לנתחים</li>
-<li>100 גרם בייקון חתוך לקוביות גסות</li>
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li><span class="iq" data-q="500" data-u="g">500 גרם</span><span class="in" data-n="פרגית">פרגית <i class="ip">חתוכה לנתחים</i></span></li>
+<li><span class="iq" data-q="100" data-u="g">100 גרם</span><span class="in" data-n="בייקון">בייקון <i class="ip">חתוך לקוביות גסות</i></span></li>
 <div class="ing-group">למרינדה:</div>
-<li>1/4 כוס סויה</li>
-<li>1 כף גדושה סוכר</li>
+<li><span class="iq" data-q="0.25" data-u="cup">¼ כוס</span><span class="in" data-n="רוטב סויה">רוטב סויה</span></li>
+<li><span class="iq" data-q="1" data-u="tbsp">1 כף</span><span class="in" data-n="סוכר">סוכר <i class="ip">גדושה</i></span></li>
 <div class="ing-group">להקפצה:</div>
-<li>1/3 כוס בוטנים מטוגנים</li>
-<li>1 גבעול כרישה חתוך באלכסון לפרוסות</li>
-<li>1/2 כוס יין לבן / מירין</li>
-<li>1 כפית גדושה קורנפלור מהולה ב-3 כפות מים</li>
-<li>3 כפות סויה + 1 כף סויה כהה</li>
-<li>2 כפות סוכר</li></ul></div>
+<li><span class="iq" data-q="0.33" data-u="cup">⅓ כוס</span><span class="in" data-n="בוטנים מטוגנים">בוטנים מטוגנים</span></li>
+<li><span class="iq" data-q="1" data-u="">1</span><span class="in" data-n="כרישה">כרישה <i class="ip">גבעול, חתוך באלכסון לפרוסות</i></span></li>
+<li><span class="iq" data-q="0.5" data-u="cup">½ כוס</span><span class="in" data-n="יין לבן / מירין">יין לבן / מירין</span></li>
+<li><span class="iq" data-q="1" data-u="tsp">1 כפית</span><span class="in" data-n="קורנפלור">קורנפלור <i class="ip">גדושה, מהולה ב-3 כפות מים</i></span></li>
+<li><span class="iq" data-q="3" data-u="tbsp">3 כפות</span><span class="in" data-n="רוטב סויה">רוטב סויה</span></li>
+<li><span class="iq" data-q="1" data-u="tbsp">1 כף</span><span class="in" data-n="רוטב סויה כהה">רוטב סויה כהה</span></li>
+<li><span class="iq" data-q="2" data-u="tbsp">2 כפות</span><span class="in" data-n="סוכר">סוכר</span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מערבבים היטב את הפרגית והבייקון עם מרינדת הסויה והסוכר ומשרים לפחות חצי שעה (אפשר לילה).</span></li>
 <li><span>מחממים ווק עם שמן ומקפיצים היטב את הפרגיות והבייקון עם כל המרינדה עד שהבשר עשוי לגמרי.</span></li>
@@ -103,6 +105,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

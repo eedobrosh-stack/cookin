@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -78,18 +79,20 @@ h1{font-size:1.45rem}
       </div>
       <div class="dbody">
         <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><div class="ing-group">לעוף:</div>
-<li>2 כרעיים עוף עם עור ועצם</li>
-<li>3 כפות שמן זית</li>
-<li>2 כפיות מלח + 2 כפיות אבקת שום</li>
-<li>1 כפית פפריקה מעושנת, אבקת בצל, כוסברה טחונה וכמון (מכל אחד)</li>
+<li><span class="iq" data-q="2" data-u="">2</span><span class="in" data-n="כרעי עוף">כרעי עוף <i class="ip">עם עור ועצם</i></span></li>
+<li><span class="iq" data-q="3" data-u="tbsp">3 כפות</span><span class="in" data-n="שמן זית">שמן זית</span></li>
+<li><span class="iq" data-q="2" data-u="tsp">2 כפיות</span><span class="in" data-n="מלח">מלח</span></li>
+<li><span class="iq" data-q="2" data-u="tsp">2 כפיות</span><span class="in" data-n="אבקת שום">אבקת שום</span></li>
+<li><span class="iq" data-q="1" data-u="tsp">1 כפית</span><span class="in" data-n="פפריקה מעושנת">פפריקה מעושנת <i class="ip">מכל אחד; גם אבקת בצל, כוסברה טחונה וכמון</i></span></li>
 <div class="ing-group">לרוטב:</div>
-<li>1/2 בצל צהוב קצוץ</li>
-<li>1 חלפיניו קצוץ</li>
-<li>2 שיני שום כתושות + 2 כפיות ג'ינג'ר קצוץ</li>
-<li>1 כף גוצ'וג'אנג</li>
-<li>1.5 כוסות עגבניות מרוסקות</li>
-<li>קורט מלח + מיץ מחצי לימון</li>
-<li>1 כוס חלב קוקוס</li></ul></div>
+<li><span class="iq" data-q="0.5" data-u="">½</span><span class="in" data-n="בצל צהוב">בצל צהוב <i class="ip">קצוץ</i></span></li>
+<li><span class="iq" data-q="1" data-u="">1</span><span class="in" data-n="חלפיניו">חלפיניו <i class="ip">קצוץ</i></span></li>
+<li><span class="iq" data-q="2" data-u="clove">2</span><span class="in" data-n="שום">שיני שום <i class="ip">כתוש</i></span></li>
+<li><span class="iq" data-q="2" data-u="tsp">2 כפיות</span><span class="in" data-n="ג'ינג'ר">ג'ינג'ר <i class="ip">קצוץ</i></span></li>
+<li><span class="iq" data-q="1" data-u="tbsp">1 כף</span><span class="in" data-n="גוצ'וג'אנג">גוצ'וג'אנג</span></li>
+<li><span class="iq" data-q="1.5" data-u="cup">1½ כוסות</span><span class="in" data-n="עגבניות מרוסקות">עגבניות מרוסקות</span></li>
+<li><span class="iq" data-q="1" data-u="pinch">1 קורט</span><span class="in" data-n="מלח">מלח <i class="ip">ומיץ מחצי לימון</i></span></li>
+<li><span class="iq" data-q="1" data-u="cup">1 כוס</span><span class="in" data-n="חלב קוקוס">חלב קוקוס</span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מתבלים את העוף בכל התבלינים וצורבים בשמן זית מצד העור עד עור פריך ושחום (על אש בינונית, בסבלנות, השומן מתרנדר). מוציאים.</span></li>
 <li><span>באותה מחבת מטגנים בצל וחלפיניו עד ריכוך, מוסיפים שום וג'ינג'ר לדקה.</span></li>
@@ -103,6 +106,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

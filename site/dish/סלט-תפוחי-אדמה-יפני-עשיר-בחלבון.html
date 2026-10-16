@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -78,19 +79,21 @@ h1{font-size:1.45rem}
       </div>
       <div class="dbody">
         <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><div class="ing-group">רוטב</div>
-<li>¼ כוס יוגורט יווני 0%</li>
-<li>1 כף חרדל צהוב (או דיז'ון)</li>
-<li>2 כפות מיונז לייט</li>
-<li>¼ כוס חלב (כל סוג)</li>
-<li>1 כפית דבש</li>
-<li>מלח, פלפל ופתיתי צ'ילי לפי הטעם</li>
-<li>רשות: 1 כף חומץ</li>
+<li><span class="iq" data-q="0.25" data-u="cup">¼ כוס</span><span class="in" data-n="יוגורט יווני 0%">יוגורט יווני 0%</span></li>
+<li><span class="iq" data-q="1" data-u="tbsp">1 כף</span><span class="in" data-n="חרדל צהוב או דיז'ון">חרדל צהוב או דיז'ון</span></li>
+<li><span class="iq" data-q="2" data-u="tbsp">2 כפות</span><span class="in" data-n="מיונז לייט">מיונז לייט</span></li>
+<li><span class="iq" data-q="0.25" data-u="cup">¼ כוס</span><span class="in" data-n="חלב">חלב <i class="ip">כל סוג</i></span></li>
+<li><span class="iq" data-q="1" data-u="tsp">1 כפית</span><span class="in" data-n="דבש">דבש</span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="מלח">מלח <i class="ip">לפי הטעם</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="פלפל">פלפל <i class="ip">לפי הטעם</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="פתיתי צ'ילי">פתיתי צ'ילי <i class="ip">לפי הטעם</i></span></li>
+<li><span class="iq" data-q="1" data-u="tbsp">1 כף</span><span class="in" data-n="חומץ">חומץ <i class="ip">רשות</i></span></li>
 <div class="ing-group">סלט</div>
-<li>3 תפוחי אדמה קטנים, מבושלים</li>
-<li>3 ביצים קשות-רכות</li>
-<li>½ מלפפון, פרוס דק</li>
-<li>¼ כוס בצל ירוק קצוץ</li>
-<li>1 חזה עוף מבושל, חתוך לקוביות</li></ul></div>
+<li><span class="iq" data-q="3" data-u="">3</span><span class="in" data-n="תפוח אדמה">תפוח אדמה <i class="ip">קטן, מבושל</i></span></li>
+<li><span class="iq" data-q="3" data-u="">3</span><span class="in" data-n="ביצה">ביצה <i class="ip">קשה-רכה</i></span></li>
+<li><span class="iq" data-q="0.5" data-u="">½</span><span class="in" data-n="מלפפון">מלפפון <i class="ip">פרוס דק</i></span></li>
+<li><span class="iq" data-q="0.25" data-u="cup">¼ כוס</span><span class="in" data-n="בצל ירוק">בצל ירוק <i class="ip">קצוץ</i></span></li>
+<li><span class="iq" data-q="1" data-u="">1</span><span class="in" data-n="חזה עוף">חזה עוף <i class="ip">מבושל, חתוך לקוביות</i></span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מבשלים את תפוחי האדמה 15-20 דקות עד שהמזלג נכנס בקלות.</span></li>
 <li><span>מבשלים את הביצים 8 דקות, לחלמון רך וג'מי, ומקררים במים קרים.</span></li>
@@ -104,6 +107,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

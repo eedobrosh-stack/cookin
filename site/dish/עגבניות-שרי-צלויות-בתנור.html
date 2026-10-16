@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -77,13 +78,14 @@ h1{font-size:1.45rem}
         <div class="dnote">נשנוש לאורחים בכמה דקות עבודה: עגבניות שרי, שיני שום שלמות, רוזמרין וטימין, שמן זית ומלח נכנסים יחד לתנור עד שהעגבניות רכות ועסיסיות. מגישים על לבנה או יוגורט עם לחם טוב.</div>
       </div>
       <div class="dbody">
-        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>600 גרם עגבניות שרי</li>
-<li>¼ כוס שמן זית</li>
-<li>5 שיני שום שלמות (ואפשר הרבה יותר)</li>
-<li>2 ענפי רוזמרין</li>
-<li>5 ענפי טימין</li>
-<li>מלח</li>
-<li>להגשה: לבנה או יוגורט, לחם טוב</li></ul></div>
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li><span class="iq" data-q="600" data-u="g">600 גרם</span><span class="in" data-n="עגבניות שרי">עגבניות שרי</span></li>
+<li><span class="iq" data-q="0.25" data-u="cup">¼ כוס</span><span class="in" data-n="שמן זית">שמן זית</span></li>
+<li><span class="iq" data-q="5" data-u="clove">5</span><span class="in" data-n="שום">שיני שום <i class="ip">שלמות, אפשר הרבה יותר</i></span></li>
+<li><span class="iq" data-q="2" data-u="sprig">2 ענפים</span><span class="in" data-n="רוזמרין">רוזמרין</span></li>
+<li><span class="iq" data-q="5" data-u="sprig">5 ענפים</span><span class="in" data-n="טימין">טימין</span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="מלח">מלח</span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="לבנה">לבנה <i class="ip">או יוגורט, להגשה</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="לחם">לחם <i class="ip">טוב, להגשה</i></span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מחממים תנור ל-200 מעלות.</span></li>
 <li><span>מערבבים בתבנית את העגבניות, השום, עשבי התיבול, שמן הזית והמלח.</span></li>
@@ -97,6 +99,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

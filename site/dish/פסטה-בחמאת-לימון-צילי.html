@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -77,17 +78,18 @@ h1{font-size:1.45rem}
         <div class="dnote">חריפה, חמוצה, מלוחה, מנת אירוח מנצחת. הקפידו על אמולסיה עדינה של החמאה הקרה.</div>
       </div>
       <div class="dbody">
-        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>1 חבילה לינגוויני (500 גרם)</li>
-<li>1/4 כוס שמן זית</li>
-<li>6 שיני שום כתושות</li>
-<li>גרידת לימון מ-2 לימונים</li>
-<li>מיץ לימון מ-2 לימונים</li>
-<li>1 כף צ'ילי גרוס + 3-4 צ'ילי יבש (אופציונלי)</li>
-<li>1 כפית מלח</li>
-<li>חופן עלי זעתר/אורגנו טריים (אופציונלי)</li>
-<li>חופן פטרוזיליה קצוצה דק</li>
-<li>1 כוס ממי בישול הפסטה</li>
-<li>200 גרם חמאה קרה חתוכה לקוביות</li></ul></div>
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li><span class="iq" data-q="1" data-u="pack">1 חבילה</span><span class="in" data-n="לינגוויני">לינגוויני <i class="ip">500 גרם</i></span></li>
+<li><span class="iq" data-q="0.25" data-u="cup">¼ כוס</span><span class="in" data-n="שמן זית">שמן זית</span></li>
+<li><span class="iq" data-q="6" data-u="clove">6</span><span class="in" data-n="שום">שיני שום <i class="ip">כתוש</i></span></li>
+<li><span class="iq" data-q="2" data-u="">2</span><span class="in" data-n="לימון">לימון <i class="ip">גרידה</i></span></li>
+<li><span class="iq" data-q="2" data-u="">2</span><span class="in" data-n="לימון">לימון <i class="ip">מיץ</i></span></li>
+<li><span class="iq" data-q="1" data-u="tbsp">1 כף</span><span class="in" data-n="צ'ילי גרוס">צ'ילי גרוס</span></li>
+<li><span class="iq" data-q="4" data-u="">3-4</span><span class="in" data-n="צ'ילי יבש">צ'ילי יבש <i class="ip">אופציונלי</i></span></li>
+<li><span class="iq" data-q="1" data-u="tsp">1 כפית</span><span class="in" data-n="מלח">מלח</span></li>
+<li><span class="iq" data-q="1" data-u="handful">1 חופן</span><span class="in" data-n="זעתר טרי / אורגנו טרי">זעתר טרי / אורגנו טרי <i class="ip">עלים, אופציונלי</i></span></li>
+<li><span class="iq" data-q="1" data-u="handful">1 חופן</span><span class="in" data-n="פטרוזיליה">פטרוזיליה <i class="ip">קצוצה דק</i></span></li>
+<li><span class="iq" data-q="1" data-u="cup">1 כוס</span><span class="in" data-n="מי בישול הפסטה">מי בישול הפסטה</span></li>
+<li><span class="iq" data-q="200" data-u="g">200 גרם</span><span class="in" data-n="חמאה">חמאה <i class="ip">קרה, חתוכה לקוביות</i></span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מרתיחים סיר מים עם 2 כפות מלח ומבשלים את הפסטה עם טיימר לפי הוראות היצרן.</span></li>
 <li><span>במקביל במחבת: מחממים שמן זית, מוסיפים שום, גרידת לימון וצ'ילי ומערבבים. מוסיפים מיץ לימון (על אש גבוהה יחסית).</span></li>
@@ -102,6 +104,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

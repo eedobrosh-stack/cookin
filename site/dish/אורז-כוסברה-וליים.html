@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -77,13 +78,14 @@ h1{font-size:1.45rem}
         <div class="dnote">האורז של צ'יפוטלה בבית: אורז יסמין עם עלה דפנה, ובסוף הרבה כוסברה טרייה, מיץ ליים ומיץ לימון וטיפת שמן. תוספת מושלמת לבוריטו, לקערות ולעוף צלוי.</div>
       </div>
       <div class="dbody">
-        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>1 כוס אורז יסמין</li>
-<li>2 כוסות מים</li>
-<li>1 כף שמן אבוקדו (ועוד טיפה לסיום)</li>
-<li>1 עלה דפנה</li>
-<li>⅓ כוס כוסברה טרייה קצוצה</li>
-<li>מיץ ליים ומיץ לימון לפי הטעם</li>
-<li>מלח לפי הטעם</li></ul></div>
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li><span class="iq" data-q="1" data-u="cup">1 כוס</span><span class="in" data-n="אורז יסמין">אורז יסמין</span></li>
+<li><span class="iq" data-q="2" data-u="cup">2 כוסות</span><span class="in" data-n="מים">מים</span></li>
+<li><span class="iq" data-q="1" data-u="tbsp">1 כף</span><span class="in" data-n="שמן אבוקדו">שמן אבוקדו <i class="ip">ועוד טיפה לסיום</i></span></li>
+<li><span class="iq" data-q="1" data-u="">1</span><span class="in" data-n="עלה דפנה">עלה דפנה</span></li>
+<li><span class="iq" data-q="0.33" data-u="cup">⅓ כוס</span><span class="in" data-n="כוסברה">כוסברה <i class="ip">טרייה, קצוצה</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="ליים">ליים <i class="ip">מיץ, לפי הטעם</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="לימון">לימון <i class="ip">מיץ, לפי הטעם</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="מלח">מלח <i class="ip">לפי הטעם</i></span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מכניסים לסיר את האורז, המים, השמן ועלה הדפנה ומביאים לרתיחה על אש בינונית-גבוהה.</span></li>
 <li><span>מנמיכים לאש קטנה, מכסים ומבשלים עד שכל המים נספגים.</span></li>
@@ -97,6 +99,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

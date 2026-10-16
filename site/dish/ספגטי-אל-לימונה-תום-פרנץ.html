@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -77,15 +78,15 @@ h1{font-size:1.45rem}
         <div class="dnote">חמאה שחומה, שום ולימון טרי, טעמים של חוף אמלפי ב-10 דקות עבודה.</div>
       </div>
       <div class="dbody">
-        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>250 גרם ספגטי איכותי</li>
-<li>3 כפות שמן זית</li>
-<li>40 גרם חמאה</li>
-<li>2-3 שיני שום פרוסות דק</li>
-<li>קליפה מגוררת מחצי לימון (החלק הצהוב בלבד)</li>
-<li>מיץ מחצי לימון</li>
-<li>חופן בזיליקום טרי או מרווה</li>
-<li>מלח + מי בישול של הפסטה</li>
-<li>פרמזן מגוררת טרי להגשה</li></ul></div>
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li><span class="iq" data-q="250" data-u="g">250 גרם</span><span class="in" data-n="ספגטי">ספגטי <i class="ip">איכותי</i></span></li>
+<li><span class="iq" data-q="3" data-u="tbsp">3 כפות</span><span class="in" data-n="שמן זית">שמן זית</span></li>
+<li><span class="iq" data-q="40" data-u="g">40 גרם</span><span class="in" data-n="חמאה">חמאה</span></li>
+<li><span class="iq" data-q="3" data-u="clove">2-3</span><span class="in" data-n="שום">שיני שום <i class="ip">פרוס דק</i></span></li>
+<li><span class="iq" data-q="0.5" data-u="">½</span><span class="in" data-n="לימון">לימון <i class="ip">קליפה מגוררת, החלק הצהוב בלבד</i></span></li>
+<li><span class="iq" data-q="0.5" data-u="">½</span><span class="in" data-n="לימון">לימון <i class="ip">מיץ</i></span></li>
+<li><span class="iq" data-q="1" data-u="handful">1 חופן</span><span class="in" data-n="בזיליקום / מרווה">בזיליקום / מרווה <i class="ip">טרי</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="מלח">מלח <i class="ip">ומי בישול של הפסטה</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="פרמזן">פרמזן <i class="ip">מגורד טרי, להגשה</i></span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מבשלים את הספגטי לאל-דנטה. שומרים כוס ממי הבישול ומסננים.</span></li>
 <li><span>במחבת רחבה מזהיבים בעדינות את השום בשמן זית על להבה בינונית.</span></li>
@@ -100,6 +101,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

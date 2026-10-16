@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -77,12 +78,13 @@ h1{font-size:1.45rem}
         <div class="dnote">אתם לא אוהבים ברוקולי כי אתם מכינים אותו לא נכון! בריא, טבעוני, ללא גלוטן, ונחטף ראשון מהשולחן.</div>
       </div>
       <div class="dbody">
-        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>400 גרם ברוקולי בפרחים קטנים</li>
-<li>2 כפיות שמן</li>
-<li>2 שיני שום קצוצות</li>
-<li>1/4 כוס מים לאידוי</li>
-<li>1/2 כפית מלח + כפית סוכר</li>
-<li>1/2 כף קורנפלור מעורבב ב-2 כפות מים</li></ul></div>
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li><span class="iq" data-q="400" data-u="g">400 גרם</span><span class="in" data-n="ברוקולי">ברוקולי <i class="ip">בפרחים קטנים</i></span></li>
+<li><span class="iq" data-q="2" data-u="tsp">2 כפיות</span><span class="in" data-n="שמן">שמן</span></li>
+<li><span class="iq" data-q="2" data-u="clove">2</span><span class="in" data-n="שום">שיני שום <i class="ip">קצוץ</i></span></li>
+<li><span class="iq" data-q="0.25" data-u="cup">¼ כוס</span><span class="in" data-n="מים">מים <i class="ip">לאידוי</i></span></li>
+<li><span class="iq" data-q="0.5" data-u="tsp">½ כפית</span><span class="in" data-n="מלח">מלח</span></li>
+<li><span class="iq" data-q="1" data-u="tsp">1 כפית</span><span class="in" data-n="סוכר">סוכר</span></li>
+<li><span class="iq" data-q="0.5" data-u="tbsp">½ כף</span><span class="in" data-n="קורנפלור">קורנפלור <i class="ip">מעורבב ב-2 כפות מים</i></span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מחממים ווק עם השמן ומוסיפים את השום מיד, עוד כשהשמן קר, לא משחימים, רק מוציאים טעם.</span></li>
 <li><span>כשהשום מבעבע קלות מוסיפים את הברוקולי ומקפיצים שהשמן יעטוף אותו.</span></li>
@@ -96,6 +98,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

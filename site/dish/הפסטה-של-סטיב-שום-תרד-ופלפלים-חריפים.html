@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -77,15 +78,16 @@ h1{font-size:1.45rem}
         <div class="dnote">"לא הכל חייב להיות סופר-טכני": השף של מסעדת Vivaldi זורק הכל למחבת קרה (שום, פטריות, פלפלים חריפים כבושים ותרד) ומדגים שפסטה מעולה לא צריכה כללים. שוחזר מהסרטון.</div>
       </div>
       <div class="dbody">
-        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>פסטה (כ-200 גרם)</li>
-<li>הרבה שום פרוס</li>
-<li>שמן זית טוב</li>
-<li>חופן פטריות פרוסות</li>
-<li>הרבה פלפלים חריפים כבושים (cherry peppers) פרוסים</li>
-<li>חופן גדול תרד</li>
-<li>מלח ופלפל</li>
-<li>מעט יין לבן</li>
-<li>הרבה גבינה מגורדת + פטרוזיליה</li></ul></div>
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li><span class="iq" data-q="200" data-u="g">200 גרם</span><span class="in" data-n="פסטה">פסטה <i class="ip">כ-</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="שום">שום <i class="ip">הרבה, פרוס</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="שמן זית">שמן זית <i class="ip">טוב</i></span></li>
+<li><span class="iq" data-q="1" data-u="handful">1 חופן</span><span class="in" data-n="פטריות">פטריות <i class="ip">פרוסות</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="פלפלים חריפים כבושים">פלפלים חריפים כבושים <i class="ip">צ'רי, הרבה, פרוסים</i></span></li>
+<li><span class="iq" data-q="1" data-u="handful">1 חופן</span><span class="in" data-n="תרד">תרד <i class="ip">גדול</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="מלח ופלפל">מלח ופלפל</span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="יין לבן">יין לבן <i class="ip">מעט</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="גבינה מגורדת">גבינה מגורדת <i class="ip">הרבה</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="פטרוזיליה">פטרוזיליה</span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>שמים את הפסטה במים רותחים; במקביל בונים את המחבת, בלי לחמם מראש.</span></li>
 <li><span>למחבת: שמן זית נדיב, הרבה שום, הפטריות והפלפלים החריפים.</span></li>
@@ -100,6 +102,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

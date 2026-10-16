@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -77,14 +78,15 @@ h1{font-size:1.45rem}
         <div class="dnote">קיץ איטלקי בצלחת: בצל אדום מקורמל, עגבניות ואפרסקים חצויים שנצרבים ומתבשלים 30 דקות עם בזיליקום, ואז נטחנים לרוטב קרמי ופירותי. השראה משף מאור סבג.</div>
       </div>
       <div class="dbody">
-        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li>500 גרם ספגטי</li>
-<li>2 בצלים אדומים קצוצים דק</li>
-<li>6-8 עגבניות בשלות חצויות</li>
-<li>3-4 אפרסקים בשלים אך יציבים, חצויים ומגולענים</li>
-<li>חופן עלי בזיליקום טריים</li>
-<li>4 כפות שמן זית</li>
-<li>מלח ופלפל שחור גרוס</li>
-<li>אופציונלי: ריקוטה או פרמזן, עירית קצוצה</li></ul></div>
+        <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><li><span class="iq" data-q="500" data-u="g">500 גרם</span><span class="in" data-n="ספגטי">ספגטי</span></li>
+<li><span class="iq" data-q="2" data-u="">2</span><span class="in" data-n="בצל אדום">בצל אדום <i class="ip">קצוץ דק</i></span></li>
+<li><span class="iq" data-q="8" data-u="">6-8</span><span class="in" data-n="עגבניות">עגבניות <i class="ip">בשלות, חצויות</i></span></li>
+<li><span class="iq" data-q="4" data-u="">3-4</span><span class="in" data-n="אפרסקים">אפרסקים <i class="ip">בשלים אך יציבים, חצויים ומגולענים</i></span></li>
+<li><span class="iq" data-q="1" data-u="handful">1 חופן</span><span class="in" data-n="בזיליקום">בזיליקום <i class="ip">עלים טריים</i></span></li>
+<li><span class="iq" data-q="4" data-u="tbsp">4 כפות</span><span class="in" data-n="שמן זית">שמן זית</span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="מלח ופלפל שחור">מלח ופלפל שחור <i class="ip">גרוס</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="ריקוטה">ריקוטה <i class="ip">או פרמזן, אופציונלי</i></span></li>
+<li><span class="iq" data-q="" data-u=""></span><span class="in" data-n="עירית">עירית <i class="ip">קצוצה, אופציונלי</i></span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מחממים שמן זית במחבת רחבה ומקרמלים את הבצל על אש נמוכה 10-15 דקות עד שהוא רך ומתוק.</span></li>
 <li><span>מוסיפים את חצאי העגבניות והאפרסקים עם הצד החתוך כלפי מטה. צורבים 3-5 דקות עד שמשחימים קלות.</span></li>
@@ -99,6 +101,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>

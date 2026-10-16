@@ -80,6 +80,7 @@ main{max-width:1200px; margin:0 auto; padding:22px 20px 80px;}
 .dbody h3{font-size:1.1rem; margin-bottom:14px; color:var(--accent-dark);}
 .ing-list{list-style:none; display:flex; flex-direction:column; gap:8px;}
 .ing-list li{display:flex; gap:10px; align-items:flex-start; font-size:.96rem; line-height:1.45;}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-list li::before{content:"•"; color:var(--accent); font-weight:700;}
 .ing-group{font-weight:700; margin-top:10px; color:#6b5d4f; font-size:.9rem;}
 .steps{list-style:none; counter-reset:st; display:flex; flex-direction:column; gap:14px;}
@@ -299,6 +300,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <script src="diet.js"></script>
 <script src="dishlinks.js"></script>
 <script src="user.js"></script>
+<script src="ing.js"></script>
 <script src="shopping.js"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -432,7 +434,7 @@ function openDish(id){
   const r = RECIPES.find(x=>x.id===id);
   if(!r) return;
   const ingHtml = r.ingredientLines.map(l =>
-    l.group ? `<div class="ing-group">${l.group}</div>` : `<li>${l.text}</li>`).join("");
+    l.group ? `<div class="ing-group">${l.group}</div>` : `<li>${cookinIng.html(l,"he")}</li>`).join("");
   const hasVid = (typeof LOCAL_VIDEOS !== "undefined") && LOCAL_VIDEOS.has(r.id);
   const hero = hasVid
     ? `<video controls playsinline preload="metadata" poster="images/${tb2(r)}" src="videos/${r.id}.mp4"></video>`

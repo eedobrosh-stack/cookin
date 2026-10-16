@@ -37,6 +37,7 @@ h3{font-size:1.1rem;margin-bottom:14px;color:var(--accent-dark)}
 .ing-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ing-list li{display:flex;gap:10px;font-size:.96rem;line-height:1.45}
 .ing-list li::before{content:"•";color:var(--accent);font-weight:700}
+.iq{flex:0 0 4.6em;font-weight:700;color:var(--accent-dark)}.ip{color:var(--muted);font-size:.88em}
 .ing-group{font-weight:700;margin-top:10px;color:#6b5d4f;font-size:.9rem}
 .steps{list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:14px}
 .steps li{counter-increment:st;display:flex;gap:12px;line-height:1.6;font-size:.98rem}
@@ -78,16 +79,21 @@ h1{font-size:1.45rem}
       </div>
       <div class="dbody">
         <div class="ingcol"><h3>🧺 מצרכים</h3><ul class="ing-list"><div class="ing-group">ברוסקטה:</div>
-<li>1/4 כוס שמן זית</li>
-<li>2 עגבניות קטנות בקוביות + 1/4 בצל קצוץ</li>
-<li>2 כפות כוסברה טרייה + 2 שיני שום כתושות</li>
-<li>1/2 כפית פתיתי צ'ילי, 1/2 כפית מלח, 1/4 כפית פלפל</li>
+<li><span class="iq" data-q="0.25" data-u="cup">¼ כוס</span><span class="in" data-n="שמן זית">שמן זית</span></li>
+<li><span class="iq" data-q="2" data-u="">2</span><span class="in" data-n="עגבנייה">עגבנייה <i class="ip">קטנה, בקוביות</i></span></li>
+<li><span class="iq" data-q="0.25" data-u="">¼</span><span class="in" data-n="בצל">בצל <i class="ip">קצוץ</i></span></li>
+<li><span class="iq" data-q="2" data-u="tbsp">2 כפות</span><span class="in" data-n="כוסברה">כוסברה <i class="ip">טרייה</i></span></li>
+<li><span class="iq" data-q="2" data-u="clove">2</span><span class="in" data-n="שום">שיני שום <i class="ip">כתוש</i></span></li>
+<li><span class="iq" data-q="0.5" data-u="tsp">½ כפית</span><span class="in" data-n="פתיתי צ'ילי">פתיתי צ'ילי</span></li>
+<li><span class="iq" data-q="0.5" data-u="tsp">½ כפית</span><span class="in" data-n="מלח">מלח</span></li>
+<li><span class="iq" data-q="0.25" data-u="tsp">¼ כפית</span><span class="in" data-n="פלפל">פלפל</span></li>
 <div class="ing-group">צזיקי:</div>
-<li>2 כוסות יוגורט יווני</li>
-<li>2 מלפפונים קטנים מגוררים ומסוננים</li>
-<li>2 כפות שמיר קצוץ + 4 שיני שום מגוררות</li>
-<li>מיץ מלימון שלם</li>
-<li>כפית מלח ופלפל, כף שמן זית, כפית חומץ (אופציונלי)</li></ul></div>
+<li><span class="iq" data-q="2" data-u="cup">2 כוסות</span><span class="in" data-n="יוגורט יווני">יוגורט יווני</span></li>
+<li><span class="iq" data-q="2" data-u="">2</span><span class="in" data-n="מלפפון">מלפפון <i class="ip">קטן, מגורד ומסונן</i></span></li>
+<li><span class="iq" data-q="2" data-u="tbsp">2 כפות</span><span class="in" data-n="שמיר">שמיר <i class="ip">קצוץ</i></span></li>
+<li><span class="iq" data-q="4" data-u="clove">4</span><span class="in" data-n="שום">שיני שום <i class="ip">מגורד</i></span></li>
+<li><span class="iq" data-q="1" data-u="">1</span><span class="in" data-n="לימון">לימון <i class="ip">מיץ מלימון שלם</i></span></li>
+<li><span class="iq" data-q="1" data-u="tsp">1 כפית</span><span class="in" data-n="מלח">מלח <i class="ip">ופלפל, כף שמן זית, כפית חומץ (אופציונלי)</i></span></li></ul></div>
         <div class="stepcol">
           <h3>👨‍🍳 אופן ההכנה</h3><ol class="steps"><li><span>מכינים את הברוסקטה: מערבבים את כל המרכיבים ומניחים בצד.</span></li>
 <li><span>מכינים את הצזיקי: מערבבים את כל המרכיבים (המלפפון מגורר ומסונן היטב).</span></li>
@@ -100,6 +106,6 @@ h1{font-size:1.45rem}
     </div>
   </div>
 </div>
-<script src="../shopping.js"></script>
+<script src="../ing.js"></script><script src="../shopping.js"></script>
 </body>
 </html>
