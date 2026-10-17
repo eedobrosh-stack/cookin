@@ -127,14 +127,15 @@ const href = a => '/vidsum/article/' + encodeURIComponent(a.slug);
 // true 16:9 frames only (hqdefault/sddefault carry baked-in black bars); a failed image is skipped and the next layer shows
 const bg = v => ['maxresdefault','hq720','mqdefault'].map(f=>'url(https://i.ytimg.com/vi/'+v+'/'+f+'.jpg)').join(',');
 const tone = a => TONES[[...a.vid].reduce((x,c)=>x+c.charCodeAt(0),0) % TONES.length];
-function when(s){
+function when(s, hasTime){
   const d = new Date(s.replace(' ','T')+'Z'), now = new Date();   // server stores UTC
   const hm = d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
-  if(d.toDateString()===now.toDateString()) return 'היום ב־'+hm;
+  if(d.toDateString()===now.toDateString()) return hasTime===false ? 'היום' : 'היום ב־'+hm;
   const y = new Date(now-864e5); if(d.toDateString()===y.toDateString()) return 'אתמול';
   return d.toLocaleDateString('he-IL');
 }
-const meta = a => [a.channel, a.minutes? 'סיכום '+a.minutes+' דק׳':'', when(a.created)].filter(Boolean).map(esc).join(' · ');
+const rel = a => when(a.released||a.created, a.released_time);
+const meta = a => [a.channel, a.minutes? 'סיכום '+a.minutes+' דק׳':'', rel(a)].filter(Boolean).map(esc).join(' · ');
 let DATA = null, FILTER = 'all';
 
 function card(a){
@@ -147,10 +148,10 @@ function render(){
   if(!items.length){ main.innerHTML='<p class="empty">אין עדיין סיכומים במדור הזה — הם יופיעו כאן אוטומטית.</p>'; return; }
   let h='';
   const lead = items[0], side = items.slice(1,4), feed = items.slice(4);
-  h+='<section class="lead-grid"'+(side.length?'':' style="grid-template-columns:1fr"')+'><a class="lead" href="'+href(lead)+'"><div class="lead-copy"><div class="eyebrow">'+esc(lead.topic)+' · '+when(lead.created)+'</div>'
+  h+='<section class="lead-grid"'+(side.length?'':' style="grid-template-columns:1fr"')+'><a class="lead" href="'+href(lead)+'"><div class="lead-copy"><div class="eyebrow">'+esc(lead.topic)+' · '+rel(lead)+'</div>'
     +'<h1>'+esc(lead.title)+'</h1><p class="subtitle">'+esc(lead.lead)+'</p><div class="meta">'+meta(lead)+'</div></div>'
     +'<div class="lead-art img" style="background-image:'+bg(lead.vid)+','+tone(lead)+'"></div></a>'
-    +(side.length?'<div class="side-latest">':'<div hidden>')+side.map(a=>'<a class="side-item" href="'+href(a)+'"><div class="tag">'+esc(a.topic)+' · '+when(a.created)+'</div><h2>'+esc(a.title)+'</h2><p>'+esc(a.lead)+'</p></a>').join('')+'</div></section>';
+    +(side.length?'<div class="side-latest">':'<div hidden>')+side.map(a=>'<a class="side-item" href="'+href(a)+'"><div class="tag">'+esc(a.topic)+' · '+rel(a)+'</div><h2>'+esc(a.title)+'</h2><p>'+esc(a.lead)+'</p></a>').join('')+'</div></section>';
   if(feed.length) h+='<div class="section-head"><h2>הכי חדש</h2><small>מסודר לפי מועד העלאת הסיכום</small></div><section class="feed-grid">'+feed.map(card).join('')+'</section>';
   if(FILTER==='all'){
     const rows = DATA.topics.map(t=>{ const a = all.find(x=>x.topic===t);

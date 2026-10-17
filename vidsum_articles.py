@@ -112,6 +112,16 @@ def slugify(title):
     return s[:70].strip("-_") or "summary"
 
 
+def _rel(a):
+    """Episode release moment as 'YYYY-MM-DD HH:MM:SS' (UTC); falls back to the date, then to when we made the article."""
+    pa = (a.get("published_at") or "").replace("T", " ").replace("Z", "")[:19]
+    if len(pa) == 19:
+        return pa
+    if (a.get("published") or "")[:10].count("-") == 2:
+        return a["published"][:10] + " 12:00:00"
+    return a.get("created") or ""
+
+
 def _articles():
     out = []
     try:
@@ -125,7 +135,7 @@ def _articles():
                     out.append(json.load(f))
             except Exception:
                 pass
-    out.sort(key=lambda a: a.get("created", ""), reverse=True)
+    out.sort(key=_rel, reverse=True)                   # newest release first, everywhere
     return out
 
 
@@ -476,7 +486,8 @@ def _run_luna(vid):
                     break
                 log(f"vidsum {vid} luna bad timestamps (dur={dur}); {'retrying' if not retry else 'accepting'}")
             _save_article(vid, _finalize(data, dur, {"channel": channel, "src_title": title, "tokens": tokens,
-                                                     "method": "luna-captions", "finish": fin, "published": pub}))
+                                                     "method": "luna-captions", "finish": fin, "published": pub,
+                                                     "published_at": tr.get("published_at")}))
         except Exception as e:
             log(f"vidsum {vid} luna FAILED: {str(e)[:400]}")
             _set_job(vid, status="failed", error=str(e)[:300])
@@ -525,7 +536,7 @@ def relay_transcript(req):
         raise ValueError("bad vid or transcript too short")
     os.makedirs(TR_DIR, exist_ok=True)
     with open(os.path.join(TR_DIR, vid + ".json"), "w", encoding="utf-8") as f:
-        json.dump({k: req.get(k) for k in ("transcript", "duration", "published", "title", "channel", "description", "source")},
+        json.dump({k: req.get(k) for k in ("transcript", "duration", "published", "published_at", "title", "channel", "description", "source")},
                   f, ensure_ascii=False)
     _set_job(vid, status="queued", error="", title=req.get("title") or "", channel=req.get("channel") or "")
     threading.Thread(target=_run_luna, args=(vid,), daemon=True).start()
@@ -662,7 +673,8 @@ def _length_min(a):
 def news_items():
     return [{"slug": a["slug"], "title": a["title"], "lead": a.get("lead") or a.get("standfirst") or a.get("subtitle", ""),
              "topic": a.get("topic") or "תרבות", "channel": a.get("channel", ""), "vid": a.get("vid"),
-             "created": a.get("created"), "minutes": _length_min(a)} for a in _articles()]
+             "created": a.get("created"), "released": _rel(a),
+             "released_time": len((a.get("published_at") or "")) >= 19, "minutes": _length_min(a)} for a in _articles()]
 
 
 # ------------------------------------------------------- channel watcher ---
@@ -1016,6 +1028,21 @@ def delete_article(slug, vid=None):
     return n
 
 
+def patch_release(vid, published_at):
+    """Admin: set an article's real release moment (ISO, UTC)."""
+    if not re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", published_at or ""):
+        raise ValueError("published_at must look like 2026-10-17T09:30:00Z")
+    for a in _articles():
+        if a.get("vid") == vid:
+            a["published_at"], a["published"] = published_at, published_at[:10]
+            tmp = os.path.join(ART_DIR, a["slug"] + ".json.tmp")
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(a, f, ensure_ascii=False, indent=1)
+            os.replace(tmp, os.path.join(ART_DIR, a["slug"] + ".json"))
+            return True
+    return False
+
+
 def import_article(req):
     """Admin: store a hand-edited article dict (must have title, standfirst, topic, vid, blocks)."""
     for k in ("title", "standfirst", "topic", "vid", "blocks"):
@@ -1066,6 +1093,16 @@ def handle_post(handler, path, req):
                 return False
         except Exception as e:
             handler._json({"ok": False, "error": str(e)[:200]}, 400)
+        return True
+    if path == "/api/vidsum/article/release":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            try:
+                handler._json({"ok": True, "updated": patch_release(str(req.get("vid") or ""), str(req.get("published_at") or ""))})
+            except Exception as e:
+                handler._json({"ok": False, "error": str(e)[:200]}, 400)
         return True
     if path == "/api/vidsum/article/import":
         user = current_user(handler)

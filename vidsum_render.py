@@ -130,7 +130,7 @@ def render(a, latest=(), base="", disclaimer=""):
     share_url = urllib.parse.quote(f'https://jarcud.com/vidsum/article/{a["slug"]}', safe="")
     share_txt = urllib.parse.quote(a["title"], safe="")
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
-           f'<span>{e(_he_date(a.get("published") or ""))}</span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span>'
+           f'<span>{e(_he_date(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span>'
            f'<a href="{base}/vidsum/articles">כל הסיכומים</a><a href="{base}/vidsum/sources">מקורות</a><a href="{base}/vidsum/logs">יומן</a><a href="{base}/vidsum/v1">הוספת סרטון</a></div></div></div>'
            f'<header class="masthead"><a class="brand" href="{base}/vidsum"><img class="brand-logo" src="{base}/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span>'
            f'<span class="brand-note">חדשות מתוך הסיכומים</span></a></header>'
@@ -139,7 +139,7 @@ def render(a, latest=(), base="", disclaimer=""):
            f'<div class="crumbs"><a href="{base}/vidsum">ראשי</a> › <a href="{base}/vidsum#{urllib.parse.quote(a["topic"])}">{e(a["topic"])}</a></div>',
            f'<h1>{e(a["title"])}</h1><p class="standfirst">{e(a["standfirst"])}</p>',
            f'<div class="byline"><span>מאת <b>מערכת Pawed</b></span><span>מתוך {e(a.get("channel", "").strip())}</span>'
-           f'<span>{e(_he_date(a.get("published") or ""))}</span><span>{mins} דק׳ קריאה</span>'
+           f'<span>{e(_he_date(a.get("published_at") or a.get("published") or ""))}</span><span>{mins} דק׳ קריאה</span>'
            f'<span class="share"><a href="https://wa.me/?text={share_txt}%20{share_url}" target="_blank" rel="noopener" title="WhatsApp">W</a>'
            f'<a href="https://www.facebook.com/sharer/sharer.php?u={share_url}" target="_blank" rel="noopener" title="Facebook">f</a>'
            f'<a href="https://twitter.com/intent/tweet?url={share_url}&amp;text={share_txt}" target="_blank" rel="noopener" title="X">X</a></span></div>',
