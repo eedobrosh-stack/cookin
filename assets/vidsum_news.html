@@ -241,6 +241,8 @@ function nav(){
 document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
   DATA=j; const h=decodeURIComponent(location.hash.slice(1)); if(j.topics.includes(h)) FILTER=h;
+  const ul=document.querySelector('.utility-links');
+  if(ul){ const a=document.createElement('a'); a.href='/vidsum/sources'; a.textContent = j.me ? ('שלום '+j.me.name+(j.personal?' · תצוגה מותאמת':'')) : 'התחברות'; a.style.fontWeight='700'; ul.appendChild(a); }
   document.getElementById('count').textContent=(j.items.length===1?'סיכום אחד':j.items.length+' סיכומים');
   nav(); render();
 }).catch(()=>{document.getElementById('main').innerHTML='<p class="empty">שגיאה בטעינה</p>';});

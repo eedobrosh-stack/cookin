@@ -440,6 +440,9 @@ def _finalize(data, dur, extra):
 
 def _save_article(vid, d):
     slug = _unique_slug(d["title"], vid)
+    src_id = _load_jobs().get(vid, {}).get("source")
+    if src_id:
+        d = {**d, "source_id": src_id}
     art = {"slug": slug, "vid": vid, "url": f"https://www.youtube.com/watch?v={vid}",
            "created": time.strftime("%Y-%m-%d %H:%M:%S"), **d}
     os.makedirs(ART_DIR, exist_ok=True)
@@ -493,7 +496,7 @@ def _run_luna(vid):
             _set_job(vid, status="failed", error=str(e)[:300])
 
 
-def submit(url, admin, engine="luna"):
+def submit(url, admin, engine="luna", source=None):
     """-> (http_code, payload). engine "luna": wait for the Mac relay's transcript; "gemini": immediate (costs tokens)."""
     vid = yt_id(url)
     if not vid:
@@ -516,7 +519,7 @@ def submit(url, admin, engine="luna"):
             if n >= PUBLIC_DAILY_CAP:
                 return 429, {"ok": False, "error": "daily limit reached"}
         status = "needs_transcript" if engine == "luna" else "queued"
-        jobs[vid] = {"status": status, "engine": engine, "public": not admin,
+        jobs[vid] = {"status": status, "engine": engine, "public": not admin, "source": source,
                      "submitted": time.strftime("%Y-%m-%d %H:%M:%S")}
         _save_jobs(jobs)
     if engine != "luna":
@@ -673,13 +676,86 @@ def _length_min(a):
 def news_items():
     return [{"slug": a["slug"], "title": a["title"], "lead": a.get("lead") or a.get("standfirst") or a.get("subtitle", ""),
              "topic": a.get("topic") or "תרבות", "channel": a.get("channel", ""), "vid": a.get("vid"),
-             "created": a.get("created"), "released": _rel(a),
+             "source_id": a.get("source_id"), "created": a.get("created"), "released": _rel(a),
              "released_time": len((a.get("published_at") or "")) >= 19, "minutes": _length_min(a)} for a in _articles()]
+
+
+# ------------------------------------------------- users: prefs + visibility ---
+MAX_USER_SOURCES = 10
+USER_DAILY_VIDEOS = 8
+
+
+def _vdb():
+    c = multiuser.db()
+    c.execute("CREATE TABLE IF NOT EXISTS vidsum_prefs(user_id TEXT PRIMARY KEY, hide_base INTEGER DEFAULT 0, "
+              "hide_name INTEGER DEFAULT 0, muted TEXT DEFAULT '[]')")
+    return c
+
+
+def get_vprefs(uid):
+    with _vdb() as c:
+        r = c.execute("SELECT * FROM vidsum_prefs WHERE user_id=?", (uid,)).fetchone()
+    if not r:
+        return {"hideBase": False, "hideName": False, "muted": []}
+    try:
+        muted = json.loads(r["muted"] or "[]")
+    except ValueError:
+        muted = []
+    return {"hideBase": bool(r["hide_base"]), "hideName": bool(r["hide_name"]), "muted": muted}
+
+
+def set_vprefs(uid, req):
+    p = get_vprefs(uid)
+    if "hideBase" in req:
+        p["hideBase"] = bool(req["hideBase"])
+    if "hideName" in req:
+        p["hideName"] = bool(req["hideName"])
+    if isinstance(req.get("muted"), list):
+        p["muted"] = [str(x)[:40] for x in req["muted"]][:200]
+    with _vdb() as c:
+        c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted) VALUES(?,?,?,?) "
+                  "ON CONFLICT(user_id) DO UPDATE SET hide_base=excluded.hide_base, hide_name=excluded.hide_name, muted=excluded.muted",
+                  (uid, int(p["hideBase"]), int(p["hideName"]), json.dumps(p["muted"])))
+    return p
+
+
+def _hidden_names():
+    with _vdb() as c:
+        return {r["user_id"] for r in c.execute("SELECT user_id FROM vidsum_prefs WHERE hide_name=1")}
+
+
+def _viewer(handler):
+    u = current_user(handler)
+    if not u or u.get("id") == "admin-token":
+        return u
+    return u
+
+
+def _visible_source_ids(viewer):
+    """Source ids a signed-in viewer sees in their own view (None = no filtering)."""
+    if not viewer or viewer.get("id") == "admin-token":
+        return None
+    p = get_vprefs(viewer["id"])
+    out = set()
+    for c in _load_ch()["channels"]:
+        owner = c.get("owner_id")
+        if owner == viewer["id"]:
+            out.add(c["id"])
+        elif owner is None:
+            if not p["hideBase"]:
+                out.add(c["id"])
+        elif owner not in p["muted"]:
+            out.add(c["id"])
+    return out
+
+
+def _can_edit_source(c, user):
+    return bool(user and (user.get("admin") or (c.get("owner_id") and c.get("owner_id") == user.get("id"))))
 
 
 # ------------------------------------------------------- channel watcher ---
 CH_PATH = os.path.join(multiuser.DATA_DIR, "vidsum_channels.json")
-WATCH_DAILY_CAP = 10
+WATCH_DAILY_CAP = 30
 WATCH_EVERY_S = 3 * 3600
 _UA = {"User-Agent": "Mozilla/5.0 (jarcud-vidsum)", "Accept-Language": "en"}
 
@@ -735,6 +811,10 @@ def _feed_url(fid):
 def resolve_channel(ref):
     """channel URL / @handle / UC… id / playlist URL (list=PL…) -> (feed_id, name)"""
     ref = ref.strip()
+    if ref.startswith("http"):
+        host = (urllib.parse.urlparse(ref).hostname or "").lower()
+        if not (host == "youtu.be" or host == "youtube.com" or host.endswith(".youtube.com")):
+            raise ValueError("only YouTube channel or playlist links are allowed")
     pl = re.search(r"[?&]list=([\w-]+)", ref)
     if pl:
         feed = _http(_feed_url(pl.group(1)))
@@ -803,14 +883,19 @@ def watch_once():
                 continue
             if used >= WATCH_DAILY_CAP:
                 break
+            if ch.get("owner_id"):
+                owner_used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit"
+                                 and e.get("owner") == ch["owner_id"])
+                if owner_used >= USER_DAILY_VIDEOS:
+                    continue
             if _is_short(vid):
                 seen.add(vid)
                 continue
-            code, payload = submit(f"https://www.youtube.com/watch?v={vid}", True)
+            code, payload = submit(f"https://www.youtube.com/watch?v={vid}", True, "luna", ch["id"])
             seen.add(vid)
             if code in (200, 202):
                 used += 1
-                d["log"].append({"day": today, "kind": "submit", "vid": vid, "channel": ch["name"],
+                d["log"].append({"day": today, "kind": "submit", "vid": vid, "channel": ch["name"], "owner": ch.get("owner_id"),
                                  "at": time.strftime("%H:%M:%S")})
                 log(f"vidsum watcher: {ch['name']} -> {vid} ({payload.get('status')})")
         ch["seen"] = sorted(seen)[-200:]
@@ -850,27 +935,52 @@ def _serve(handler, path):
         handler._json({"error": "page missing"}, 404)
 
 
-def sources_view():
-    return [{"id": c["id"], "name": c["name"], "language": c["language"], "url": c["url"],
-             "vertical": c["vertical"], "added": c.get("added", ""), "pending": c["id"].startswith("pending-")}
-            for c in _load_ch()["channels"]]
+def sources_view(viewer=None):
+    hidden = _hidden_names()
+    vis = _visible_source_ids(viewer)
+    out = []
+    for c in _load_ch()["channels"]:
+        if vis is not None and c["id"] not in vis:
+            continue
+        owner = c.get("owner_id")
+        label = "Pawed" if owner is None else ("אנונימי" if owner in hidden else (c.get("owner_name") or "משתמש"))
+        out.append({"id": c["id"], "name": c["name"], "language": c["language"], "url": c["url"],
+                    "vertical": c["vertical"], "added": c.get("added", ""), "pending": c["id"].startswith("pending-"),
+                    "owner_id": owner, "owner_label": label, "mine": bool(viewer and owner and owner == viewer.get("id")),
+                    "base": owner is None, "can_edit": _can_edit_source(c, viewer)})
+    return out
 
 
-def add_source(req):
+def sources_hidden_count(viewer):
+    """How many sources the viewer's own preferences are hiding."""
+    vis = _visible_source_ids(viewer)
+    if vis is None:
+        return 0
+    return sum(1 for c in _load_ch()["channels"] if c["id"] not in vis)
+
+
+def add_source(req, user=None):
     url = str(req.get("url") or "").strip()
     name = str(req.get("name") or "").strip()
     lang = req.get("language") if req.get("language") in LANGS else "he"
     vert = req.get("vertical") if req.get("vertical") in TOPICS else "תרבות"
+    admin = bool(user and user.get("admin"))
+    owner_id = None if admin else user["id"]
+    owner_name = None if admin else (user.get("name") or (user.get("email") or "").split("@")[0] or "משתמש")
+    if not admin:
+        mine = sum(1 for c in _load_ch()["channels"] if c.get("owner_id") == owner_id)
+        if mine >= MAX_USER_SOURCES:
+            raise ValueError(f"you can have up to {MAX_USER_SOURCES} sources")
     if not url:                                   # pod name only: stays inactive until a YouTube URL is attached
         if not name:
             raise ValueError("enter a podcast name, or a YouTube URL")
         with LOCK:
             d = _load_ch()
-            if any(c["name"].strip() == name for c in d["channels"]):
+            if any(c["name"].strip() == name and c.get("owner_id") == owner_id for c in d["channels"]):
                 raise ValueError("this podcast is already in the table")
             cid = "pending-" + uuid.uuid4().hex[:8]
             d["channels"].append({"id": cid, "name": name[:120], "url": "", "language": lang, "vertical": vert,
-                                  "added": time.strftime("%Y-%m-%d %H:%M:%S")})
+                                  "added": time.strftime("%Y-%m-%d %H:%M:%S"), "owner_id": owner_id, "owner_name": owner_name})
             _save_ch(d)
         return cid
     cid, found = resolve_channel(url)
@@ -880,7 +990,8 @@ def add_source(req):
             raise ValueError("this source is already in the table")
         d["channels"].append({"id": cid, "name": (name or found)[:120], "url": url[:300],
                               "language": lang, "vertical": vert, "added": time.strftime("%Y-%m-%d %H:%M:%S"),
-                              "backfill": bool(req.get("backfill"))})
+                              "owner_id": owner_id, "owner_name": owner_name,
+                              "backfill": bool(req.get("backfill")) and admin})
         _save_ch(d)
     return cid
 
@@ -947,11 +1058,23 @@ def handle_get(handler, path, qs):
         return True
     if path == "/api/vidsum/sources":
         user = current_user(handler)
-        handler._json({"ok": True, "can_edit": bool(user and user.get("admin")), "verticals": TOPICS,
-                       "languages": LANGS, "sources": sources_view()})
+        signed = bool(user and user.get("id") != "admin-token")
+        handler._json({"ok": True, "can_edit": bool(user), "admin": bool(user and user.get("admin")),
+                       "me": ({"id": user["id"], "name": user.get("name") or user.get("email"), "avatar": user.get("avatar", "")}
+                              if signed else None),
+                       "prefs": get_vprefs(user["id"]) if signed else None, "hidden": sources_hidden_count(user) if signed else 0,
+                       "limit": MAX_USER_SOURCES, "verticals": TOPICS, "languages": LANGS, "sources": sources_view(user)})
         return True
     if path == "/api/vidsum/news":
-        handler._json({"ok": True, "topics": TOPICS, "items": news_items()})
+        user = current_user(handler)
+        items = news_items()
+        vis = _visible_source_ids(user)
+        personal = vis is not None
+        if personal:
+            base_ok = not get_vprefs(user["id"])["hideBase"]
+            items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and base_ok)]
+        handler._json({"ok": True, "topics": TOPICS, "items": items, "personal": personal,
+                       "me": ({"name": user.get("name") or user.get("email")} if user and user.get("id") != "admin-token" else None)})
         return True
     if path == "/api/vidsum/channels":
         user = current_user(handler)
@@ -1086,13 +1209,30 @@ def handle_post(handler, path, req):
             elif path == "/api/vidsum/bulk":
                 res = {"added": 0, "existing": 0, "rejected": 0}
                 for u in (req.get("urls") or [])[:500]:
-                    code, p = submit(str(u), True, req.get("engine", "luna"))
+                    code, p = submit(str(u), True, req.get("engine", "luna"), req.get("source"))
                     res["existing" if p.get("existing") else "added" if code in (200, 202) else "rejected"] += 1
                 handler._json({"ok": True, **res})
             else:
                 return False
         except Exception as e:
             handler._json({"ok": False, "error": str(e)[:200]}, 400)
+        return True
+    if path == "/api/vidsum/article/source":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            n = 0
+            for a in _articles():
+                sid = (req.get("map") or {}).get(a.get("vid"))
+                if sid and a.get("source_id") != sid:
+                    a["source_id"] = str(sid)[:80]
+                    tmp = os.path.join(ART_DIR, a["slug"] + ".json.tmp")
+                    with open(tmp, "w", encoding="utf-8") as f:
+                        json.dump(a, f, ensure_ascii=False, indent=1)
+                    os.replace(tmp, os.path.join(ART_DIR, a["slug"] + ".json"))
+                    n += 1
+            handler._json({"ok": True, "updated": n})
         return True
     if path == "/api/vidsum/article/release":
         user = current_user(handler)
@@ -1114,41 +1254,50 @@ def handle_post(handler, path, req):
             except Exception as e:
                 handler._json({"ok": False, "error": str(e)[:200]}, 400)
         return True
+    if path == "/api/vidsum/prefs":
+        user = current_user(handler)
+        if not user or user.get("id") == "admin-token":
+            handler._json({"ok": False, "error": "sign in with Google first"}, 401)
+        else:
+            handler._json({"ok": True, "prefs": set_vprefs(user["id"], req)})
+        return True
     if path.startswith("/api/vidsum/sources/"):
         user = current_user(handler)
-        if not (user and user.get("admin")):
-            handler._json({"ok": False, "error": "sign in as admin to edit sources"}, 403)
+        if not user:
+            handler._json({"ok": False, "error": "sign in with Google to edit sources"}, 401)
             return True
         try:
             if path == "/api/vidsum/sources/add":
-                add_source(req)
-            elif path == "/api/vidsum/sources/remove":
+                add_source(req, user)
+            elif path in ("/api/vidsum/sources/remove", "/api/vidsum/sources/update"):
                 with LOCK:
                     d = _load_ch()
-                    d["channels"] = [c for c in d["channels"] if c["id"] != req.get("id")]
-                    _save_ch(d)
-            elif path == "/api/vidsum/sources/update":
-                with LOCK:
-                    d = _load_ch()
-                    for c in d["channels"]:
-                        if c["id"] == req.get("id"):
-                            if (req.get("url") or "").strip():
-                                newid, _found = resolve_channel(req["url"].strip())      # raises if not a valid channel
-                                if newid != c["id"] and any(x["id"] == newid for x in d["channels"]):
-                                    raise ValueError("this YouTube source is already in the table")
-                                c["id"], c["url"] = newid, req["url"].strip()[:300]
-                                c["added"] = time.strftime("%Y-%m-%d %H:%M:%S")
-                                c.pop("seen", None)
-                            if req.get("language") in LANGS:
-                                c["language"] = req["language"]
-                            if req.get("vertical") in TOPICS:
-                                c["vertical"] = req["vertical"]
-                            if (req.get("name") or "").strip():
-                                c["name"] = req["name"].strip()[:120]
+                    hit = next((c for c in d["channels"] if c["id"] == req.get("id")), None)
+                    if hit and not _can_edit_source(hit, user):
+                        raise PermissionError("you can only change your own sources")
+                    if path.endswith("/remove"):
+                        d["channels"] = [c for c in d["channels"] if c["id"] != req.get("id")]
+                    elif hit:
+                        c = hit
+                        if (req.get("url") or "").strip():
+                            newid, _found = resolve_channel(req["url"].strip())      # raises if not a valid channel
+                            if newid != c["id"] and any(x["id"] == newid for x in d["channels"]):
+                                raise ValueError("this YouTube source is already in the table")
+                            c["id"], c["url"] = newid, req["url"].strip()[:300]
+                            c["added"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                            c.pop("seen", None)
+                        if req.get("language") in LANGS:
+                            c["language"] = req["language"]
+                        if req.get("vertical") in TOPICS:
+                            c["vertical"] = req["vertical"]
+                        if (req.get("name") or "").strip():
+                            c["name"] = req["name"].strip()[:120]
                     _save_ch(d)
             else:
                 return False
-            handler._json({"ok": True, "sources": sources_view()})
+            handler._json({"ok": True, "sources": sources_view(user), "hidden": sources_hidden_count(user)})
+        except PermissionError as e:
+            handler._json({"ok": False, "error": str(e)}, 403)
         except Exception as e:
             handler._json({"ok": False, "error": str(e)[:200]}, 400)
         return True
