@@ -14,6 +14,7 @@ from collections import Counter
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 import multiuser
 import cands
+import vidsum_articles
 
 # Category landing pages: /salads serves the gallery with the Salads category
 # preselected, so browser "back" from a dish returns to that category rather
@@ -767,6 +768,10 @@ class Handler(SimpleHTTPRequestHandler):
         if self._is_main_host() and p == "/":
             self._html(JARCUD_LANDING)
             return
+        if self._is_main_host() and (p.startswith("/vidsum/art") or p in ("/api/vidsum/articles", "/api/vidsum/job")):
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if vidsum_articles.handle_get(self, p, qs):
+                return
         if p in ("/cands", "/cands/") or p.startswith("/api/admin/cands"):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if cands.handle_get(self, p, qs):
@@ -926,6 +931,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path.split("?")[0]
+        if p == "/api/vidsum/summarize":
+            if vidsum_articles.handle_post(self, p, self._read_json()):
+                return
         if p.startswith("/api/admin/cands"):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if cands.handle_post(self, p, qs, self._read_json):
@@ -1068,6 +1076,7 @@ if __name__ == "__main__":
     os.makedirs(VIDEOS_DIR, exist_ok=True)
     multiuser.init()
     cands.start_scheduler()
+    vidsum_articles.resume_stuck()
     if not os.path.exists(STATE_PATH):
         save_state(json.loads(json.dumps(DEFAULT)))
     print(f"cookin serving on 0.0.0.0:{PORT}, data={DATA_DIR}", flush=True)

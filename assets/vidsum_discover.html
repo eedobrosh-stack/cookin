@@ -74,7 +74,7 @@
 </style>
 <div class="wrap">
   <h1>&#127916; Vidsum Discover</h1>
-  <p class="sub">Find episodes four ways, check the ones you want, and queue them for
+  <p class="sub"><a href="/vidsum/articles" style="color:inherit">&#128218; Summaries</a> &middot; Find episodes four ways, check the ones you want, and queue them for
   summarization.</p>
   <div class="tabs">
     <span class="tab on" data-pane="link">&#128279; Link</span>
@@ -161,6 +161,18 @@ $('lf').addEventListener('submit', async e=>{
   e.preventDefault();
   const url = $('link').value.trim(); if(!url) return;
   $('linkbtn').disabled = true; status_.className=''; status_.textContent='Queuing link…';
+  if(/(youtu\.be\/|youtube\.com\/)/.test(url)){
+    try{
+      const r = await fetch('/api/vidsum/summarize', {method:'POST',
+        headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})});
+      const j = await r.json();
+      if(!j.ok) throw new Error(j.error||'failed');
+      $('link').value='';
+      await pollJob(j.id);
+    }catch(err){ status_.className='err'; status_.textContent='❌ '+err.message; }
+    $('linkbtn').disabled = false;
+    return;
+  }
   try{
     const r = await fetch('/api/vidsum/queue', {method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -174,6 +186,21 @@ $('lf').addEventListener('submit', async e=>{
   }catch(err){ status_.className='err'; status_.textContent='❌ '+err.message; }
   $('linkbtn').disabled = false;
 });
+
+async function pollJob(id){
+  for(let i=0;i<400;i++){
+    const j = await (await fetch('/api/vidsum/job?id='+encodeURIComponent(id))).json();
+    if(j.status==='done'){
+      status_.className='ok';
+      status_.innerHTML='✅ Ready: <a style="color:inherit" href="/vidsum/article/'+encodeURIComponent(j.slug)+'">'+esc(j.title||j.slug)+'</a>';
+      return;
+    }
+    if(j.status==='failed') throw new Error(j.error||'summary failed');
+    status_.textContent = j.status==='running' ? '⏳ Summarizing on the server (a few minutes for long videos)…' : '⏳ Queued…';
+    await new Promise(r=>setTimeout(r,5000));
+  }
+  throw new Error('timed out waiting; check /vidsum/articles later');
+}
 
 function fmtDur(ms){ if(!ms) return ''; return Math.round(ms/60000)+' min'; }
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
