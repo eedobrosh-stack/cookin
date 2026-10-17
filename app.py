@@ -931,7 +931,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path.split("?")[0]
-        if p == "/api/vidsum/summarize":
+        if p in ("/api/vidsum/summarize", "/api/vidsum/article/delete"):
             if vidsum_articles.handle_post(self, p, self._read_json()):
                 return
         if p.startswith("/api/admin/cands"):

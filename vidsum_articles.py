@@ -110,7 +110,7 @@ Write a DETAILED summary in Hebrew (keep proper names / terms in their original 
 Rules:
 - title: a clear Hebrew article title (guest/topic specific, no clickbait). subtitle: one line (channel, speakers, length, date if known).
 - Split the video into 6-14 chronological sections, each with a short descriptive Hebrew title.
-- Each section holds 3-8 bullets. A bullet is a full, information-dense sentence or two: claims, numbers, names, examples, arguments, conclusions. No filler, no "the speaker says".
+- Each section holds 5-12 bullets, and overall roughly one bullet per 40-60 seconds of video (a 1-hour video should yield 70-100+ bullets). A bullet is a full, information-dense sentence or two: claims, numbers, names, examples, arguments, conclusions. No filler, no "the speaker says".
 - Every bullet has "ts": the timestamp in the video where that point is made, format m:ss or h:mm:ss, accurate to within a few seconds, increasing through the video.
 - Cover the whole video to the end, not only the beginning.
 Return only JSON matching the schema."""
@@ -370,7 +370,30 @@ def handle_get(handler, path, qs):
     return False
 
 
+def delete_article(slug, vid=None):
+    n = 0
+    for a in _articles():
+        if a["slug"] == slug or (vid and a.get("vid") == vid):
+            try:
+                os.remove(os.path.join(ART_DIR, a["slug"] + ".json"))
+                n += 1
+                with LOCK:
+                    jobs = _load_jobs()
+                    jobs.pop(a.get("vid"), None)
+                    _save_jobs(jobs)
+            except OSError:
+                pass
+    return n
+
+
 def handle_post(handler, path, req):
+    if path == "/api/vidsum/article/delete":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            handler._json({"ok": True, "deleted": delete_article(str(req.get("slug") or ""), req.get("vid"))})
+        return True
     if path == "/api/vidsum/summarize":
         user = current_user(handler)
         code, payload = submit(str(req.get("url") or ""), bool(user and user.get("admin")))
