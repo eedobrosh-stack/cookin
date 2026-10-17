@@ -106,6 +106,9 @@
     td { padding:11px 12px; border-bottom:1px solid var(--line); font-size:15px; vertical-align:middle; }
     td.url a { color:#1556d6; text-decoration:underline; text-underline-offset:2px; word-break:break-all; direction:ltr; display:inline-block; }
     td.name { font-weight:800; }
+    .pend { display:inline-block; background:#fff1d6; color:#8a5a00; font-size:12px; font-weight:700; padding:2px 8px; border-radius:20px; margin-inline-end:8px; }
+    .pendform { display:inline-flex; gap:6px; align-items:center; min-width:280px; }
+    .pendform .add-btn { padding:6px 12px; }
     select, input[type=text] { font:inherit; font-size:14px; padding:7px 9px; border:1px solid #cfcfcf; background:#fff; border-radius:3px; width:100%; }
     .rm { border:0; background:none; color:#b9141c; font-size:13px; font-weight:700; cursor:pointer; padding:6px 8px; }
     .rm:hover { text-decoration:underline; }
@@ -140,7 +143,7 @@
       <tfoot id="addfoot" hidden><tr class="addrow">
         <td><input type="text" id="n_name" placeholder="שם (אופציונלי, יילקח מיוטיוב)"></td>
         <td><select id="n_lang"></select></td>
-        <td><input type="text" id="n_url" placeholder="https://www.youtube.com/@channel  או קישור לפלייליסט" dir="ltr"></td>
+        <td><input type="text" id="n_url" placeholder="כתובת YouTube (ריק = מוסיף רק את השם, פעיל רק אחרי שיש כתובת)" dir="ltr"></td>
         <td><select id="n_vert"></select></td>
         <td><button class="add-btn" id="n_add">הוספה</button></td>
       </tr></tfoot>
@@ -158,11 +161,15 @@ function msg(t, cls){ const m=$('msg'); m.textContent=t||''; m.className=cls||''
 function render(){
   const rows = D.sources.map(s => '<tr><td class="name">'+esc(s.name)+'</td>'
     +'<td>'+(D.can_edit?'<select data-id="'+esc(s.id)+'" data-f="language">'+opts(D.languages,s.language)+'</select>':esc(D.languages[s.language]||s.language))+'</td>'
-    +'<td class="url"><a href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(short(s.url))+'</a></td>'
+    +'<td class="url">'+(s.pending
+        ? (D.can_edit ? '<span class="pend">ממתין לכתובת</span><span class="pendform"><input type="text" dir="ltr" placeholder="https://www.youtube.com/@channel" data-url="'+esc(s.id)+'"><button class="add-btn" data-save="'+esc(s.id)+'">שמירה</button></span>'
+                      : '<span class="pend">ממתין לכתובת YouTube</span>')
+        : '<a href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(short(s.url))+'</a>')+'</td>'
     +'<td>'+(D.can_edit?'<select data-id="'+esc(s.id)+'" data-f="vertical">'+opts(D.verticals,s.vertical)+'</select>':esc(s.vertical))+'</td>'
     +'<td>'+(D.can_edit?'<button class="rm" data-rm="'+esc(s.id)+'" data-name="'+esc(s.name)+'">הסרה</button>':'')+'</td></tr>');
   $('rows').innerHTML = rows.join('') || '<tr><td colspan="5">אין עדיין מקורות.</td></tr>';
   $('rows').querySelectorAll('select').forEach(el=>el.onchange=()=>post('update',{id:el.dataset.id,[el.dataset.f]:el.value},'נשמר'));
+  $('rows').querySelectorAll('[data-save]').forEach(b=>b.onclick=async()=>{ const id=b.dataset.save, v=$('rows').querySelector('[data-url="'+id+'"]').value.trim(); if(!v){ msg('יש להזין כתובת YouTube','err'); return; } b.disabled=true; await post('update',{id,url:v},'הכתובת נשמרה, המקור פעיל'); b.disabled=false; });
   $('rows').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ if(confirm('להסיר את "'+b.dataset.name+'" מהמקורות?')) post('remove',{id:b.dataset.rm},'המקור הוסר'); });
 }
 async function post(action, body, okText){
@@ -175,9 +182,9 @@ async function post(action, body, okText){
   }catch(e){ msg('❌ '+e.message,'err'); return false; }
 }
 $('n_add').onclick = async () => {
-  const url = $('n_url').value.trim(); if(!url){ msg('יש להזין כתובת YouTube','err'); return; }
+  const url = $('n_url').value.trim(); if(!url && !$('n_name').value.trim()){ msg('יש להזין שם פודקאסט או כתובת YouTube','err'); return; }
   $('n_add').disabled = true;
-  if(await post('add',{name:$('n_name').value.trim(),language:$('n_lang').value,url,vertical:$('n_vert').value},'המקור נוסף')){ $('n_name').value=''; $('n_url').value=''; }
+  if(await post('add',{name:$('n_name').value.trim(),language:$('n_lang').value,url,vertical:$('n_vert').value},url ? 'המקור נוסף' : 'השם נוסף, יופעל כשתצורף כתובת YouTube')){ $('n_name').value=''; $('n_url').value=''; }
   $('n_add').disabled = false;
 };
 document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});

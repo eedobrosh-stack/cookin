@@ -1,7 +1,7 @@
 """Vidsum server-side: YouTube link -> Gemini (reads the URL itself, so Render's
 blocked IP never touches YouTube) -> detailed RTL summary stored as an article
 served at /vidsum/article/<slug>."""
-import json, os, re, threading, time, html as _html, unicodedata
+import json, os, re, threading, uuid, time, html as _html, unicodedata
 import urllib.request, urllib.parse, urllib.error
 
 import multiuser
@@ -648,8 +648,11 @@ def _load_ch():
     d.setdefault("log", [])
     for c in d["channels"]:
         url, lang, vert = _SEED.get(c["id"], (None, "he", "תרבות"))
-        c.setdefault("url", url or (f"https://www.youtube.com/channel/{c['id']}" if c["id"].startswith("UC")
-                                    else f"https://www.youtube.com/playlist?list={c['id']}"))
+        if c["id"].startswith("pending-"):
+            c.setdefault("url", "")
+        else:
+            c.setdefault("url", url or (f"https://www.youtube.com/channel/{c['id']}" if c["id"].startswith("UC")
+                                        else f"https://www.youtube.com/playlist?list={c['id']}"))
         c.setdefault("language", lang)
         c.setdefault("vertical", vert)
     return d
@@ -721,6 +724,8 @@ def watch_once():
     today = time.strftime("%Y-%m-%d")
     used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit")
     for ch in d["channels"]:
+        if ch["id"].startswith("pending-"):          # name only, no YouTube URL yet: not a valid source
+            continue
         try:
             feed = _http(_feed_url(ch["id"]))
         except Exception as e:
@@ -791,21 +796,33 @@ def _serve(handler, path):
 
 def sources_view():
     return [{"id": c["id"], "name": c["name"], "language": c["language"], "url": c["url"],
-             "vertical": c["vertical"], "added": c.get("added", "")} for c in _load_ch()["channels"]]
+             "vertical": c["vertical"], "added": c.get("added", ""), "pending": c["id"].startswith("pending-")}
+            for c in _load_ch()["channels"]]
 
 
 def add_source(req):
     url = str(req.get("url") or "").strip()
-    if not url:
-        raise ValueError("YouTube URL is required")
+    name = str(req.get("name") or "").strip()
     lang = req.get("language") if req.get("language") in LANGS else "he"
     vert = req.get("vertical") if req.get("vertical") in TOPICS else "תרבות"
-    cid, name = resolve_channel(url)
+    if not url:                                   # pod name only: stays inactive until a YouTube URL is attached
+        if not name:
+            raise ValueError("enter a podcast name, or a YouTube URL")
+        with LOCK:
+            d = _load_ch()
+            if any(c["name"].strip() == name for c in d["channels"]):
+                raise ValueError("this podcast is already in the table")
+            cid = "pending-" + uuid.uuid4().hex[:8]
+            d["channels"].append({"id": cid, "name": name[:120], "url": "", "language": lang, "vertical": vert,
+                                  "added": time.strftime("%Y-%m-%d %H:%M:%S")})
+            _save_ch(d)
+        return cid
+    cid, found = resolve_channel(url)
     with LOCK:
         d = _load_ch()
         if any(c["id"] == cid for c in d["channels"]):
             raise ValueError("this source is already in the table")
-        d["channels"].append({"id": cid, "name": (str(req.get("name") or "").strip() or name)[:120], "url": url[:300],
+        d["channels"].append({"id": cid, "name": (name or found)[:120], "url": url[:300],
                               "language": lang, "vertical": vert, "added": time.strftime("%Y-%m-%d %H:%M:%S"),
                               "backfill": bool(req.get("backfill"))})
         _save_ch(d)
@@ -1003,6 +1020,13 @@ def handle_post(handler, path, req):
                     d = _load_ch()
                     for c in d["channels"]:
                         if c["id"] == req.get("id"):
+                            if (req.get("url") or "").strip():
+                                newid, _found = resolve_channel(req["url"].strip())      # raises if not a valid channel
+                                if newid != c["id"] and any(x["id"] == newid for x in d["channels"]):
+                                    raise ValueError("this YouTube source is already in the table")
+                                c["id"], c["url"] = newid, req["url"].strip()[:300]
+                                c["added"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                                c.pop("seen", None)
                             if req.get("language") in LANGS:
                                 c["language"] = req["language"]
                             if req.get("vertical") in TOPICS:
