@@ -105,6 +105,14 @@
     .brand-logo { height:58px; width:auto; display:block; }
     .brand-mark { color:#2a211b; font-size:46px; letter-spacing:-1.5px; font-family:"Arial Black",Arial,sans-serif; }
     .brand-note { border-right:1px solid #ccc; padding-right:12px; }
+  
+    /* promo images keep their full 16:9 frame (no cropping of the on-image text/faces) */
+    .lead { display:flex !important; flex-direction:column; min-height:0 !important; grid-template-columns:none !important; }
+    .lead-art, .lead-art.img { order:-1; width:100%; aspect-ratio:16/9; min-height:0 !important; height:auto; flex:none; background-size:cover; }
+    .lead-copy { padding:22px 28px 26px !important; min-height:0 !important; justify-content:flex-start !important; }
+    .lead h1 { font-size:30px; }
+    .thumb, .thumb.img { height:auto !important; aspect-ratio:16/9; }
+    .card { min-height:0 !important; }
   </style>
 </head>
 <body>
