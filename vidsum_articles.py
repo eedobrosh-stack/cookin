@@ -1096,7 +1096,8 @@ def handle_get(handler, path, qs):
         if not (user and user.get("admin")):
             handler._json({"error": "forbidden"}, 403)
         else:
-            handler._json({"ok": True, "queue": relay_queue(int((qs.get("limit") or ["15"])[0]))})
+            handler._json({"ok": True, "queue": relay_queue(int((qs.get("limit") or ["15"])[0])),
+                           "need_dates": [a["vid"] for a in _articles() if a.get("vid") and not a.get("published_at")][:25]})
         return True
     if path == "/api/vidsum/diag":
         user = current_user(handler)

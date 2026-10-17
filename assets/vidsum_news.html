@@ -224,7 +224,7 @@ function render(){
     +'<h1>'+esc(lead.title)+'</h1><p class="subtitle">'+esc(lead.lead)+'</p><div class="meta">'+meta(lead)+'</div></div>'
     +'<div class="lead-art img" style="background-image:'+bg(lead.vid)+','+tone(lead)+'"></div></a>'
     +(side.length?'<div class="side-latest">':'<div hidden>')+side.map(a=>'<a class="side-item" href="'+href(a)+'"><div class="tag">'+esc(a.topic)+' · '+rel(a)+'</div><h2>'+esc(a.title)+'</h2><p>'+esc(a.lead)+'</p></a>').join('')+'</div></section>';
-  if(feed.length) h+='<div class="section-head"><h2>הכי חדש</h2><small>מסודר לפי מועד העלאת הסיכום</small></div><section class="feed-grid">'+feed.map(card).join('')+'</section>';
+  if(feed.length) h+='<div class="section-head"><h2>הכי חדש</h2><small>מסודר לפי מועד פרסום הפרק</small></div><section class="feed-grid">'+feed.map(card).join('')+'</section>';
   if(FILTER==='all'){
     const rows = DATA.topics.map(t=>{ const a = all.find(x=>x.topic===t);
       return a ? '<a class="topic-row" href="'+href(a)+'"><div class="topic">'+esc(t)+'</div><div><h3>'+esc(a.title)+'</h3><p>'+esc(a.lead)+'</p></div></a>'
