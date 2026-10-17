@@ -134,6 +134,9 @@ def _prompt(title, channel, dur=None, retry=False):
         length = (f"\nThe video is EXACTLY {_fmt(dur)} long ({dur} seconds). No timestamp may exceed {_fmt(dur)}. "
                   + ("Use h:mm:ss for any time past 59:59. " if dur >= 3600 else "")
                   + "Only give a timestamp you can actually place in the audio/video; never space them evenly or guess.")
+    if dur:
+        length += (f"\nSIZE TARGET: about {max(600, round(dur / 60 * 18))} Hebrew words in total and at least "
+                   f"{max(12, round(dur / 50))} bullets, spread across the whole video. Do not stop early and do not compress.")
     if retry:
         length += "\nYour previous attempt had timestamps beyond the video length or invented evenly-spaced ones. Re-listen and give real ones."
     return f"""You are summarizing the attached YouTube video ("{title}", channel "{channel}").{length}
