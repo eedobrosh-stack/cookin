@@ -485,11 +485,11 @@ def _length_min(a):
     if a.get("duration"):
         return round(a["duration"] / 60)
     m = 0
-    for s in a.get("sections", []):
-        for b in s.get("bullets", []):
-            t = _ts_sec(b.get("ts"))
-            if t and t > m:
-                m = t
+    items = [b for s in a.get("sections", []) for b in s.get("bullets", [])] + list(a.get("blocks", []))
+    for b in items:
+        t = _ts_sec(b.get("ts"))
+        if t and t > m:
+            m = t
     return round(m / 60)
 
 
