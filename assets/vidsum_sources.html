@@ -192,7 +192,7 @@ fetch('/api/vidsum/sources').then(r=>r.json()).then(j=>{
   D=j; render();
   $('n_lang').innerHTML = opts(j.languages,'he'); $('n_vert').innerHTML = opts(j.verticals,j.verticals[0]);
   if(j.can_edit) $('addfoot').hidden = false;
-  else { $('signin').hidden = false; $('signinlink').href = '/auth/login?next='+encodeURIComponent('/vidsum/sources'); }
+  else { $('signin').hidden = false; $('signinlink').href = (location.hostname==='cookin.jarcud.com' ? '' : 'https://cookin.jarcud.com')+'/auth/login?next='+encodeURIComponent('/vidsum/sources'); }
 }).catch(()=>{ $('rows').innerHTML='<tr><td colspan="5">שגיאה בטעינה</td></tr>'; });
 </script>
 </body>
