@@ -768,7 +768,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self._is_main_host() and p == "/":
             self._html(JARCUD_LANDING)
             return
-        if self._is_main_host() and (p.startswith("/vidsum/art") or p in ("/api/vidsum/articles", "/api/vidsum/job")):
+        if self._is_main_host() and (p.startswith(("/vidsum/art", "/vidsum/news")) or p in ("/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return
@@ -931,7 +931,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path.split("?")[0]
-        if p in ("/api/vidsum/summarize", "/api/vidsum/article/delete"):
+        if p in ("/api/vidsum/summarize", "/api/vidsum/article/delete") or p.startswith("/api/vidsum/channels/"):
             if vidsum_articles.handle_post(self, p, self._read_json()):
                 return
         if p.startswith("/api/admin/cands"):
@@ -1076,7 +1076,7 @@ if __name__ == "__main__":
     os.makedirs(VIDEOS_DIR, exist_ok=True)
     multiuser.init()
     cands.start_scheduler()
-    vidsum_articles.resume_stuck()
+    vidsum_articles.start_background()
     if not os.path.exists(STATE_PATH):
         save_state(json.loads(json.dumps(DEFAULT)))
     print(f"cookin serving on 0.0.0.0:{PORT}, data={DATA_DIR}", flush=True)

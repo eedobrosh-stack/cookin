@@ -88,11 +88,14 @@ def _unique_slug(title, vid):
 
 
 # ----------------------------------------------------------------- gemini ---
+TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "רכילות", "בריאות"]
 SCHEMA = {
     "type": "OBJECT",
     "properties": {
         "title": {"type": "STRING"},
         "subtitle": {"type": "STRING"},
+        "topic": {"type": "STRING", "enum": TOPICS},
+        "lead": {"type": "STRING"},
         "sections": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
             "title": {"type": "STRING"},
             "bullets": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
@@ -100,7 +103,7 @@ SCHEMA = {
                 "required": ["text", "ts"]}}},
             "required": ["title", "bullets"]}},
     },
-    "required": ["title", "subtitle", "sections"],
+    "required": ["title", "subtitle", "topic", "lead", "sections"],
 }
 
 
@@ -109,6 +112,7 @@ def _prompt(title, channel):
 Write a DETAILED summary in Hebrew (keep proper names / terms in their original language when natural).
 Rules:
 - title: a clear Hebrew article title (guest/topic specific, no clickbait). subtitle: one line (channel, speakers, length, date if known).
+- topic: the single best-fitting news section from the allowed list. lead: a 1-2 sentence Hebrew teaser (max 220 chars) that states the core story/claim, written like a news-site standfirst.
 - Split the video into 6-14 chronological sections, each with a short descriptive Hebrew title.
 - Each section holds 5-12 bullets, and overall roughly one bullet per 40-60 seconds of video (a 1-hour video should yield 70-100+ bullets). A bullet is a full, information-dense sentence or two: claims, numbers, names, examples, arguments, conclusions. No filler, no "the speaker says".
 - Every bullet has "ts": the timestamp in the video where that point is made, format m:ss or h:mm:ss, accurate to within a few seconds, increasing through the video.
@@ -116,12 +120,12 @@ Rules:
 Return only JSON matching the schema."""
 
 
-def _gemini(parts, media_low=True):
+def _gemini(parts, media_low=True, schema=None, max_out=32768):
     key = secret("GEMINI_API_KEY")
     if not key:
         raise RuntimeError("GEMINI_API_KEY missing")
     gc = {"temperature": 0.3, "response_mime_type": "application/json",
-          "response_schema": SCHEMA, "maxOutputTokens": 32768}
+          "response_schema": schema or SCHEMA, "maxOutputTokens": max_out}
     if media_low:
         gc["mediaResolution"] = "MEDIA_RESOLUTION_LOW"   # ~100 tok/s of video instead of ~300
     body = {"contents": [{"role": "user", "parts": parts}], "generationConfig": gc}
@@ -139,7 +143,7 @@ def _gemini(parts, media_low=True):
             if e.code == 429 and "spending cap" in last:
                 raise BudgetExhausted(last)
             if e.code == 400 and media_low and "mediaResolution" in last:
-                return _gemini(parts, media_low=False)
+                return _gemini(parts, media_low=False, schema=schema, max_out=max_out)
             if e.code in (429, 500, 503) and attempt < 2:
                 time.sleep(10 * (attempt + 1))
                 continue
@@ -207,6 +211,8 @@ def summarize(vid):
     if not secs:
         raise RuntimeError("empty summary")
     return {"title": data["title"].strip(), "subtitle": data.get("subtitle", "").strip(), "sections": secs,
+            "topic": data.get("topic") if data.get("topic") in TOPICS else "תרבות",
+            "lead": (data.get("lead") or "").strip(),
             "channel": channel, "src_title": title, "tokens": tokens, "method": method, "finish": fin}
 
 
@@ -336,6 +342,179 @@ def index_html():
     return _page("סיכומי וידאו", body)
 
 
+
+# ------------------------------------------------------------- news portal ---
+CLS_SCHEMA = {"type": "OBJECT", "properties": {"topic": {"type": "STRING", "enum": TOPICS},
+                                               "lead": {"type": "STRING"}}, "required": ["topic", "lead"]}
+
+
+def backfill():
+    """Older articles lack topic/lead: classify them from their text (cheap, text-only)."""
+    for a in _articles():
+        if a.get("topic") and a.get("lead"):
+            continue
+        try:
+            txt = a["title"] + "\n" + "\n".join(b["text"] for s in a["sections"][:3] for b in s["bullets"][:3])
+            d, _, _ = _gemini([{"text": "Classify this Hebrew video summary into one news section and write a 1-2 sentence "
+                                        "Hebrew teaser (max 220 chars) stating the core story.\n\n" + txt[:6000]}],
+                              schema=CLS_SCHEMA, max_out=1024)
+            a["topic"] = d["topic"] if d.get("topic") in TOPICS else "תרבות"
+            a["lead"] = d.get("lead", "").strip()
+            tmp = os.path.join(ART_DIR, a["slug"] + ".json.tmp")
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(a, f, ensure_ascii=False, indent=1)
+            os.replace(tmp, os.path.join(ART_DIR, a["slug"] + ".json"))
+            log(f"vidsum backfill {a['slug']} -> {a['topic']}")
+        except Exception as e:
+            log(f"vidsum backfill failed {a.get('slug')}: {str(e)[:200]}")
+
+
+def _length_min(a):
+    m = 0
+    for s in a.get("sections", []):
+        for b in s.get("bullets", []):
+            t = _ts_sec(b.get("ts"))
+            if t and t > m:
+                m = t
+    return round(m / 60)
+
+
+def news_items():
+    return [{"slug": a["slug"], "title": a["title"], "lead": a.get("lead") or a.get("subtitle", ""),
+             "topic": a.get("topic") or "תרבות", "channel": a.get("channel", ""), "vid": a.get("vid"),
+             "created": a.get("created"), "minutes": _length_min(a)} for a in _articles()]
+
+
+# ------------------------------------------------------- channel watcher ---
+CH_PATH = os.path.join(multiuser.DATA_DIR, "vidsum_channels.json")
+WATCH_DAILY_CAP = 10
+WATCH_EVERY_S = 3 * 3600
+_UA = {"User-Agent": "Mozilla/5.0 (jarcud-vidsum)", "Accept-Language": "en"}
+
+
+def _load_ch():
+    try:
+        with open(CH_PATH, encoding="utf-8") as f:
+            d = json.load(f)
+        d.setdefault("channels", [])
+        d.setdefault("log", [])
+        return d
+    except Exception:
+        return {"channels": [], "log": []}
+
+
+def _save_ch(d):
+    d["log"] = d["log"][-60:]
+    tmp = CH_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, CH_PATH)
+
+
+def _http(url, timeout=20):
+    req = urllib.request.Request(url, headers=_UA)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read().decode("utf-8", "replace")
+
+
+def resolve_channel(ref):
+    """channel URL / @handle / UC… id -> (channel_id, name)"""
+    ref = ref.strip()
+    m = re.search(r"(UC[\w-]{22})", ref)
+    if m:
+        cid = m.group(1)
+    else:
+        if ref.startswith("@"):
+            ref = "https://www.youtube.com/" + ref
+        if not ref.startswith("http"):
+            ref = "https://www.youtube.com/@" + ref
+        html = _http(ref.split("?")[0])
+        m = (re.search(r'"channelId":"(UC[\w-]{22})"', html) or re.search(r'channel_id=(UC[\w-]{22})', html)
+             or re.search(r'youtube\.com/channel/(UC[\w-]{22})', html))
+        if not m:
+            raise RuntimeError("could not resolve channel id")
+        cid = m.group(1)
+    feed = _http(f"https://www.youtube.com/feeds/videos.xml?channel_id={cid}")
+    n = re.search(r"<title>([^<]+)</title>", feed)
+    return cid, _html.unescape(n.group(1)) if n else cid
+
+
+def _is_short(vid):
+    class NoRedir(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *a, **k):
+            return None
+    try:
+        op = urllib.request.build_opener(NoRedir)
+        op.open(urllib.request.Request(f"https://www.youtube.com/shorts/{vid}", headers=_UA, method="HEAD"), timeout=15)
+        return True            # 200 = it is a Short
+    except urllib.error.HTTPError as e:
+        return e.code not in (301, 302, 303, 307, 308) and e.code == 200
+    except Exception:
+        return False
+
+
+def watch_once():
+    """Look at every channel feed; summarize videos published after the channel was added."""
+    d = _load_ch()
+    today = time.strftime("%Y-%m-%d")
+    used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit")
+    for ch in d["channels"]:
+        try:
+            feed = _http(f"https://www.youtube.com/feeds/videos.xml?channel_id={ch['id']}")
+        except Exception as e:
+            ch["error"] = str(e)[:120]
+            continue
+        ch["error"] = ""
+        ch["checked"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        seen = set(ch.setdefault("seen", []))
+        entries = re.findall(r"<entry>.*?</entry>", feed, re.S)
+        for ent in reversed(entries):                       # oldest first
+            vm = re.search(r"<yt:videoId>([\w-]{11})</yt:videoId>", ent)
+            pm = re.search(r"<published>([^<]+)</published>", ent)
+            if not vm or not pm:
+                continue
+            vid, pub = vm.group(1), pm.group(1)
+            if vid in seen:
+                continue
+            if pub[:19].replace("T", " ") < ch["added"][:19] and not ch.get("backfill"):
+                seen.add(vid)                                # older than the subscription: ignore
+                continue
+            if used >= WATCH_DAILY_CAP:
+                break
+            if _is_short(vid):
+                seen.add(vid)
+                continue
+            code, payload = submit(f"https://www.youtube.com/watch?v={vid}", True)
+            seen.add(vid)
+            if code in (200, 202):
+                used += 1
+                d["log"].append({"day": today, "kind": "submit", "vid": vid, "channel": ch["name"],
+                                 "at": time.strftime("%H:%M:%S")})
+                log(f"vidsum watcher: {ch['name']} -> {vid} ({payload.get('status')})")
+        ch["seen"] = sorted(seen)[-200:]
+        if ch.get("backfill") and all(m in seen for m in re.findall(r"<yt:videoId>([\w-]{11})</yt:videoId>", feed)):
+            ch["backfill"] = False
+    _save_ch(d)
+
+
+def _watch_loop():
+    time.sleep(90)
+    while True:
+        try:
+            watch_once()
+        except Exception as e:
+            log(f"vidsum watcher error: {str(e)[:200]}")
+        time.sleep(WATCH_EVERY_S)
+
+
+def start_background():
+    resume_stuck()
+    threading.Thread(target=backfill, daemon=True).start()
+    threading.Thread(target=_watch_loop, daemon=True).start()
+
+
+NEWS_PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "vidsum_news.html")
+
 # ---------------------------------------------------------------- routing ---
 ART_PREFIX = "/vidsum/article/"
 
@@ -357,6 +536,25 @@ def handle_get(handler, path, qs):
             handler._json({"error": "article not found"}, 404)
         else:
             handler._html(article_html(a), "no-store")
+        return True
+    if path in ("/vidsum/news", "/vidsum/news/"):
+        try:
+            with open(NEWS_PAGE, "rb") as f:
+                handler._html(f.read(), "no-store")
+        except OSError:
+            handler._json({"error": "news page missing"}, 404)
+        return True
+    if path == "/api/vidsum/news":
+        handler._json({"ok": True, "topics": TOPICS, "items": news_items()})
+        return True
+    if path == "/api/vidsum/channels":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            d = _load_ch()
+            handler._json({"ok": True, "channels": [{k: v for k, v in c.items() if k != "seen"} | {"seen": len(c.get("seen", []))}
+                                                    for c in d["channels"]], "log": d["log"][-20:]})
         return True
     if path == "/api/vidsum/articles":
         handler._json({"ok": True, "articles": [
@@ -387,6 +585,35 @@ def delete_article(slug, vid=None):
 
 
 def handle_post(handler, path, req):
+    if path.startswith("/api/vidsum/channels"):
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+            return True
+        try:
+            if path == "/api/vidsum/channels/add":
+                cid, name = resolve_channel(str(req.get("channel") or ""))
+                with LOCK:
+                    d = _load_ch()
+                    if not any(c["id"] == cid for c in d["channels"]):
+                        d["channels"].append({"id": cid, "name": name, "added": time.strftime("%Y-%m-%d %H:%M:%S"),
+                                              "backfill": bool(req.get("backfill"))})
+                    _save_ch(d)
+                handler._json({"ok": True, "id": cid, "name": name})
+            elif path == "/api/vidsum/channels/remove":
+                with LOCK:
+                    d = _load_ch()
+                    d["channels"] = [c for c in d["channels"] if c["id"] != req.get("id")]
+                    _save_ch(d)
+                handler._json({"ok": True})
+            elif path == "/api/vidsum/channels/run":
+                threading.Thread(target=watch_once, daemon=True).start()
+                handler._json({"ok": True, "started": True})
+            else:
+                return False
+        except Exception as e:
+            handler._json({"ok": False, "error": str(e)[:200]}, 400)
+        return True
     if path == "/api/vidsum/article/delete":
         user = current_user(handler)
         if not (user and user.get("admin")):
