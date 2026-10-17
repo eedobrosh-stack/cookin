@@ -53,6 +53,46 @@ def _save_jobs(j):
     os.replace(tmp, JOBS_PATH)
 
 
+EVENTS_PATH = os.path.join(multiuser.DATA_DIR, "vidsum_events.jsonl")
+EV_LOCK = threading.Lock()
+_STAGE = {"needs_transcript": "queued", "running": "writing", "queued": "transcript", "done": "done",
+          "failed": "failed", "no_captions": "no_captions"}
+
+
+def _event(vid, stage, detail="", rec=None):
+    """Append one line to the live activity log shown at /vidsum/logs."""
+    rec = rec or {}
+    ev = {"t": time.strftime("%Y-%m-%d %H:%M:%S"), "vid": vid, "stage": stage, "title": rec.get("title") or "",
+          "channel": rec.get("channel") or "", "detail": _scrub(detail)[:300], "slug": rec.get("slug") or ""}
+    try:
+        with EV_LOCK:
+            os.makedirs(os.path.dirname(EVENTS_PATH), exist_ok=True)
+            with open(EVENTS_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(ev, ensure_ascii=False) + "\n")
+            if os.path.getsize(EVENTS_PATH) > 3_000_000:            # keep the newest half
+                with open(EVENTS_PATH, encoding="utf-8") as f:
+                    lines = f.readlines()
+                with open(EVENTS_PATH, "w", encoding="utf-8") as f:
+                    f.writelines(lines[len(lines) // 2:])
+    except OSError:
+        pass
+
+
+def _recent_events(limit=300):
+    try:
+        with EV_LOCK, open(EVENTS_PATH, encoding="utf-8") as f:
+            lines = f.readlines()[-limit:]
+    except OSError:
+        return []
+    out = []
+    for ln in reversed(lines):
+        try:
+            out.append(json.loads(ln))
+        except ValueError:
+            pass
+    return out
+
+
 def _set_job(vid, **kw):
     with LOCK:
         jobs = _load_jobs()
@@ -61,6 +101,9 @@ def _set_job(vid, **kw):
         jobs.setdefault(vid, {}).update(kw)
         jobs[vid]["updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
         _save_jobs(jobs)
+        rec = dict(jobs[vid])
+    if "status" in kw and kw["status"] in _STAGE:
+        _event(vid, _STAGE[kw["status"]], kw.get("error") or "", rec)
 
 
 def slugify(title):
@@ -484,7 +527,7 @@ def relay_transcript(req):
     with open(os.path.join(TR_DIR, vid + ".json"), "w", encoding="utf-8") as f:
         json.dump({k: req.get(k) for k in ("transcript", "duration", "published", "title", "channel", "description", "source")},
                   f, ensure_ascii=False)
-    _set_job(vid, status="queued", error="")
+    _set_job(vid, status="queued", error="", title=req.get("title") or "", channel=req.get("channel") or "")
     threading.Thread(target=_run_luna, args=(vid,), daemon=True).start()
 
 
@@ -784,6 +827,7 @@ _ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 NEWS_PAGE = os.path.join(_ASSETS, "vidsum_news.html")
 V1_PAGE = os.path.join(_ASSETS, "vidsum_discover.html")
 SOURCES_PAGE = os.path.join(_ASSETS, "vidsum_sources.html")
+LOGS_PAGE = os.path.join(_ASSETS, "vidsum_logs.html")
 
 
 def _serve(handler, path):
@@ -864,6 +908,17 @@ def handle_get(handler, path, qs):
         return True
     if path in ("/vidsum/sources", "/vidsum/sources/"):
         _serve(handler, SOURCES_PAGE)
+        return True
+    if path in ("/vidsum/logs", "/vidsum/logs/"):
+        _serve(handler, LOGS_PAGE)
+        return True
+    if path == "/api/vidsum/logs":
+        jobs = _load_jobs()
+        cnt = {}
+        for j in jobs.values():
+            cnt[j.get("status", "?")] = cnt.get(j.get("status", "?"), 0) + 1
+        handler._json({"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "summary": cnt, "total": len(jobs),
+                       "events": _recent_events(int((qs.get("limit") or ["300"])[0]))})
         return True
     if path == "/api/vidsum/sources":
         user = current_user(handler)
@@ -977,6 +1032,13 @@ def handle_post(handler, path, req):
         try:
             if path == "/api/vidsum/relay/transcript":
                 relay_transcript(req)
+                handler._json({"ok": True})
+            elif path == "/api/vidsum/relay/event":
+                vid = str(req.get("vid") or "")
+                stage = req.get("stage") if req.get("stage") in ("fetching", "rate_limited") else None
+                if stage and re.fullmatch(r"[\w-]{11}", vid):
+                    rec = _load_jobs().get(vid, {})
+                    _event(vid, stage, str(req.get("detail") or ""), rec)
                 handler._json({"ok": True})
             elif path == "/api/vidsum/relay/fail":
                 _set_job(str(req.get("vid")), status="no_captions", error=str(req.get("reason") or "")[:200])

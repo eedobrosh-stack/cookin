@@ -774,7 +774,7 @@ class Handler(SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return
-        if self._is_main_host() and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/relay/queue")):
+        if self._is_main_host() and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/relay/queue")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return

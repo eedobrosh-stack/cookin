@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>יומן | וידסומ</title>
+  <meta name="description" content="חדשות מתוך סיכומי וידאו ופודקאסטים">
+  <style>
+    :root { --red:#e3222b; --red-dark:#b9141c; --ink:#171717; --muted:#6c6c6c; --line:#e5e5e5; --paper:#fff; --soft:#f4f4f4; --yellow:#ffc400; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:#fff; font-family:Arial, "Noto Sans Hebrew", sans-serif; }
+    a { color:inherit; text-decoration:none; }
+    .topline { height:5px; background:var(--red); }
+    .utility { border-bottom:1px solid var(--line); color:#777; font-size:12px; }
+    .utility-inner, .masthead, .nav, main, .footer-inner { max-width:1180px; margin:auto; padding-inline:22px; }
+    .utility-inner { min-height:34px; display:flex; align-items:center; justify-content:space-between; gap:18px; }
+    .utility-links { display:flex; gap:18px; }
+    .live { color:var(--red); font-weight:700; }
+    .masthead { height:102px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+    .brand { display:flex; align-items:baseline; gap:10px; }
+    .brand-mark { color:var(--red); font-weight:900; font-size:50px; letter-spacing:-5px; line-height:1; }
+    .brand-note { color:#777; font-size:13px; border-right:1px solid #ccc; padding-right:12px; }
+    .masthead-actions { display:flex; align-items:center; gap:13px; }
+    .date { color:#777; font-size:12px; }
+    .round-btn { width:34px; height:34px; border:1px solid #d8d8d8; border-radius:50%; background:#fff; cursor:pointer; font-size:16px; }
+    .nav-wrap { border-block:1px solid var(--line); box-shadow:0 2px 0 rgba(0,0,0,.02); }
+    .nav { display:flex; min-height:48px; align-items:center; gap:0; overflow:auto; scrollbar-width:none; }
+    .nav::-webkit-scrollbar { display:none; }
+    .nav button { border:0; background:none; padding:15px 16px; font-size:15px; font-weight:700; white-space:nowrap; cursor:pointer; border-bottom:3px solid transparent; }
+    .nav button:hover, .nav button.active { color:var(--red); border-bottom-color:var(--red); }
+    main { padding-top:22px; padding-bottom:60px; }
+    .breaking { display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--line); padding-bottom:13px; margin-bottom:20px; font-size:14px; }
+    .breaking b { color:#fff; background:var(--red); padding:6px 10px; font-size:12px; white-space:nowrap; }
+    .breaking span { color:#444; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .section-kicker { display:flex; align-items:center; gap:10px; margin:0 0 11px; font-size:14px; font-weight:800; color:var(--red); }
+    .section-kicker::after { content:""; height:1px; background:var(--red); flex:1; opacity:.5; }
+    .lead-grid { display:grid; grid-template-columns:1.45fr .85fr; gap:20px; border-bottom:1px solid var(--line); padding-bottom:25px; }
+    .lead { min-height:325px; display:grid; grid-template-columns:1fr 1fr; background:#151515; color:#fff; overflow:hidden; }
+    .lead-copy { padding:27px 28px; display:flex; flex-direction:column; justify-content:flex-end; }
+    .eyebrow { color:var(--yellow); font-size:12px; font-weight:700; margin-bottom:12px; }
+    .lead h1 { font-size:34px; line-height:1.08; margin:0 0 12px; letter-spacing:-1.2px; }
+    .lead .subtitle { color:#ddd; font-size:16px; line-height:1.45; margin:0 0 17px; }
+    .meta { color:#999; font-size:12px; display:flex; gap:8px; align-items:center; }
+    .lead-art, .thumb { position:relative; overflow:hidden; background:linear-gradient(135deg,#8e121a 0%,#ed343c 48%,#f3a400 100%); }
+    .lead-art::before, .thumb::before { content:""; position:absolute; inset:12% -12% -12% 14%; border:1px solid rgba(255,255,255,.44); transform:rotate(-18deg); box-shadow:0 0 0 18px rgba(0,0,0,.08), 0 0 0 37px rgba(255,255,255,.11); }
+    .lead-art::after, .thumb::after { content:"וידסומ"; position:absolute; inset:auto 20px 18px auto; color:rgba(255,255,255,.74); font-size:21px; font-weight:900; letter-spacing:-2px; }
+    .side-latest { display:flex; flex-direction:column; gap:0; }
+    .side-item { padding:0 0 17px; margin-bottom:17px; border-bottom:1px solid var(--line); }
+    .side-item:last-child { margin-bottom:0; }
+    .side-item .tag { color:var(--red); font-size:12px; font-weight:700; }
+    .side-item h2 { font-size:20px; line-height:1.16; margin:7px 0; }
+    .side-item p { margin:0; color:#555; line-height:1.45; font-size:14px; }
+    .section-head { display:flex; align-items:center; justify-content:space-between; margin:30px 0 12px; }
+    .section-head h2 { margin:0; font-size:24px; }
+    .section-head small { color:#888; }
+    .feed-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:19px; }
+    .card { border-top:4px solid var(--ink); background:#fff; display:flex; flex-direction:column; min-height:340px; }
+    .card.hidden { display:none; }
+    .thumb { height:128px; background:var(--tone, linear-gradient(135deg,#252525,#777)); }
+    .card-body { padding:16px 16px 17px; display:flex; flex-direction:column; flex:1; }
+    .card .tag { font-size:12px; font-weight:700; color:var(--red); }
+    .card h3 { font-size:21px; line-height:1.17; margin:8px 0 7px; letter-spacing:-.35px; }
+    .card p { margin:0; color:#555; line-height:1.45; font-size:14px; }
+    .card .meta { margin-top:auto; padding-top:15px; color:#888; border-top:1px solid var(--line); }
+    .topic-block { margin-top:36px; border-top:3px solid var(--ink); padding-top:15px; }
+    .topic-block h2 { margin:0 0 15px; font-size:24px; }
+    .topic-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:0 24px; }
+    .topic-row { display:grid; grid-template-columns:110px 1fr; gap:16px; padding:15px 0; border-bottom:1px solid var(--line); }
+    .topic-row .topic { font-weight:800; color:var(--red); font-size:13px; }
+    .topic-row h3 { margin:0 0 5px; font-size:18px; line-height:1.18; }
+    .topic-row p { margin:0; color:#666; font-size:13px; line-height:1.4; }
+    footer { background:#222; color:#aaa; padding:28px 0; font-size:12px; }
+    .footer-inner { display:flex; justify-content:space-between; gap:20px; }
+    .prototype { color:#fff; background:#383838; padding:4px 8px; }
+    @media (max-width:800px) {
+      .masthead { height:82px; }
+      .brand-mark { font-size:39px; }
+      .brand-note, .date { display:none; }
+      .lead-grid, .lead { grid-template-columns:1fr; }
+      .lead-art { min-height:150px; order:-1; }
+      .lead-copy { min-height:255px; }
+      .lead h1 { font-size:29px; }
+      .feed-grid { grid-template-columns:repeat(2,1fr); }
+      .topic-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width:520px) {
+      .utility-links { display:none; }
+      .utility-inner { justify-content:flex-start; }
+      main, .utility-inner, .masthead, .nav, .footer-inner { padding-inline:14px; }
+      .nav button { padding-inline:11px; font-size:13px; }
+      .feed-grid { grid-template-columns:1fr; }
+      .card { min-height:290px; }
+      .section-head { align-items:flex-start; flex-direction:column; gap:4px; }
+    }
+  
+    a.side-item { display:block; }
+    a.card h3, a.side-item h2, a.topic-link h3 { color:inherit; }
+    .thumb.img { background-size:cover; background-position:center; background-repeat:no-repeat; }
+    .thumb.img::before, .thumb.img::after, .lead-art.img::before, .lead-art.img::after { display:none; }
+    .lead-art.img { background-size:cover; background-position:center; background-repeat:no-repeat; min-height:100%; }
+    .empty { color:#888; padding:40px 0; text-align:center; }
+    .card:hover h3, .side-item:hover h2, .lead:hover h1, .topic-row:hover h3 { text-decoration:underline; }
+
+    h1.page { font-size:34px; margin:6px 0 4px; letter-spacing:-1px; }
+    .sub2 { color:#666; margin:0 0 18px; font-size:15px; }
+    .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin:0 0 18px; }
+    .tile { border:1px solid var(--line); border-top:4px solid var(--c,#999); padding:10px 14px; background:#fff; cursor:pointer; }
+    .tile b { display:block; font-size:28px; line-height:1.1; }
+    .tile span { font-size:13px; color:#666; }
+    .tile.on { background:#faf6e6; }
+    .now { display:flex; align-items:center; gap:10px; background:#171717; color:#fff; padding:12px 16px; margin:0 0 16px; font-size:15px; }
+    .now .dot { width:10px; height:10px; border-radius:50%; background:#2fbf71; animation:pulse 1.2s infinite; flex:none; }
+    .now.idle .dot { background:#888; animation:none; }
+    @keyframes pulse { 50% { opacity:.25; } }
+    .bar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:0 0 10px; flex-wrap:wrap; font-size:13px; color:#777; }
+    .chips button { border:1px solid #cfcfcf; background:#fff; padding:5px 12px; border-radius:20px; font-size:13px; cursor:pointer; margin-inline-start:6px; }
+    .chips button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+    table { width:100%; border-collapse:collapse; background:#fff; }
+    th { text-align:right; font-size:12px; color:#777; padding:9px 12px; border-bottom:2px solid var(--ink); white-space:nowrap; }
+    td { padding:9px 12px; border-bottom:1px solid var(--line); font-size:14px; vertical-align:top; }
+    td.t { white-space:nowrap; color:#777; font-size:13px; direction:ltr; text-align:right; }
+    td.v a { color:#1556d6; font-weight:700; }
+    td.v small { display:block; color:#888; font-size:12px; margin-top:2px; }
+    td.d { color:#8a1b1b; font-size:13px; max-width:340px; word-break:break-word; }
+    .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; background:var(--bg,#eee); color:var(--fg,#333); }
+    .s-queued { --bg:#ececec; --fg:#555; } .s-fetching { --bg:#e3edff; --fg:#1556d6; } .s-rate_limited { --bg:#fff1d6; --fg:#8a5a00; }
+    .s-transcript { --bg:#e3edff; --fg:#1556d6; } .s-writing { --bg:#efe4fb; --fg:#6a2fa3; } .s-done { --bg:#dcf3e4; --fg:#18723a; }
+    .s-failed, .s-no_captions { --bg:#fde0e0; --fg:#a31a1a; }
+    .scroll { overflow-x:auto; }
+    .live2 { color:#1a7a3a; font-weight:700; }
+    @media (max-width:640px) { main, .utility-inner, .masthead, .footer-inner { padding-inline:14px; } h1.page { font-size:27px; } }
+</style>
+</head>
+<body>
+  <div class="topline"></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a href="/vidsum/articles">כל הסיכומים</a><a href="/vidsum/sources">מקורות</a><a href="/vidsum/v1">הוספת סרטון</a></div></div></div>
+  <header class="masthead">
+    <a class="brand" href="/vidsum"><span class="brand-mark">וידסומ</span><span class="brand-note">חדשות מתוך הסיכומים</span></a>
+    <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
+  </header>
+  <main>
+    <h1 class="page">יומן פעילות</h1>
+    <p class="sub2">משיכת כתוביות, כתיבת כתבות, הצלחות וכשלונות, בזמן אמת. מתרענן כל כמה שניות.</p>
+    <div class="now idle" id="now"><span class="dot"></span><span id="nowtext">טוען…</span></div>
+    <div class="tiles" id="tiles"></div>
+    <div class="bar"><div class="chips" id="chips"></div><span id="stamp"></span></div>
+    <div class="scroll"><table>
+      <thead><tr><th>שעה</th><th>שלב</th><th>סרטון</th><th>פרטים</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="4">טוען…</td></tr></tbody>
+    </table></div>
+  </main>
+  <footer><div class="footer-inner"><span>וידסומ · פורטל חדשות המבוסס על סיכומי וידאו</span><span>Summarized by vidsum skill (by Mr. Brosh)</span></div></footer>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const STAGE = {queued:'בתור', fetching:'מושך כתוביות', rate_limited:'יוטיוב הגביל, ינסה שוב', transcript:'כתוביות התקבלו', writing:'כותב כתבה', done:'פורסם', failed:'נכשל', no_captions:'אין כתוביות'};
+const GROUP = {all:null, ok:['done'], fail:['failed','no_captions'], active:['queued','fetching','rate_limited','transcript','writing']};
+const TILES = [['done','פורסמו','#2fbf71'],['writing','בכתיבה','#8a4fd0'],['queued','כתוביות התקבלו, ממתינות לכתיבה','#1556d6'],['needs_transcript','ממתינות לכתוביות','#999'],['no_captions','אין כתוביות','#d33'],['failed','נכשלו','#d33']];
+let FILTER='all', DATA=null;
+function when(s){ const d=new Date(s.replace(' ','T')+'Z'); return d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · '+d.toLocaleDateString('he-IL',{day:'numeric',month:'numeric'}); }
+function render(){
+  if(!DATA) return;
+  const sm = DATA.summary;
+  $('tiles').innerHTML = TILES.map(([k,l,c])=>'<div class="tile" style="--c:'+c+'"><b>'+(sm[k]||0)+'</b><span>'+l+'</span></div>').join('');
+  $('chips').innerHTML = [['all','הכל'],['active','בתהליך'],['ok','הצלחות'],['fail','כשלונות']].map(([k,l])=>'<button data-f="'+k+'" class="'+(k===FILTER?'on':'')+'">'+l+'</button>').join('');
+  $('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f;render();});
+  const g = GROUP[FILTER], evs = DATA.events.filter(e=>!g||g.includes(e.stage));
+  $('rows').innerHTML = evs.map(e=>'<tr><td class="t">'+esc(when(e.t))+'</td><td><span class="badge s-'+esc(e.stage)+'">'+esc(STAGE[e.stage]||e.stage)+'</span></td>'
+    +'<td class="v"><a href="'+(e.slug&&e.stage==='done'?'/vidsum/article/'+encodeURIComponent(e.slug):'https://www.youtube.com/watch?v='+esc(e.vid))+'" target="_blank" rel="noopener">'+esc(e.title||e.vid)+'</a>'
+    +(e.channel?'<small>'+esc(e.channel)+'</small>':'')+'</td><td class="d">'+esc(e.detail)+'</td></tr>').join('') || '<tr><td colspan="4">אין אירועים להצגה.</td></tr>';
+  const last = DATA.events[0], busy = last && ['fetching','writing','rate_limited','transcript'].includes(last.stage) && (Date.now()-new Date(last.t.replace(' ','T')+'Z'))<15*60e3;
+  $('now').className = 'now'+(busy?'':' idle');
+  $('nowtext').textContent = last ? ((busy?'עכשיו: ':'פעילות אחרונה: ')+(STAGE[last.stage]||last.stage)+' · '+(last.title||last.vid)) : 'אין פעילות עדיין';
+  $('stamp').innerHTML = '<span class="live2">●</span> עודכן '+new Date().toLocaleTimeString('he-IL')+' · '+DATA.total+' משימות במערכת';
+}
+async function tick(){ try{ DATA = await (await fetch('/api/vidsum/logs?limit=400')).json(); render(); }catch(e){ $('stamp').textContent='שגיאת רענון'; } }
+$('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+tick(); setInterval(tick, 4000);
+</script>
+</body>
+</html>

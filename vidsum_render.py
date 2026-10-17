@@ -130,7 +130,7 @@ def render(a, latest=(), base="", disclaimer=""):
     share_txt = urllib.parse.quote(a["title"], safe="")
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(_he_date(a.get("published") or ""))}</span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span>'
-           f'<a href="{base}/vidsum/articles">כל הסיכומים</a><a href="{base}/vidsum/sources">מקורות</a><a href="{base}/vidsum/v1">הוספת סרטון</a></div></div></div>'
+           f'<a href="{base}/vidsum/articles">כל הסיכומים</a><a href="{base}/vidsum/sources">מקורות</a><a href="{base}/vidsum/logs">יומן</a><a href="{base}/vidsum/v1">הוספת סרטון</a></div></div></div>'
            f'<header class="masthead"><a class="brand" href="{base}/vidsum"><span class="brand-mark">וידסומ</span>'
            f'<span class="brand-note">חדשות מתוך הסיכומים</span></a></header>'
            f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">ראשי</a>{nav}</nav></div>',
