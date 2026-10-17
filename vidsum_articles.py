@@ -288,7 +288,7 @@ def summarize(vid):
                 nb["speaker"] = (b.get("speaker") or "").strip()
             blocks.append(nb)
     if sum(1 for b in blocks if b["type"] == "p") < 3:
-        raise RuntimeError("empty article")
+        raise RuntimeError(f"empty article: blocks={[(b.get('type'), len(b.get('text') or '')) for b in data.get('blocks', [])][:12]} finish={fin} keys={list(data)}")
     return {"title": data["title"].strip(), "standfirst": data.get("standfirst", "").strip(), "blocks": blocks,
             "key_points": [k.strip() for k in data.get("key_points", []) if k.strip()][:6],
             "topic": data.get("topic") if data.get("topic") in TOPICS else "תרבות",
