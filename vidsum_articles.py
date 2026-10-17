@@ -454,7 +454,7 @@ def submit(url, admin, engine="luna"):
             return 200, {"ok": True, "id": vid, "status": cur["status"]}
         active = sum(1 for j in jobs.values() if j.get("status") in ("queued", "running"))
         waiting = sum(1 for j in jobs.values() if j.get("status") == "needs_transcript")
-        if active >= MAX_ACTIVE or waiting >= MAX_WAITING:
+        if (active >= MAX_ACTIVE and not admin) or waiting >= MAX_WAITING:
             return 429, {"ok": False, "error": "busy, try again in a few minutes"}
         if not admin:
             today = time.strftime("%Y-%m-%d")
