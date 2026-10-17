@@ -528,7 +528,7 @@ JARCUD_ARTIFACTS = """<!doctype html>
 <a class="card" href="/lielmali"><span class="e">&#128373;&#65039;</span><span>Where in the World are Liel &amp; Mali?<small>The detective game</small></span></a>
 <a class="card" href="/barrace"><span class="e">&#127937;</span><span>Bar Race<small>7-color racing game</small></span></a>
 <a class="card" href="/ski2027"><span class="e">&#127935;</span><span>Ski 2027<small>chalet candidates, 17–22 Feb 2027</small></span></a>
-<a class="card" href="/vidsum"><span class="e">&#127916;</span><span>Vidsum Discover<small>Topic search &rarr; queue episodes to summarize</small></span></a>
+<a class="card" href="/vidsum"><span class="e">&#127916;</span><span>Pawed<small>News from podcast &amp; video summaries</small></span></a>
 <a class="home" href="/">&#128081; Jarcud</a>
 """
 
@@ -774,7 +774,7 @@ class Handler(SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return
-        if self._is_main_host() and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/relay/queue")):
+        if self._is_main_host() and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/pawed")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/relay/queue")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return

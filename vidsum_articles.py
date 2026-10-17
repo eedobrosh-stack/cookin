@@ -26,7 +26,7 @@ WORKER = threading.Semaphore(1)          # one Gemini video job at a time
 PUBLIC_DAILY_CAP = 15                    # non-admin submissions per day (admin unlimited)
 MAX_ACTIVE = 8
 ACCENT = "#2c5f7c"
-HEADNOTE = "Summarized by vidsum skill (by Mr. Brosh)"
+HEADNOTE = "Summarized by Pawed (by Mr. Brosh)"
 
 _YT_RE = re.compile(r"(?:youtu\.be/|youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/|v/))([\w-]{11})")
 
@@ -581,7 +581,7 @@ def _page(title, body, desc=""):
 
 def article_html(a):
     e = _html.escape
-    out = ['<p class="kicker"><a href="/vidsum/articles">Vidsum &middot; כל הסיכומים</a></p>',
+    out = ['<p class="kicker"><a href="/vidsum/articles">Pawed &middot; כל הסיכומים</a></p>',
            f'<h1>{e(a["title"])}</h1>']
     if a.get("subtitle"):
         out.append(f'<p class="sub">{e(a["subtitle"])}</p>')
@@ -605,7 +605,7 @@ def index_html():
     items = "".join(
         f'<a class="item" href="/vidsum/article/{urllib.parse.quote(a["slug"])}">{e(a["title"])}'
         f'<small>{e(a.get("channel", ""))} &middot; {e(a["created"][:10])}</small></a>' for a in arts)
-    body = ('<p class="kicker"><a href="/vidsum">&larr; Vidsum</a></p><h1>סיכומי וידאו</h1>'
+    body = ('<p class="kicker"><a href="/vidsum">&larr; Pawed</a></p><h1>סיכומי וידאו</h1>'
             f'<div class="list">{items or "<p class=sub>אין עדיין סיכומים.</p>"}</div>')
     return _page("סיכומי וידאו", body)
 
@@ -902,6 +902,19 @@ def handle_get(handler, path, qs):
         handler.send_header("Location", "/vidsum")
         handler.send_header("Content-Length", "0")
         handler.end_headers()
+        return True
+    if path == "/vidsum/pawed-logo.png":
+        try:
+            with open(os.path.join(_ASSETS, "pawed-logo.png"), "rb") as f:
+                body = f.read()
+            handler.send_response(200)
+            handler.send_header("Content-Type", "image/png")
+            handler.send_header("Content-Length", str(len(body)))
+            handler.send_header("Cache-Control", "public, max-age=86400")
+            handler.end_headers()
+            handler.wfile.write(body)
+        except OSError:
+            handler._json({"error": "logo missing"}, 404)
         return True
     if path in ("/vidsum/v1", "/vidsum/v1/"):
         _serve(handler, V1_PAGE)

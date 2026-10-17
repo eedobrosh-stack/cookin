@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>יומן | וידסומ</title>
+  <title>יומן | Pawed</title>
   <meta name="description" content="חדשות מתוך סיכומי וידאו ופודקאסטים">
   <style>
     :root { --red:#e3222b; --red-dark:#b9141c; --ink:#171717; --muted:#6c6c6c; --line:#e5e5e5; --paper:#fff; --soft:#f4f4f4; --yellow:#ffc400; }
@@ -43,7 +43,7 @@
     .meta { color:#999; font-size:12px; display:flex; gap:8px; align-items:center; }
     .lead-art, .thumb { position:relative; overflow:hidden; background:linear-gradient(135deg,#8e121a 0%,#ed343c 48%,#f3a400 100%); }
     .lead-art::before, .thumb::before { content:""; position:absolute; inset:12% -12% -12% 14%; border:1px solid rgba(255,255,255,.44); transform:rotate(-18deg); box-shadow:0 0 0 18px rgba(0,0,0,.08), 0 0 0 37px rgba(255,255,255,.11); }
-    .lead-art::after, .thumb::after { content:"וידסומ"; position:absolute; inset:auto 20px 18px auto; color:rgba(255,255,255,.74); font-size:21px; font-weight:900; letter-spacing:-2px; }
+    .lead-art::after, .thumb::after { content:"Pawed"; position:absolute; inset:auto 20px 18px auto; color:rgba(255,255,255,.74); font-size:21px; font-weight:900; letter-spacing:-2px; }
     .side-latest { display:flex; flex-direction:column; gap:0; }
     .side-item { padding:0 0 17px; margin-bottom:17px; border-bottom:1px solid var(--line); }
     .side-item:last-child { margin-bottom:0; }
@@ -129,13 +129,18 @@
     .scroll { overflow-x:auto; }
     .live2 { color:#1a7a3a; font-weight:700; }
     @media (max-width:640px) { main, .utility-inner, .masthead, .footer-inner { padding-inline:14px; } h1.page { font-size:27px; } }
-</style>
+
+    .brand { align-items:center; gap:12px; }
+    .brand-logo { height:58px; width:auto; display:block; }
+    .brand-mark { color:#2a211b; font-size:46px; letter-spacing:-1.5px; font-family:"Arial Black",Arial,sans-serif; }
+    .brand-note { border-right:1px solid #ccc; padding-right:12px; }
+  </style>
 </head>
 <body>
   <div class="topline"></div>
   <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a href="/vidsum/articles">כל הסיכומים</a><a href="/vidsum/sources">מקורות</a><a href="/vidsum/v1">הוספת סרטון</a></div></div></div>
   <header class="masthead">
-    <a class="brand" href="/vidsum"><span class="brand-mark">וידסומ</span><span class="brand-note">חדשות מתוך הסיכומים</span></a>
+    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span><span class="brand-note">חדשות מתוך הסיכומים</span></a>
     <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
   </header>
   <main>
@@ -149,7 +154,7 @@
       <tbody id="rows"><tr><td colspan="4">טוען…</td></tr></tbody>
     </table></div>
   </main>
-  <footer><div class="footer-inner"><span>וידסומ · פורטל חדשות המבוסס על סיכומי וידאו</span><span>Summarized by vidsum skill (by Mr. Brosh)</span></div></footer>
+  <footer><div class="footer-inner"><span>Pawed · פורטל חדשות המבוסס על סיכומי וידאו</span><span>Summarized by Pawed (by Mr. Brosh)</span></div></footer>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

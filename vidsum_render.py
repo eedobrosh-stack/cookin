@@ -31,8 +31,9 @@ a{color:inherit;text-decoration:none}
 .utility-inner{min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:18px}
 .utility-links{display:flex;gap:18px}.live{color:var(--red);font-weight:700}
 .masthead{height:96px;display:flex;align-items:center;justify-content:center}
-.brand{display:flex;align-items:baseline;gap:10px}
-.brand-mark{color:var(--red);font-weight:900;font-size:50px;letter-spacing:-5px;line-height:1}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-logo{height:58px;width:auto;display:block}
+.brand-mark{color:#2a211b;font-weight:900;font-size:46px;letter-spacing:-1.5px;line-height:1;font-family:"Arial Black",Arial,sans-serif}
 .brand-note{color:#777;font-size:13px;border-right:1px solid #ccc;padding-right:12px}
 .nav-wrap{border-block:1px solid var(--line)}
 .nav{display:flex;min-height:48px;align-items:center;justify-content:center;overflow:auto;scrollbar-width:none}
@@ -131,13 +132,13 @@ def render(a, latest=(), base="", disclaimer=""):
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(_he_date(a.get("published") or ""))}</span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span>'
            f'<a href="{base}/vidsum/articles">כל הסיכומים</a><a href="{base}/vidsum/sources">מקורות</a><a href="{base}/vidsum/logs">יומן</a><a href="{base}/vidsum/v1">הוספת סרטון</a></div></div></div>'
-           f'<header class="masthead"><a class="brand" href="{base}/vidsum"><span class="brand-mark">וידסומ</span>'
+           f'<header class="masthead"><a class="brand" href="{base}/vidsum"><img class="brand-logo" src="{base}/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span>'
            f'<span class="brand-note">חדשות מתוך הסיכומים</span></a></header>'
            f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">ראשי</a>{nav}</nav></div>',
            '<div class="page"><article>',
            f'<div class="crumbs"><a href="{base}/vidsum">ראשי</a> › <a href="{base}/vidsum#{urllib.parse.quote(a["topic"])}">{e(a["topic"])}</a></div>',
            f'<h1>{e(a["title"])}</h1><p class="standfirst">{e(a["standfirst"])}</p>',
-           f'<div class="byline"><span>מאת <b>מערכת וידסומ</b></span><span>מתוך {e(a.get("channel", "").strip())}</span>'
+           f'<div class="byline"><span>מאת <b>מערכת Pawed</b></span><span>מתוך {e(a.get("channel", "").strip())}</span>'
            f'<span>{e(_he_date(a.get("published") or ""))}</span><span>{mins} דק׳ קריאה</span>'
            f'<span class="share"><a href="https://wa.me/?text={share_txt}%20{share_url}" target="_blank" rel="noopener" title="WhatsApp">W</a>'
            f'<a href="https://www.facebook.com/sharer/sharer.php?u={share_url}" target="_blank" rel="noopener" title="Facebook">f</a>'
@@ -180,11 +181,11 @@ def render(a, latest=(), base="", disclaimer=""):
     out.append('<div class="box"><h3>לפי נושא</h3><ol>' + "".join(
         f'<li><a href="{base}/vidsum#{urllib.parse.quote(t)}"><span>{e(t)}</span><small>{cnt.get(t, 0)} כתבות</small></a></li>'
         for t in TOPICS) + "</ol></div></aside></div>")
-    out.append('<footer><div class="footer-inner"><span>וידסומ · פורטל חדשות המבוסס על סיכומי וידאו</span>'
-               '<span>Summarized by vidsum skill (by Mr. Brosh)</span></div></footer>')
+    out.append('<footer><div class="footer-inner"><span>Pawed · פורטל חדשות המבוסס על סיכומי וידאו</span>'
+               '<span>Summarized by Pawed (by Mr. Brosh)</span></div></footer>')
     desc = e(a["standfirst"])
     return (f'<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">'
-            f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(a["title"])} | וידסומ</title>'
+            f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(a["title"])} | Pawed</title>'
             f'<meta name="description" content="{desc}"><meta property="og:title" content="{e(a["title"])}">'
             f'<meta property="og:description" content="{desc}"><meta property="og:image" content="https://i.ytimg.com/vi/{e(a["vid"])}/maxresdefault.jpg">'
             f'<style>{CSS}</style></head><body style="{_theme(a["topic"])}">{"".join(out)}</body></html>')
