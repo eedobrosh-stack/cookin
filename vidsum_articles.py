@@ -213,6 +213,50 @@ def _gemini(parts, media_low=True, schema=None, max_out=32768):
     return data, tokens, cand.get("finishReason")
 
 
+# ------------------------------------------------- LunaRoute (text-only, free) ---
+LUNA_URL = "https://gw.lunaroute.com"
+LUNA_MODEL = os.environ.get("VIDSUM_LUNA_MODEL", "deepseek-4.1-flash")
+SCHEMA_HINT = """{"title": str, "standfirst": str, "topic": one of %s, "lead": str, "key_points": [str],
+ "blocks": [{"type": "h2"|"p"|"quote"|"list", "text": str, "ts": "m:ss or h:mm:ss", "speaker": str (quotes only), "items": [str] (list only)}]}""" % json.dumps(TOPICS, ensure_ascii=False)
+
+
+def _luna(prompt, max_tokens=24000):
+    key = secret("LUNAROUTE_API_KEY")
+    if not key:
+        raise RuntimeError("LUNAROUTE_API_KEY missing")
+    body = {"model": LUNA_MODEL, "max_tokens": max_tokens, "messages": [{"role": "user", "content": prompt}]}
+    last = None
+    for attempt in range(3):
+        req = urllib.request.Request(LUNA_URL + "/v1/messages", data=json.dumps(body).encode(),
+                                     headers={"Authorization": "Bearer " + key, "anthropic-version": "2023-06-01",
+                                              "content-type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=900) as r:
+                res = json.loads(r.read().decode())
+            break
+        except urllib.error.HTTPError as e:
+            last = e.read().decode()[:400]
+            if e.code in (429, 500, 502, 503, 529) and attempt < 2:
+                time.sleep(15 * (attempt + 1))
+                continue
+            raise RuntimeError(f"luna {e.code}: {last}")
+    text = "".join(c.get("text", "") for c in res.get("content", []) if c.get("type") == "text")
+    i, j = text.find("{"), text.rfind("}")
+    if i < 0 or j < i:
+        raise RuntimeError("luna returned no JSON: " + text[:200])
+    usage = res.get("usage") or {}
+    return json.loads(text[i:j + 1]), int(usage.get("input_tokens", 0)) + int(usage.get("output_tokens", 0)), res.get("stop_reason")
+
+
+def _text_prompt(title, channel, dur, transcript, retry=False):
+    p = _prompt(title, channel, dur, retry).replace("the attached YouTube video", "the video whose transcript is below")
+    p = p.replace("Return only JSON matching the schema.", "")
+    return (p + "\nThe transcript is auto-generated Hebrew speech recognition and contains word errors: infer the intended words "
+            "from context and fix obvious mistakes (names, numbers), never copy garbled text.\n"
+            "Return ONLY one JSON object, no markdown, matching this shape:\n" + SCHEMA_HINT +
+            "\n\nTRANSCRIPT (each line starts with its timestamp in brackets):\n" + transcript)
+
+
 def _oembed(vid):
     try:
         with urllib.request.urlopen("https://www.youtube.com/oembed?format=json&url=" +
@@ -293,6 +337,11 @@ def summarize(vid):
         if _ts_ok(data, dur):
             break
         log(f"vidsum {vid} bad timestamps (dur={dur}); {'retrying' if not retry else 'clamping'}")
+    return _finalize(data, dur, {"channel": channel, "src_title": title, "tokens": tokens, "method": method,
+                                 "finish": fin, "published": published})
+
+
+def _finalize(data, dur, extra):
     blocks = []
     for b in data.get("blocks", []):
         t = b.get("type")
@@ -309,37 +358,70 @@ def summarize(vid):
                 nb["speaker"] = (b.get("speaker") or "").strip()
             blocks.append(nb)
     if sum(1 for b in blocks if b["type"] == "p") < 3:
-        raise RuntimeError(f"empty article: blocks={[(b.get('type'), len(b.get('text') or '')) for b in data.get('blocks', [])][:12]} finish={fin} keys={list(data)}")
+        raise RuntimeError(f"empty article: blocks={[(b.get('type'), len(b.get('text') or '')) for b in data.get('blocks', [])][:12]} keys={list(data)}")
     return {"title": data["title"].strip(), "standfirst": data.get("standfirst", "").strip(), "blocks": blocks,
             "key_points": [k.strip() for k in data.get("key_points", []) if k.strip()][:6],
             "topic": data.get("topic") if data.get("topic") in TOPICS else "תרבות",
             "lead": (data.get("lead") or data.get("standfirst") or "").strip(),
-            "channel": channel, "src_title": title, "tokens": tokens, "method": method, "finish": fin,
-            "duration": dur, "published": published}
+            "duration": dur, **extra}
+
+
+def _save_article(vid, d):
+    slug = _unique_slug(d["title"], vid)
+    art = {"slug": slug, "vid": vid, "url": f"https://www.youtube.com/watch?v={vid}",
+           "created": time.strftime("%Y-%m-%d %H:%M:%S"), **d}
+    os.makedirs(ART_DIR, exist_ok=True)
+    tmp = os.path.join(ART_DIR, slug + ".json.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(art, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, os.path.join(ART_DIR, slug + ".json"))
+    _set_job(vid, status="done", slug=slug, title=d["title"], error="")
+    log(f"vidsum {vid} DONE slug={slug} tokens={d.get('tokens')} via {d.get('method')}")
 
 
 def _run(vid):
+    """Gemini path: Google reads the YouTube URL itself (costs tokens)."""
     with WORKER:
         _set_job(vid, status="running", started=time.strftime("%Y-%m-%d %H:%M:%S"))
         try:
-            d = summarize(vid)
-            slug = _unique_slug(d["title"], vid)
-            art = {"slug": slug, "vid": vid, "url": f"https://www.youtube.com/watch?v={vid}",
-                   "created": time.strftime("%Y-%m-%d %H:%M:%S"), **d}
-            os.makedirs(ART_DIR, exist_ok=True)
-            tmp = os.path.join(ART_DIR, slug + ".json.tmp")
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(art, f, ensure_ascii=False, indent=1)
-            os.replace(tmp, os.path.join(ART_DIR, slug + ".json"))
-            _set_job(vid, status="done", slug=slug, title=d["title"], error="")
-            log(f"vidsum {vid} DONE slug={slug} tokens={d['tokens']} via {d['method']}")
+            _save_article(vid, summarize(vid))
         except Exception as e:
             log(f"vidsum {vid} FAILED: {str(e)[:400]}")
             _set_job(vid, status="failed", error=str(e)[:300])
 
 
-def submit(url, admin):
-    """-> (http_code, payload)"""
+# ----------------------------------------------- transcript relay (free path) ---
+TR_DIR = os.path.join(multiuser.DATA_DIR, "vidsum_transcripts")
+MAX_WAITING = 800
+
+
+def _run_luna(vid):
+    """LunaRoute path: the Mac relay supplied captions; DeepSeek writes the article."""
+    with WORKER:
+        _set_job(vid, status="running", started=time.strftime("%Y-%m-%d %H:%M:%S"))
+        try:
+            with open(os.path.join(TR_DIR, vid + ".json"), encoding="utf-8") as f:
+                tr = json.load(f)
+            dur, pub = tr.get("duration"), tr.get("published")
+            title, channel = tr.get("title", ""), tr.get("channel", "")
+            data = fin = None
+            for retry in (False, True):
+                prompt = _text_prompt(title, channel, dur, tr["transcript"], retry)
+                if tr.get("description"):
+                    prompt += "\n\nVIDEO DESCRIPTION (use for names and context):\n" + tr["description"][:2500]
+                data, tokens, fin = _luna(prompt)
+                if _ts_ok(data, dur):
+                    break
+                log(f"vidsum {vid} luna bad timestamps (dur={dur}); {'retrying' if not retry else 'accepting'}")
+            _save_article(vid, _finalize(data, dur, {"channel": channel, "src_title": title, "tokens": tokens,
+                                                     "method": "luna-captions", "finish": fin, "published": pub}))
+        except Exception as e:
+            log(f"vidsum {vid} luna FAILED: {str(e)[:400]}")
+            _set_job(vid, status="failed", error=str(e)[:300])
+
+
+def submit(url, admin, engine="luna"):
+    """-> (http_code, payload). engine "luna": wait for the Mac relay's transcript; "gemini": immediate (costs tokens)."""
     vid = yt_id(url)
     if not vid:
         return 400, {"ok": False, "error": "not a YouTube link"}
@@ -349,20 +431,42 @@ def submit(url, admin):
     with LOCK:
         jobs = _load_jobs()
         cur = jobs.get(vid)
-        if cur and cur.get("status") in ("queued", "running"):
+        if cur and cur.get("status") in ("queued", "running", "needs_transcript"):
             return 200, {"ok": True, "id": vid, "status": cur["status"]}
         active = sum(1 for j in jobs.values() if j.get("status") in ("queued", "running"))
-        if active >= MAX_ACTIVE:
+        waiting = sum(1 for j in jobs.values() if j.get("status") == "needs_transcript")
+        if active >= MAX_ACTIVE or waiting >= MAX_WAITING:
             return 429, {"ok": False, "error": "busy, try again in a few minutes"}
         if not admin:
             today = time.strftime("%Y-%m-%d")
             n = sum(1 for j in jobs.values() if j.get("public") and (j.get("submitted") or "").startswith(today))
             if n >= PUBLIC_DAILY_CAP:
                 return 429, {"ok": False, "error": "daily limit reached"}
-        jobs[vid] = {"status": "queued", "public": not admin, "submitted": time.strftime("%Y-%m-%d %H:%M:%S")}
+        status = "needs_transcript" if engine == "luna" else "queued"
+        jobs[vid] = {"status": status, "engine": engine, "public": not admin,
+                     "submitted": time.strftime("%Y-%m-%d %H:%M:%S")}
         _save_jobs(jobs)
-    threading.Thread(target=_run, args=(vid,), daemon=True).start()
-    return 202, {"ok": True, "id": vid, "status": "queued"}
+    if engine != "luna":
+        threading.Thread(target=_run, args=(vid,), daemon=True).start()
+    return 202, {"ok": True, "id": vid, "status": status}
+
+
+def relay_queue(limit=15):
+    return [{"vid": v, "url": f"https://www.youtube.com/watch?v={v}", "submitted": j.get("submitted")}
+            for v, j in sorted(_load_jobs().items(), key=lambda kv: kv[1].get("submitted", ""))
+            if j.get("status") == "needs_transcript"][:limit]
+
+
+def relay_transcript(req):
+    vid = str(req.get("vid") or "")
+    if not re.fullmatch(r"[\w-]{11}", vid) or len(req.get("transcript") or "") < 200:
+        raise ValueError("bad vid or transcript too short")
+    os.makedirs(TR_DIR, exist_ok=True)
+    with open(os.path.join(TR_DIR, vid + ".json"), "w", encoding="utf-8") as f:
+        json.dump({k: req.get(k) for k in ("transcript", "duration", "published", "title", "channel", "description", "source")},
+                  f, ensure_ascii=False)
+    _set_job(vid, status="queued", error="")
+    threading.Thread(target=_run_luna, args=(vid,), daemon=True).start()
 
 
 def resume_stuck():
@@ -684,6 +788,13 @@ def handle_get(handler, path, qs):
         handler._json({"ok": True, "articles": [
             {k: a.get(k) for k in ("slug", "title", "subtitle", "vid", "channel", "created")} for a in _articles()]})
         return True
+    if path == "/api/vidsum/relay/queue":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            handler._json({"ok": True, "queue": relay_queue(int((qs.get("limit") or ["15"])[0]))})
+        return True
     if path == "/api/vidsum/diag":
         user = current_user(handler)
         if not (user and user.get("admin")):
@@ -760,6 +871,29 @@ def import_article(req):
 
 
 def handle_post(handler, path, req):
+    if path.startswith("/api/vidsum/relay/") or path == "/api/vidsum/bulk":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+            return True
+        try:
+            if path == "/api/vidsum/relay/transcript":
+                relay_transcript(req)
+                handler._json({"ok": True})
+            elif path == "/api/vidsum/relay/fail":
+                _set_job(str(req.get("vid")), status="no_captions", error=str(req.get("reason") or "")[:200])
+                handler._json({"ok": True})
+            elif path == "/api/vidsum/bulk":
+                res = {"added": 0, "existing": 0, "rejected": 0}
+                for u in (req.get("urls") or [])[:500]:
+                    code, p = submit(str(u), True, req.get("engine", "luna"))
+                    res["existing" if p.get("existing") else "added" if code in (200, 202) else "rejected"] += 1
+                handler._json({"ok": True, **res})
+            else:
+                return False
+        except Exception as e:
+            handler._json({"ok": False, "error": str(e)[:200]}, 400)
+        return True
     if path == "/api/vidsum/article/import":
         user = current_user(handler)
         if not (user and user.get("admin")):
@@ -808,7 +942,8 @@ def handle_post(handler, path, req):
         return True
     if path == "/api/vidsum/summarize":
         user = current_user(handler)
-        code, payload = submit(str(req.get("url") or ""), bool(user and user.get("admin")))
+        is_admin = bool(user and user.get("admin"))
+        code, payload = submit(str(req.get("url") or ""), is_admin, req.get("engine", "luna") if is_admin else "luna")
         handler._json(payload, code)
         return True
     return False

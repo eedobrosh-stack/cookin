@@ -768,7 +768,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self._is_main_host() and p == "/":
             self._html(JARCUD_LANDING)
             return
-        if self._is_main_host() and (p.startswith(("/vidsum/art", "/vidsum/news")) or p in ("/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels", "/api/vidsum/diag")):
+        if self._is_main_host() and (p.startswith(("/vidsum/art", "/vidsum/news")) or p in ("/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/relay/queue")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return
@@ -931,7 +931,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path.split("?")[0]
-        if p in ("/api/vidsum/summarize", "/api/vidsum/article/delete", "/api/vidsum/article/import") or p.startswith("/api/vidsum/channels/"):
+        if p in ("/api/vidsum/summarize", "/api/vidsum/article/delete", "/api/vidsum/article/import") or p.startswith(("/api/vidsum/channels/", "/api/vidsum/relay/")) or p == "/api/vidsum/bulk":
             if vidsum_articles.handle_post(self, p, self._read_json()):
                 return
         if p.startswith("/api/admin/cands"):
