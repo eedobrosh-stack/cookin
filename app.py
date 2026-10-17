@@ -768,7 +768,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self._is_main_host() and p == "/":
             self._html(JARCUD_LANDING)
             return
-        if self._is_main_host() and (p.startswith(("/vidsum/art", "/vidsum/news")) or p in ("/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels")):
+        if self._is_main_host() and (p.startswith(("/vidsum/art", "/vidsum/news")) or p in ("/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels", "/api/vidsum/diag")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return

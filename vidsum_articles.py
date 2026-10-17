@@ -684,6 +684,37 @@ def handle_get(handler, path, qs):
         handler._json({"ok": True, "articles": [
             {k: a.get(k) for k in ("slug", "title", "subtitle", "vid", "channel", "created")} for a in _articles()]})
         return True
+    if path == "/api/vidsum/diag":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+            return True
+        vid = (qs.get("id") or ["h_hXk-1fP50"])[0]
+        res = {}
+        try:
+            h = _http(f"https://www.youtube.com/watch?v={vid}")
+            res["watch_page"] = {"bytes": len(h), "lengthSeconds": bool(re.search(r'"lengthSeconds"', h)),
+                                 "bot_wall": ("confirm you" in h and "bot" in h), "consent": "consent.youtube" in h}
+        except Exception as e:
+            res["watch_page"] = {"error": str(e)[:160]}
+        import subprocess, sys, tempfile, glob
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                p = subprocess.run([sys.executable, "-m", "yt_dlp", "--skip-download", "--write-auto-subs", "--sub-langs", "he,iw,en.*",
+                                    "--sub-format", "vtt", "--no-warnings", "-o", os.path.join(tmp, "s"),
+                                    f"https://www.youtube.com/watch?v={vid}"], capture_output=True, text=True, timeout=90)
+                res["captions"] = {"files": [os.path.basename(f) for f in glob.glob(os.path.join(tmp, "*.vtt"))],
+                                   "stderr": (p.stderr or "")[-300:]}
+        except Exception as e:
+            res["captions"] = {"error": str(e)[:200]}
+        try:
+            p = subprocess.run([sys.executable, "-m", "yt_dlp", "-f", "bestaudio", "-g", "--no-warnings",
+                                f"https://www.youtube.com/watch?v={vid}"], capture_output=True, text=True, timeout=90)
+            res["audio_url"] = {"ok": p.returncode == 0 and p.stdout.startswith("http"), "stderr": (p.stderr or "")[-300:]}
+        except Exception as e:
+            res["audio_url"] = {"error": str(e)[:200]}
+        handler._json({"ok": True, **res})
+        return True
     if path == "/api/vidsum/job":
         vid = (qs.get("id") or [""])[0]
         j = _load_jobs().get(vid)
