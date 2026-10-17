@@ -103,7 +103,7 @@ SCHEMA = {
             "ts": {"type": "STRING"},
             "speaker": {"type": "STRING"},
             "items": {"type": "ARRAY", "items": {"type": "STRING"}}},
-            "required": ["type"]}},
+            "required": ["type", "text", "ts"]}},
     },
     "required": ["title", "standfirst", "topic", "lead", "key_points", "blocks"],
 }
@@ -160,7 +160,7 @@ Write like an Israeli news site feature, not like a meeting summary:
 - title: a sharp, specific Hebrew headline stating the main claim or story (no clickbait, no question marks unless essential). standfirst: 1-2 sentences under the headline. lead: one 200-char teaser.
 - topic: the single best-fitting section from the allowed list.
 - key_points: 4-5 short Hebrew sentences ("עיקרי הדברים").
-- blocks: the article body, in order. Use type "h2" for subheadings (a new one every 2-4 paragraphs), "p" for flowing prose paragraphs, "list" (with "items") at most once for a real enumeration, and "quote" for pull quotes.
+- blocks: the article body, in order. Every block MUST carry its content in "text" (for "list" blocks put the bullets in "items" and leave "text" empty). Use type "h2" for subheadings (a new one every 2-4 paragraphs), "p" for flowing prose paragraphs, "list" (with "items") at most once for a real enumeration, and "quote" for pull quotes.
 - About {words} Hebrew words in total across the "p" blocks. Third person, past/present tense news style, attribute claims ("לדבריו", "לטענתו"), keep concrete names, numbers, examples and the logic of the argument. Do not invent facts; do not editorialize.
 - Every "p" block has "ts": the timestamp (m:ss or h:mm:ss) where its content is said. Cover the whole video to the end, chronologically.
 - Include {quotes} "quote" blocks: the MOST PROVOCATIVE, punchy, quotable statements actually spoken, copied as close to verbatim as you can hear them, each under 25 words, with "speaker" (name + a few words of context, e.g. "אלון אולמן, על מנהיגות") and "ts". Place each quote right after the paragraph it relates to.
@@ -277,6 +277,8 @@ def summarize(vid):
     blocks = []
     for b in data.get("blocks", []):
         t = b.get("type")
+        if t in ("p", "quote") and not (b.get("text") or "").strip() and b.get("items"):
+            b = {**b, "text": " ".join(str(i) for i in b["items"])}      # model put prose in items
         if t == "list" and b.get("items"):
             blocks.append({"type": "list", "items": [str(i) for i in b["items"]]})
         elif t in ("h2", "p", "quote") and (b.get("text") or "").strip():
