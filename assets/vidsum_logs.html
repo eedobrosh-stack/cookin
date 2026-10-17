@@ -155,7 +155,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const STAGE = {queued:'בתור', fetching:'מושך כתוביות', rate_limited:'יוטיוב הגביל, ינסה שוב', transcript:'כתוביות התקבלו', writing:'כותב כתבה', done:'פורסם', failed:'נכשל', no_captions:'אין כתוביות'};
 const GROUP = {all:null, ok:['done'], fail:['failed','no_captions'], active:['queued','fetching','rate_limited','transcript','writing']};
-const TILES = [['done','פורסמו','#2fbf71'],['writing','בכתיבה','#8a4fd0'],['queued','כתוביות התקבלו, ממתינות לכתיבה','#1556d6'],['needs_transcript','ממתינות לכתוביות','#999'],['no_captions','אין כתוביות','#d33'],['failed','נכשלו','#d33']];
+const TILES = [['done','פורסמו','#2fbf71'],['running','בכתיבה עכשיו','#8a4fd0'],['queued','כתוביות התקבלו, ממתינות לכתיבה','#1556d6'],['needs_transcript','ממתינות לכתוביות','#999'],['no_captions','אין כתוביות','#d33'],['failed','נכשלו','#d33']];
 let FILTER='all', DATA=null;
 function when(s){ const d=new Date(s.replace(' ','T')+'Z'); return d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · '+d.toLocaleDateString('he-IL',{day:'numeric',month:'numeric'}); }
 function render(){
