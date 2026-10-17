@@ -226,26 +226,31 @@ def _luna(prompt, max_tokens=24000):
         raise RuntimeError("LUNAROUTE_API_KEY missing")
     body = {"model": LUNA_MODEL, "max_tokens": max_tokens, "messages": [{"role": "user", "content": prompt}]}
     last = None
-    for attempt in range(3):
+    for attempt in range(4):
         req = urllib.request.Request(LUNA_URL + "/v1/messages", data=json.dumps(body).encode(),
                                      headers={"Authorization": "Bearer " + key, "anthropic-version": "2023-06-01",
                                               "content-type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=900) as r:
                 res = json.loads(r.read().decode())
-            break
         except urllib.error.HTTPError as e:
             last = e.read().decode()[:400]
-            if e.code in (429, 500, 502, 503, 529) and attempt < 2:
+            if e.code in (429, 500, 502, 503, 529) and attempt < 3:
                 time.sleep(15 * (attempt + 1))
                 continue
             raise RuntimeError(f"luna {e.code}: {last}")
-    text = "".join(c.get("text", "") for c in res.get("content", []) if c.get("type") == "text")
-    i, j = text.find("{"), text.rfind("}")
-    if i < 0 or j < i:
-        raise RuntimeError("luna returned no JSON: " + text[:200])
-    usage = res.get("usage") or {}
-    return json.loads(text[i:j + 1]), int(usage.get("input_tokens", 0)) + int(usage.get("output_tokens", 0)), res.get("stop_reason")
+        text = "".join(c.get("text", "") for c in res.get("content", []) if c.get("type") == "text")
+        i, j = text.find("{"), text.rfind("}")
+        usage = res.get("usage") or {}
+        try:
+            if i < 0 or j < i:
+                raise ValueError("no JSON in reply: " + text[:120])
+            return (json.loads(text[i:j + 1]), int(usage.get("input_tokens", 0)) + int(usage.get("output_tokens", 0)),
+                    res.get("stop_reason"))
+        except ValueError as e:                      # malformed JSON (often an unescaped quote in Hebrew): ask again
+            last = str(e)[:200]
+            log(f"vidsum luna bad JSON (attempt {attempt + 1}): {last}")
+    raise RuntimeError("luna kept returning invalid JSON: " + str(last))
 
 
 def _text_prompt(title, channel, dur, transcript, retry=False):
@@ -253,7 +258,7 @@ def _text_prompt(title, channel, dur, transcript, retry=False):
     p = p.replace("Return only JSON matching the schema.", "")
     return (p + "\nThe transcript is auto-generated Hebrew speech recognition and contains word errors: infer the intended words "
             "from context and fix obvious mistakes (names, numbers), never copy garbled text.\n"
-            "Return ONLY one JSON object, no markdown, matching this shape:\n" + SCHEMA_HINT +
+            "Return ONLY one valid JSON object, no markdown. Never use the ASCII double-quote character inside a string value (use ״ or single quotes instead), so the JSON stays valid. Shape:\n" + SCHEMA_HINT +
             "\n\nTRANSCRIPT (each line starts with its timestamp in brackets):\n" + transcript)
 
 
