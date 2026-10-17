@@ -110,6 +110,15 @@ SCHEMA = {
 
 
 _META = {}
+_LAST_USAGE = {}
+
+
+def _dur_from_usage():
+    """Video length from Gemini's own token accounting (audio = 32 tokens/s) when the watch page is unreachable."""
+    for d in (_LAST_USAGE.get('promptTokensDetails') or []):
+        if d.get('modality') == 'AUDIO' and d.get('tokenCount'):
+            return round(d['tokenCount'] / 32)
+    return None
 
 
 def _video_meta(vid):
@@ -199,6 +208,8 @@ def _gemini(parts, media_low=True, schema=None, max_out=32768):
     text = cand["content"]["parts"][0]["text"]
     data = json.loads(text)
     tokens = int((res.get("usageMetadata") or {}).get("totalTokenCount") or 0)
+    global _LAST_USAGE
+    _LAST_USAGE = res.get("usageMetadata") or {}
     return data, tokens, cand.get("finishReason")
 
 
@@ -245,11 +256,15 @@ def _all_ts(data):
 
 
 def _ts_ok(data, dur):
+    ps = [b for b in data.get("blocks", []) if b.get("type") == "p"]
     secs = [t for t in (_ts_sec(x) for x in _all_ts(data)) if t is not None]
-    if not secs:
-        return False
-    if dur and max(secs) > dur * 1.02 + 10:
-        return False
+    if not secs or len(secs) < 0.8 * len([b for b in data.get("blocks", []) if b.get("type") in ("p", "quote")]):
+        return False                                   # most blocks must carry a usable timestamp
+    if dur:
+        if max(secs) > dur * 1.02 + 10:
+            return False                               # beyond the end of the video
+        if max(secs) < dur * 0.8:
+            return False                               # did not cover the whole video
     return True
 
 
@@ -271,6 +286,10 @@ def summarize(vid):
             tr = _captions_fallback(vid)
             data, tokens, fin = _gemini([{"text": prompt + "\n\nTranscript with timestamps:\n" + tr}])
             method = "gemini-captions"
+        if not dur:
+            dur = _dur_from_usage()
+            if dur:
+                log(f"vidsum {vid} duration from tokens: {dur}s")
         if _ts_ok(data, dur):
             break
         log(f"vidsum {vid} bad timestamps (dur={dur}); {'retrying' if not retry else 'clamping'}")
