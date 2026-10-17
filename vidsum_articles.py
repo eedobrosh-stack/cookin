@@ -400,7 +400,10 @@ def summarize(vid):
             raise
         except Exception as e:
             log(f"vidsum {vid} video path failed ({str(e)[:200]}); trying captions")
-            tr = _captions_fallback(vid)
+            try:
+                tr = _captions_fallback(vid)
+            except Exception as e2:
+                raise RuntimeError(f"Gemini could not read the video ({str(e)[:230]}); captions: {str(e2)[:60]}")
             data, tokens, fin = _gemini([{"text": prompt + "\n\nTranscript with timestamps:\n" + tr}])
             method = "gemini-captions"
         if not dur:
