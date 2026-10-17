@@ -107,8 +107,36 @@ SCHEMA = {
 }
 
 
-def _prompt(title, channel):
-    return f"""You are summarizing the attached YouTube video ("{title}", channel "{channel}").
+def _duration(vid):
+    """Video length in seconds from the watch page (None if unavailable)."""
+    try:
+        h = _http(f"https://www.youtube.com/watch?v={vid}")
+        m = re.search(r'"lengthSeconds":"(\d+)"', h)
+        return int(m.group(1)) if m else None
+    except Exception:
+        return None
+
+
+def _fmt(sec):
+    h, r = divmod(int(sec), 3600)
+    return f"{h}:{r // 60:02d}:{r % 60:02d}" if h else f"{r // 60}:{r % 60:02d}"
+
+
+def _norm_ts(ts):
+    """m:ss with minutes >= 60 -> h:mm:ss."""
+    sec = _ts_sec(ts)
+    return _fmt(sec) if sec is not None else ""
+
+
+def _prompt(title, channel, dur=None, retry=False):
+    length = ""
+    if dur:
+        length = (f"\nThe video is EXACTLY {_fmt(dur)} long ({dur} seconds). No timestamp may exceed {_fmt(dur)}. "
+                  + ("Use h:mm:ss for any time past 59:59. " if dur >= 3600 else "")
+                  + "Only give a timestamp you can actually place in the audio/video; never space them evenly or guess.")
+    if retry:
+        length += "\nYour previous attempt had timestamps beyond the video length or invented evenly-spaced ones. Re-listen and give real ones."
+    return f"""You are summarizing the attached YouTube video ("{title}", channel "{channel}").{length}
 Write a DETAILED summary in Hebrew (keep proper names / terms in their original language when natural).
 Rules:
 - title: a clear Hebrew article title (guest/topic specific, no clickbait). subtitle: one line (channel, speakers, length, date if known).
@@ -193,27 +221,48 @@ def _captions_fallback(vid):
     return "\n".join(lines)[:900000]
 
 
+def _ts_ok(data, dur):
+    secs = [t for t in (_ts_sec(b.get("ts")) for s in data.get("sections", []) for b in s.get("bullets", [])) if t is not None]
+    if not secs:
+        return False
+    if dur and max(secs) > dur * 1.02 + 10:
+        return False
+    return True
+
+
 def summarize(vid):
     url = f"https://www.youtube.com/watch?v={vid}"
     title, channel = _oembed(vid)
-    prompt = _prompt(title, channel)
-    try:
-        data, tokens, fin = _gemini([{"file_data": {"file_uri": url}}, {"text": prompt}])
-        method = "gemini-video"
-    except BudgetExhausted:
-        raise
-    except Exception as e:
-        log(f"vidsum {vid} video path failed ({str(e)[:200]}); trying captions")
-        tr = _captions_fallback(vid)
-        data, tokens, fin = _gemini([{"text": prompt + "\n\nTranscript with timestamps:\n" + tr}])
-        method = "gemini-captions"
+    dur = _duration(vid)
+    method = None
+    data = tokens = fin = None
+    for retry in (False, True):
+        prompt = _prompt(title, channel, dur, retry)
+        try:
+            data, tokens, fin = _gemini([{"file_data": {"file_uri": url}}, {"text": prompt}])
+            method = "gemini-video"
+        except BudgetExhausted:
+            raise
+        except Exception as e:
+            log(f"vidsum {vid} video path failed ({str(e)[:200]}); trying captions")
+            tr = _captions_fallback(vid)
+            data, tokens, fin = _gemini([{"text": prompt + "\n\nTranscript with timestamps:\n" + tr}])
+            method = "gemini-captions"
+        if _ts_ok(data, dur):
+            break
+        log(f"vidsum {vid} bad timestamps (dur={dur}); {'retrying' if not retry else 'clamping'}")
     secs = [s for s in data.get("sections", []) if s.get("bullets")]
     if not secs:
         raise RuntimeError("empty summary")
+    for s in secs:
+        for b in s["bullets"]:
+            t = _ts_sec(b.get("ts"))
+            b["ts"] = "" if (t is None or (dur and t > dur + 5)) else _norm_ts(b["ts"])
     return {"title": data["title"].strip(), "subtitle": data.get("subtitle", "").strip(), "sections": secs,
             "topic": data.get("topic") if data.get("topic") in TOPICS else "תרבות",
             "lead": (data.get("lead") or "").strip(),
-            "channel": channel, "src_title": title, "tokens": tokens, "method": method, "finish": fin}
+            "channel": channel, "src_title": title, "tokens": tokens, "method": method, "finish": fin,
+            "duration": dur}
 
 
 def _run(vid):
@@ -370,6 +419,8 @@ def backfill():
 
 
 def _length_min(a):
+    if a.get("duration"):
+        return round(a["duration"] / 60)
     m = 0
     for s in a.get("sections", []):
         for b in s.get("bullets", []):
