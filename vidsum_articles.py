@@ -103,7 +103,7 @@ def _set_job(vid, **kw):
         _save_jobs(jobs)
         rec = dict(jobs[vid])
     if "status" in kw and kw["status"] in _STAGE:
-        _event(vid, _STAGE[kw["status"]], kw.get("error") or "", rec)
+        _event(vid, _STAGE[kw["status"]], kw.get("error") or kw.get("detail") or "", rec)
 
 
 def slugify(title):
@@ -450,7 +450,8 @@ def _save_article(vid, d):
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(art, f, ensure_ascii=False, indent=1)
     os.replace(tmp, os.path.join(ART_DIR, slug + ".json"))
-    _set_job(vid, status="done", slug=slug, title=d["title"], error="")
+    _set_job(vid, status="done", slug=slug, title=d["title"], error="",
+             detail=f"{d.get('method', '')} · {d.get('tokens', 0):,} tokens", channel=d.get("channel") or "")
     log(f"vidsum {vid} DONE slug={slug} tokens={d.get('tokens')} via {d.get('method')}")
 
 
@@ -507,7 +508,8 @@ def submit(url, admin, engine="luna", source=None):
     with LOCK:
         jobs = _load_jobs()
         cur = jobs.get(vid)
-        if cur and cur.get("status") in ("queued", "running", "needs_transcript"):
+        if cur and cur.get("status") in ("queued", "running", "needs_transcript") and not (
+                engine == "gemini" and cur.get("status") == "needs_transcript"):
             return 200, {"ok": True, "id": vid, "status": cur["status"]}
         active = sum(1 for j in jobs.values() if j.get("status") in ("queued", "running"))
         waiting = sum(1 for j in jobs.values() if j.get("status") == "needs_transcript")
@@ -519,7 +521,7 @@ def submit(url, admin, engine="luna", source=None):
             if n >= PUBLIC_DAILY_CAP:
                 return 429, {"ok": False, "error": "daily limit reached"}
         status = "needs_transcript" if engine == "luna" else "queued"
-        jobs[vid] = {"status": status, "engine": engine, "public": not admin, "source": source,
+        jobs[vid] = {"status": status, "engine": engine, "public": not admin, "source": source or (cur or {}).get("source"),
                      "submitted": time.strftime("%Y-%m-%d %H:%M:%S")}
         _save_jobs(jobs)
     if engine != "luna":
