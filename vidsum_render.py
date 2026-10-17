@@ -122,6 +122,16 @@ footer .footer-inner{flex-direction:column;gap:6px;padding-inline:14px;font-size
 """
 
 
+PAW_JS = """<script>(function(){var seq=['maxresdefault','hq720','mqdefault'];
+function fix(img){var v=img.dataset.vid,i=0;
+function next(){if(i<seq.length){img.src='https://i.ytimg.com/vi/'+v+'/'+seq[i++]+'.jpg';}
+else{img.onload=img.onerror=null;img.src='/vidsum/cover/'+v+'.svg';}}
+img.onerror=next;
+img.onload=function(){if(img.naturalWidth<300&&img.src.indexOf('/vidsum/cover/')<0)next();};
+next();}
+document.querySelectorAll('img[data-vid]').forEach(fix);})();</script>"""
+
+
 def _ts_sec(ts):
     try:
         p = [int(x) for x in str(ts).split(":")]
@@ -171,8 +181,7 @@ def render(a, latest=(), base="", disclaimer=""):
            f'<span class="share"><a href="https://wa.me/?text={share_txt}%20{share_url}" target="_blank" rel="noopener" title="WhatsApp">W</a>'
            f'<a href="https://www.facebook.com/sharer/sharer.php?u={share_url}" target="_blank" rel="noopener" title="Facebook">f</a>'
            f'<a href="https://twitter.com/intent/tweet?url={share_url}&amp;text={share_txt}" target="_blank" rel="noopener" title="X">X</a></span></div>',
-           f'<figure><a class="hero" href="{e(a["url"])}" target="_blank" rel="noopener" title="צפייה בסרטון ביוטיוב"><img src="https://i.ytimg.com/vi/{e(a["vid"])}/maxresdefault.jpg" '
-           f'onerror="this.onerror=null;this.src=\'https://i.ytimg.com/vi/{e(a["vid"])}/hq720.jpg\'" alt=""></a>'
+           f'<figure><a class="hero" href="{e(a["url"])}" target="_blank" rel="noopener" title="צפייה בסרטון ביוטיוב"><img data-vid="{e(a["vid"])}" alt=""></a>'
            f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())} · צילום מסך מתוך הסרטון</figcaption></figure>']
     if a.get("key_points"):
         out.append('<div class="keybox"><h4>עיקרי הדברים</h4><ul>' + "".join(f"<li>{e(k)}</li>" for k in a["key_points"]) + "</ul></div>")
@@ -197,7 +206,7 @@ def render(a, latest=(), base="", disclaimer=""):
     rel = [x for x in others if x["topic"] == a["topic"]][:3] or others[:3]
     if rel:
         out.append('<section class="related"><h3>כתבות נוספות</h3><div class="rel-grid">' + "".join(
-            f'<a class="rel-card" href="{art_url(x)}"><img src="{thumb(x["vid"])}" onerror="this.onerror=null;this.src=\'https://i.ytimg.com/vi/{e(x["vid"])}/mqdefault.jpg\'" alt=""><div class="t">{e(x["topic"])}</div>'
+            f'<a class="rel-card" href="{art_url(x)}"><img data-vid="{e(x["vid"])}" alt=""><div class="t">{e(x["topic"])}</div>'
             f'<h4>{e(x["title"])}</h4></a>' for x in rel) + "</div></section>")
     out.append("</article><aside>")
     if others:
@@ -216,4 +225,4 @@ def render(a, latest=(), base="", disclaimer=""):
             f'<meta name="theme-color" content="#e3222b"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(a["title"])} | Pawed</title>'
             f'<meta name="description" content="{desc}"><meta property="og:title" content="{e(a["title"])}">'
             f'<meta property="og:description" content="{desc}"><meta property="og:image" content="https://i.ytimg.com/vi/{e(a["vid"])}/maxresdefault.jpg">'
-            f'<style>{CSS}</style></head><body style="{_theme(a["topic"])}">{"".join(out)}</body></html>')
+            f'<style>{CSS}</style></head><body style="{_theme(a["topic"])}">{"".join(out)}{PAW_JS}</body></html>')

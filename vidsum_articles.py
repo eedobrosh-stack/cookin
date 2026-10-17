@@ -1,7 +1,7 @@
 """Vidsum server-side: YouTube link -> Gemini (reads the URL itself, so Render's
 blocked IP never touches YouTube) -> detailed RTL summary stored as an article
 served at /vidsum/article/<slug>."""
-import json, os, re, threading, uuid, time, html as _html, unicodedata
+import json, math, os, re, threading, uuid, time, html as _html, unicodedata
 import urllib.request, urllib.parse, urllib.error
 
 import multiuser
@@ -637,6 +637,88 @@ def render_article(a):
     return article_html(a)
 
 
+
+# ------------------------------------------------ generated cover art (no usable YouTube thumbnail) ---
+_COVER_ACC = {"כלכלה": "#e0a43a", "פוליטיקה": "#6fbf5a", "טכנולוגיה": "#ff6b4a", "ספורט": "#ff9a3c",
+              "תרבות": "#b07be0", "רכילות": "#f07ab0", "בריאות": "#3fcfb4"}
+_KEYS = [("chip", r"\bAI\b|בינה מלאכותית|GPT|סוכן|סוכנים|אלגוריתם|סייבר|הייטק|רובוט|OpenAI|אנטרופיק|צ'אט"),
+         ("chart", r"מניות|בורסה|S&P|נאסד|שוק ההון|השקעות|מסחר|וול סטריט|כלכל|ריבית|אינפלציה|מטבע|קריפטו|דולר"),
+         ("ball", r"כדורגל|ליגה|שחקן|קבוצ|מונדיאל|יורו|מאמן|כדורסל|ספורט|משחק"),
+         ("columns", r"בחירות|ממשלה|כנסת|נתניהו|פוליטי|קואליציה|ראש הממשלה|שר |סקר|מפלגה"),
+         ("heart", r"בריאות|רפוא|מחל|סוכר|תזונה|מוח|דיאטה|שינה|רופא|טיפול"),
+         ("mic", r"פודקאסט|ראיון|תרבות|מוזיק|סרט|טלוויזיה|סלבס|רכילות|אופנה|קומדי|סאטיר")]
+_TOPIC_MOTIF = {"טכנולוגיה": "chip", "כלכלה": "chart", "ספורט": "ball", "פוליטיקה": "columns", "בריאות": "heart",
+                "תרבות": "mic", "רכילות": "mic"}
+
+
+def _motif_name(a):
+    text = f"{a.get('title', '')} {a.get('lead', '')} {a.get('standfirst', '')}"
+    for name, rx in _KEYS:
+        if name == _TOPIC_MOTIF.get(a.get("topic")) and re.search(rx, text, re.I):
+            return name
+    for name, rx in _KEYS[:2]:                        # AI / markets override the section when clearly the subject
+        if re.search(rx, a.get("title", ""), re.I):
+            return name
+    return _TOPIC_MOTIF.get(a.get("topic"), "mic")
+
+
+def _motif_svg(m, acc):
+    w, k = "#ffffff", acc
+    if m == "chip":
+        pins = "".join(f'<line x1="{x}" y1="215" x2="{x}" y2="170" /><line x1="{x}" y1="505" x2="{x}" y2="550" />' for x in range(520, 761, 40))
+        pins += "".join(f'<line x1="505" y1="{y}" x2="460" y2="{y}" /><line x1="775" y1="{y}" x2="820" y2="{y}" />' for y in range(260, 461, 50))
+        nodes = [(250, 200), (300, 360), (230, 520), (1030, 190), (990, 370), (1060, 520), (640, 90), (640, 640)]
+        lines = "".join(f'<path d="M{x} {y} L{640 + (-1 if x < 640 else 1) * 195} 360" opacity=".45"/><circle cx="{x}" cy="{y}" r="9" fill="{k}" stroke="none"/>' for x, y in nodes)
+        return (f'<g fill="none" stroke="{w}" stroke-width="5" stroke-linecap="round">{lines}{pins}'
+                f'<rect x="500" y="230" width="280" height="260" rx="26" fill="rgba(255,255,255,.08)"/>'
+                f'<rect x="545" y="275" width="190" height="170" rx="14" stroke="{k}"/></g>'
+                f'<text x="640" y="395" text-anchor="middle" font-family="Arial Black,Arial" font-weight="900" font-size="110" fill="{w}">AI</text>')
+    if m == "chart":
+        bars = [(380, 430, 150, 560), (450, 400, 130, 520), (520, 360, 200, 540), (590, 330, 110, 470), (660, 290, 170, 480),
+                (730, 250, 120, 410), (800, 215, 190, 430), (870, 190, 100, 330)]
+        g = ""
+        for i, (x, top, hgt, wick) in enumerate(bars):
+            up = i % 3 != 1
+            col = k if up else "#ffffff"
+            g += (f'<line x1="{x + 20}" y1="{top - 40}" x2="{x + 20}" y2="{top + hgt + 40}" stroke="{col}" stroke-width="5"/>'
+                  f'<rect x="{x}" y="{top}" width="40" height="{hgt}" rx="5" fill="{col}" opacity="{.95 if up else .45}"/>')
+        grid = "".join(f'<line x1="300" y1="{y}" x2="980" y2="{y}" stroke="#fff" stroke-opacity=".12" stroke-width="2"/>' for y in range(180, 600, 70))
+        return grid + g + f'<path d="M330 540 L450 500 L520 470 L600 430 L690 380 L760 320 L850 270 L930 205" fill="none" stroke="{w}" stroke-width="7" stroke-linecap="round" stroke-dasharray="2 16"/>'
+    if m == "ball":
+        pitch = f'<g fill="none" stroke="{w}" stroke-opacity=".2" stroke-width="4"><circle cx="640" cy="360" r="300"/><line x1="640" y1="60" x2="640" y2="660"/><rect x="140" y="210" width="190" height="300"/><rect x="950" y="210" width="190" height="300"/></g>'
+        def _pg(cx, cy, r, scale):
+            pts = " ".join("%.0f,%.0f" % (cx + r * scale * math.cos(math.radians(d)), cy + r * scale * math.sin(math.radians(d)))
+                           for d in range(-90, 270, 72))
+            return '<polygon points="%s" fill="#15131a" opacity=".85"/>' % pts
+        pent = _pg(640, 360, 46, 1) + _pg(490, 310, 30, .9) + _pg(790, 310, 30, .9) + _pg(545, 495, 30, .9) + _pg(735, 495, 30, .9)
+        return pitch + f'<circle cx="640" cy="360" r="185" fill="{w}"/>' + pent + f'<circle cx="640" cy="360" r="185" fill="none" stroke="{k}" stroke-width="10"/>'
+    if m == "columns":
+        cols = "".join(f'<rect x="{x}" y="320" width="46" height="200" rx="8" fill="{w}" opacity=".92"/><rect x="{x - 8}" y="300" width="62" height="24" rx="6" fill="{w}"/><rect x="{x - 8}" y="516" width="62" height="20" rx="6" fill="{w}"/>' for x in range(430, 800, 82))
+        return (f'<polygon points="380,300 640,170 900,300" fill="{k}"/><rect x="380" y="296" width="520" height="12" fill="{w}"/>{cols}'
+                f'<rect x="360" y="536" width="560" height="22" rx="6" fill="{w}"/><rect x="330" y="558" width="620" height="22" rx="6" fill="{w}" opacity=".8"/>'
+                f'<circle cx="640" cy="262" r="26" fill="{w}" opacity=".9"/>')
+    if m == "heart":
+        return (f'<path d="M640 560 C 380 400 400 210 540 200 C 600 196 630 230 640 262 C 650 230 680 196 740 200 C 880 210 900 400 640 560 Z" fill="{k}" opacity=".95"/>'
+                f'<path d="M280 380 L470 380 L520 300 L590 470 L650 330 L700 400 L770 400 L840 380 L1000 380" fill="none" stroke="{w}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>')
+    # mic (culture, gossip, general talk)
+    waves = "".join(f'<path d="M{640 - r} 330 A{r} {r} 0 0 0 {640 + r} 330" fill="none" stroke="{w}" stroke-opacity="{o}" stroke-width="6" stroke-linecap="round" transform="rotate(180 640 330)" />' for r, o in ((210, .55), (270, .35), (330, .2)))
+    spark = "".join(f'<path d="M{x} {y - s} L{x + s * .28} {y - s * .28} L{x + s} {y} L{x + s * .28} {y + s * .28} L{x} {y + s} L{x - s * .28} {y + s * .28} L{x - s} {y} L{x - s * .28} {y - s * .28} Z" fill="{k}"/>' for x, y, s in ((300, 220, 34), (990, 190, 26), (1050, 470, 38), (250, 500, 22)))
+    return (waves + f'<rect x="580" y="170" width="120" height="230" rx="60" fill="{w}"/><path d="M540 330 A100 100 0 0 0 740 330" fill="none" stroke="{w}" stroke-width="12" stroke-linecap="round"/>'
+            f'<line x1="640" y1="430" x2="640" y2="520" stroke="{w}" stroke-width="12"/><rect x="570" y="520" width="140" height="16" rx="8" fill="{w}"/>' + spark)
+
+
+def cover_svg(a):
+    acc = _COVER_ACC.get(a.get("topic"), "#e0a43a")
+    seed = sum(ord(c) for c in a.get("vid", "x"))
+    dots = "".join(f'<circle cx="{(seed * (i + 3) * 37) % 1280}" cy="{(seed * (i + 5) * 53) % 720}" r="{3 + (seed * (i + 1)) % 5}" fill="#fff" opacity=".14"/>' for i in range(26))
+    e = _html.escape
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">'
+            f'<defs><radialGradient id="g" cx="50%" cy="46%" r="75%"><stop offset="0" stop-color="{acc}" stop-opacity=".55"/><stop offset=".62" stop-color="#1b1722"/><stop offset="1" stop-color="#0e0c12"/></radialGradient></defs>'
+            f'<rect width="1280" height="720" fill="url(#g)"/>{dots}{_motif_svg(_motif_name(a), acc)}'
+            f'<rect x="56" y="48" rx="22" ry="22" width="{40 + 24 * len(a.get("topic", ""))}" height="48" fill="{acc}"/>'
+            f'<text x="{56 + (40 + 24 * len(a.get("topic", ""))) / 2}" y="82" text-anchor="middle" font-family="Arial" font-weight="800" font-size="30" fill="#17120a">{e(a.get("topic", ""))}</text>'
+            f'<text x="1224" y="676" text-anchor="end" font-family="Arial" font-weight="700" font-size="34" fill="#fff" fill-opacity=".72">{e((a.get("channel") or "").strip()[:42])}</text></svg>')
+
 # ------------------------------------------------------------- news portal ---
 CLS_SCHEMA = {"type": "OBJECT", "properties": {"topic": {"type": "STRING", "enum": TOPICS},
                                                "lead": {"type": "STRING"}}, "required": ["topic", "lead"]}
@@ -1027,6 +1109,17 @@ def handle_get(handler, path, qs):
         handler.send_header("Location", "/vidsum")
         handler.send_header("Content-Length", "0")
         handler.end_headers()
+        return True
+    if path.startswith("/vidsum/cover/") and path.endswith(".svg"):
+        vid = path[len("/vidsum/cover/"):-4]
+        a = _find_by_vid(vid) if re.fullmatch(r"[\w-]{11}", vid) else None
+        body = cover_svg(a or {"vid": vid, "topic": "תרבות", "title": ""}).encode("utf-8")
+        handler.send_response(200)
+        handler.send_header("Content-Type", "image/svg+xml")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.send_header("Cache-Control", "public, max-age=3600")
+        handler.end_headers()
+        handler.wfile.write(body)
         return True
     if path == "/vidsum/pawed-logo.png":
         try:

@@ -195,6 +195,23 @@ const TONES = [
   'linear-gradient(135deg,#193b2d,#3a9b60 55%,#d1bc55)','linear-gradient(135deg,#41235a,#b94278 55%,#f3a84c)',
   'linear-gradient(135deg,#154448,#2c9d8d 58%,#e8d36a)','linear-gradient(135deg,#263342,#64748b 55%,#d2a34c)'];
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// YouTube serves a tiny grey placeholder (120px wide) for thumbnails it has not produced yet: only accept real frames,
+// otherwise fall back to a generated cover that matches the episode's topic.
+const THUMB_CACHE = {};
+function probe(url){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i.naturalWidth>=300?url:null); i.onerror=()=>res(null); i.src=url; }); }
+async function bestThumb(v){
+  if(THUMB_CACHE[v]) return THUMB_CACHE[v];
+  for(const f of ['maxresdefault','hq720','mqdefault']){ const u='https://i.ytimg.com/vi/'+v+'/'+f+'.jpg'; if(await probe(u)){ return THUMB_CACHE[v]=u; } }
+  return THUMB_CACHE[v]='/vidsum/cover/'+v+'.svg';
+}
+function hydrateThumbs(){
+  document.querySelectorAll('[data-vid]').forEach(async el=>{
+    if(el.dataset.done) return; el.dataset.done='1';
+    const u = await bestThumb(el.dataset.vid);
+    el.style.backgroundImage = 'url('+u+'),'+(el.style.backgroundImage||'none');
+  });
+}
 const href = a => '/vidsum/article/' + encodeURIComponent(a.slug);
 // true 16:9 frames only (hqdefault/sddefault carry baked-in black bars); a failed image is skipped and the next layer shows
 const bg = v => ['maxresdefault','hq720','mqdefault'].map(f=>'url(https://i.ytimg.com/vi/'+v+'/'+f+'.jpg)').join(',');
@@ -231,7 +248,7 @@ function render(){
                : '<div class="topic-row"><div class="topic">'+esc(t)+'</div><div><h3>מדור בהכנה</h3><p>יוזן מסיכומי הווידאו הבאים.</p></div></div>'; });
     h+='<section class="topic-block"><h2>עוד לפי נושא</h2><div class="topic-grid">'+rows.join('')+'</div></section>';
   }
-  main.innerHTML=h;
+  main.innerHTML=h; hydrateThumbs();
 }
 function nav(){
   const n=document.getElementById('nav');
