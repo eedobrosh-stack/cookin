@@ -124,18 +124,18 @@ def render(a, latest=(), base="", disclaimer=""):
     mins = max(1, round(sum(len(b.get("text", "").split()) for b in a["blocks"]) / 200))
     others = [x for x in latest if x.get("slug") != a.get("slug")]
 
-    nav = "".join(f'<a href="{base}/vidsum/news#{urllib.parse.quote(t)}" class="{"active" if t == a["topic"] else ""}">{e(t)}</a>'
+    nav = "".join(f'<a href="{base}/vidsum#{urllib.parse.quote(t)}" class="{"active" if t == a["topic"] else ""}">{e(t)}</a>'
                   for t in TOPICS)
     share_url = urllib.parse.quote(f'https://jarcud.com/vidsum/article/{a["slug"]}', safe="")
     share_txt = urllib.parse.quote(a["title"], safe="")
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(_he_date(a.get("published") or ""))}</span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span>'
-           f'<a href="{base}/vidsum/articles">כל הסיכומים</a><a href="{base}/vidsum">הוספת סרטון</a></div></div></div>'
-           f'<header class="masthead"><a class="brand" href="{base}/vidsum/news"><span class="brand-mark">וידסומ</span>'
+           f'<a href="{base}/vidsum/articles">כל הסיכומים</a><a href="{base}/vidsum/sources">מקורות</a><a href="{base}/vidsum/v1">הוספת סרטון</a></div></div></div>'
+           f'<header class="masthead"><a class="brand" href="{base}/vidsum"><span class="brand-mark">וידסומ</span>'
            f'<span class="brand-note">חדשות מתוך הסיכומים</span></a></header>'
-           f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum/news">ראשי</a>{nav}</nav></div>',
+           f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">ראשי</a>{nav}</nav></div>',
            '<div class="page"><article>',
-           f'<div class="crumbs"><a href="{base}/vidsum/news">ראשי</a> › <a href="{base}/vidsum/news#{urllib.parse.quote(a["topic"])}">{e(a["topic"])}</a></div>',
+           f'<div class="crumbs"><a href="{base}/vidsum">ראשי</a> › <a href="{base}/vidsum#{urllib.parse.quote(a["topic"])}">{e(a["topic"])}</a></div>',
            f'<h1>{e(a["title"])}</h1><p class="standfirst">{e(a["standfirst"])}</p>',
            f'<div class="byline"><span>מאת <b>מערכת וידסומ</b></span><span>מתוך {e(a.get("channel", "").strip())}</span>'
            f'<span>{e(_he_date(a.get("published") or ""))}</span><span>{mins} דק׳ קריאה</span>'
@@ -178,7 +178,7 @@ def render(a, latest=(), base="", disclaimer=""):
     for x in latest:
         cnt[x["topic"]] = cnt.get(x["topic"], 0) + 1
     out.append('<div class="box"><h3>לפי נושא</h3><ol>' + "".join(
-        f'<li><a href="{base}/vidsum/news#{urllib.parse.quote(t)}"><span>{e(t)}</span><small>{cnt.get(t, 0)} כתבות</small></a></li>'
+        f'<li><a href="{base}/vidsum#{urllib.parse.quote(t)}"><span>{e(t)}</span><small>{cnt.get(t, 0)} כתבות</small></a></li>'
         for t in TOPICS) + "</ol></div></aside></div>")
     out.append('<footer><div class="footer-inner"><span>וידסומ · פורטל חדשות המבוסס על סיכומי וידאו</span>'
                '<span>Summarized by vidsum skill (by Mr. Brosh)</span></div></footer>')

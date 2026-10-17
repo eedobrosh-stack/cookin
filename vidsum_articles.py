@@ -629,15 +629,30 @@ WATCH_EVERY_S = 3 * 3600
 _UA = {"User-Agent": "Mozilla/5.0 (jarcud-vidsum)", "Accept-Language": "en"}
 
 
+LANGS = {"he": "עברית", "en": "English", "other": "אחר"}
+_SEED = {  # url / language / vertical for sources subscribed before the sources table existed
+    "UCkfjrjH3vuHaM_Pa_MMSi5Q": ("https://www.youtube.com/@DanielDushi", "he", "תרבות"),
+    "UCMjZQzhn3nt7aJIHfYdjc9g": ("https://www.youtube.com/@NadavEyal", "he", "פוליטיקה"),
+    "PLZPgleW4baxpCtioKMLwGfWxeUUIuZi49": ("https://www.youtube.com/playlist?list=PLZPgleW4baxpCtioKMLwGfWxeUUIuZi49", "he", "פוליטיקה"),
+    "UCwywdccdYsNS_Cs6tS0U_dg": ("https://www.youtube.com/@TrashTechNews", "he", "טכנולוגיה"),
+}
+
+
 def _load_ch():
     try:
         with open(CH_PATH, encoding="utf-8") as f:
             d = json.load(f)
-        d.setdefault("channels", [])
-        d.setdefault("log", [])
-        return d
     except Exception:
-        return {"channels": [], "log": []}
+        d = {"channels": [], "log": []}
+    d.setdefault("channels", [])
+    d.setdefault("log", [])
+    for c in d["channels"]:
+        url, lang, vert = _SEED.get(c["id"], (None, "he", "תרבות"))
+        c.setdefault("url", url or (f"https://www.youtube.com/channel/{c['id']}" if c["id"].startswith("UC")
+                                    else f"https://www.youtube.com/playlist?list={c['id']}"))
+        c.setdefault("language", lang)
+        c.setdefault("vertical", vert)
+    return d
 
 
 def _save_ch(d):
@@ -760,7 +775,41 @@ def start_background():
     threading.Thread(target=_watch_loop, daemon=True).start()
 
 
-NEWS_PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "vidsum_news.html")
+_ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+NEWS_PAGE = os.path.join(_ASSETS, "vidsum_news.html")
+V1_PAGE = os.path.join(_ASSETS, "vidsum_discover.html")
+SOURCES_PAGE = os.path.join(_ASSETS, "vidsum_sources.html")
+
+
+def _serve(handler, path):
+    try:
+        with open(path, "rb") as f:
+            handler._html(f.read(), "no-store")
+    except OSError:
+        handler._json({"error": "page missing"}, 404)
+
+
+def sources_view():
+    return [{"id": c["id"], "name": c["name"], "language": c["language"], "url": c["url"],
+             "vertical": c["vertical"], "added": c.get("added", "")} for c in _load_ch()["channels"]]
+
+
+def add_source(req):
+    url = str(req.get("url") or "").strip()
+    if not url:
+        raise ValueError("YouTube URL is required")
+    lang = req.get("language") if req.get("language") in LANGS else "he"
+    vert = req.get("vertical") if req.get("vertical") in TOPICS else "תרבות"
+    cid, name = resolve_channel(url)
+    with LOCK:
+        d = _load_ch()
+        if any(c["id"] == cid for c in d["channels"]):
+            raise ValueError("this source is already in the table")
+        d["channels"].append({"id": cid, "name": (str(req.get("name") or "").strip() or name)[:120], "url": url[:300],
+                              "language": lang, "vertical": vert, "added": time.strftime("%Y-%m-%d %H:%M:%S"),
+                              "backfill": bool(req.get("backfill"))})
+        _save_ch(d)
+    return cid
 
 # ---------------------------------------------------------------- routing ---
 ART_PREFIX = "/vidsum/article/"
@@ -784,12 +833,25 @@ def handle_get(handler, path, qs):
         else:
             handler._html(render_article(a), "no-store")
         return True
-    if path in ("/vidsum/news", "/vidsum/news/"):
-        try:
-            with open(NEWS_PAGE, "rb") as f:
-                handler._html(f.read(), "no-store")
-        except OSError:
-            handler._json({"error": "news page missing"}, 404)
+    if path in ("/vidsum", "/vidsum/"):
+        _serve(handler, NEWS_PAGE)
+        return True
+    if path in ("/vidsum/news", "/vidsum/news/"):            # old address of the portal
+        handler.send_response(302)
+        handler.send_header("Location", "/vidsum")
+        handler.send_header("Content-Length", "0")
+        handler.end_headers()
+        return True
+    if path in ("/vidsum/v1", "/vidsum/v1/"):
+        _serve(handler, V1_PAGE)
+        return True
+    if path in ("/vidsum/sources", "/vidsum/sources/"):
+        _serve(handler, SOURCES_PAGE)
+        return True
+    if path == "/api/vidsum/sources":
+        user = current_user(handler)
+        handler._json({"ok": True, "can_edit": bool(user and user.get("admin")), "verticals": TOPICS,
+                       "languages": LANGS, "sources": sources_view()})
         return True
     if path == "/api/vidsum/news":
         handler._json({"ok": True, "topics": TOPICS, "items": news_items()})
@@ -922,6 +984,37 @@ def handle_post(handler, path, req):
                 handler._json({"ok": True, "slug": import_article(req)})
             except Exception as e:
                 handler._json({"ok": False, "error": str(e)[:200]}, 400)
+        return True
+    if path.startswith("/api/vidsum/sources/"):
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"ok": False, "error": "sign in as admin to edit sources"}, 403)
+            return True
+        try:
+            if path == "/api/vidsum/sources/add":
+                add_source(req)
+            elif path == "/api/vidsum/sources/remove":
+                with LOCK:
+                    d = _load_ch()
+                    d["channels"] = [c for c in d["channels"] if c["id"] != req.get("id")]
+                    _save_ch(d)
+            elif path == "/api/vidsum/sources/update":
+                with LOCK:
+                    d = _load_ch()
+                    for c in d["channels"]:
+                        if c["id"] == req.get("id"):
+                            if req.get("language") in LANGS:
+                                c["language"] = req["language"]
+                            if req.get("vertical") in TOPICS:
+                                c["vertical"] = req["vertical"]
+                            if (req.get("name") or "").strip():
+                                c["name"] = req["name"].strip()[:120]
+                    _save_ch(d)
+            else:
+                return False
+            handler._json({"ok": True, "sources": sources_view()})
+        except Exception as e:
+            handler._json({"ok": False, "error": str(e)[:200]}, 400)
         return True
     if path.startswith("/api/vidsum/channels"):
         user = current_user(handler)
