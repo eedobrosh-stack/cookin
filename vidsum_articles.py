@@ -142,7 +142,7 @@ Rules:
 - title: a clear Hebrew article title (guest/topic specific, no clickbait). subtitle: one line (channel, speakers, length, date if known).
 - topic: the single best-fitting news section from the allowed list. lead: a 1-2 sentence Hebrew teaser (max 220 chars) that states the core story/claim, written like a news-site standfirst.
 - Split the video into 6-14 chronological sections, each with a short descriptive Hebrew title.
-- Each section holds 5-12 bullets, and overall roughly one bullet per 40-60 seconds of video (a 1-hour video should yield 70-100+ bullets). A bullet is a full, information-dense sentence or two: claims, numbers, names, examples, arguments, conclusions. No filler, no "the speaker says".
+- Each section holds 5-12 bullets, and overall roughly one bullet per 40-60 seconds of video (a 1-hour video should yield 70-100+ bullets). A bullet is 25-45 Hebrew words (never a short fragment): two full sentences giving the claim plus its supporting detail: claims, numbers, names, examples, arguments, conclusions. No filler, no "the speaker says".
 - Every bullet has "ts": the timestamp in the video where that point is made, format m:ss or h:mm:ss, accurate to within a few seconds, increasing through the video.
 - Cover the whole video to the end, not only the beginning.
 Return only JSON matching the schema."""
