@@ -113,13 +113,14 @@ def slugify(title):
 
 
 def _rel(a):
-    """Episode release moment as 'YYYY-MM-DD HH:MM:SS' (UTC); falls back to the date, then to when we made the article."""
+    """Episode release moment as 'YYYY-MM-DD HH:MM:SS' (UTC). Unknown dates sort LAST: the moment we processed an
+    episode says nothing about when it came out, so it is never used for ordering."""
     pa = (a.get("published_at") or "").replace("T", " ").replace("Z", "")[:19]
     if len(pa) == 19:
         return pa
     if (a.get("published") or "")[:10].count("-") == 2:
         return a["published"][:10] + " 12:00:00"
-    return a.get("created") or ""
+    return ""
 
 
 def _articles():
@@ -438,7 +439,45 @@ def _finalize(data, dur, extra):
             "duration": dur, **extra}
 
 
+def _release_from_feeds(vid, source_id=None):
+    """Real release moment (UTC ISO) of a video from the public RSS feed of its source / its channel."""
+    import datetime as _dt
+    feeds = []
+    if source_id and not source_id.startswith("pending-"):
+        feeds.append(source_id)
+    try:
+        with urllib.request.urlopen("https://www.youtube.com/oembed?format=json&url=" + urllib.parse.quote(
+                f"https://www.youtube.com/watch?v={vid}", safe=""), timeout=20) as r:
+            au = (json.loads(r.read().decode()).get("author_url") or "")
+        if au:
+            cid, _n = resolve_channel(au)
+            if cid not in feeds:
+                feeds.append(cid)
+    except Exception:
+        pass
+    for fid in feeds:
+        try:
+            x = _http(_feed_url(fid))
+        except Exception:
+            continue
+        m = re.search(r"<yt:videoId>" + re.escape(vid) + r"</yt:videoId>.*?<published>([^<]+)</published>", x, re.S)
+        if m:
+            try:
+                dt = _dt.datetime.fromisoformat(m.group(1).replace("Z", "+00:00")).astimezone(_dt.timezone.utc)
+                return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+            except ValueError:
+                pass
+    return None
+
+
 def _save_article(vid, d):
+    if not d.get("published_at"):
+        try:
+            pa = _release_from_feeds(vid, _load_jobs().get(vid, {}).get("source"))
+            if pa:
+                d = {**d, "published_at": pa, "published": pa[:10]}
+        except Exception as e:
+            log(f"vidsum {vid} release lookup failed: {str(e)[:100]}")
     slug = _unique_slug(d["title"], vid)
     src_id = _load_jobs().get(vid, {}).get("source")
     if src_id:
