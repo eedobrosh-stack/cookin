@@ -120,7 +120,7 @@ def render(a, latest=(), base="", disclaimer=""):
     ts_link = lambda ts: ("" if not _ts_sec(ts) else f'<a class="ts" href="{e(a["url"])}&amp;t={_ts_sec(ts)}s" target="_blank" rel="noopener">▶ {e(ts)}</a>'
                           if _ts_sec(ts) is not None and ts else "")
     art_url = lambda s: f'{base}/vidsum/article/{urllib.parse.quote(s["slug"])}'
-    thumb = lambda v: f"https://i.ytimg.com/vi/{v}/hqdefault.jpg"
+    thumb = lambda v: f"https://i.ytimg.com/vi/{v}/hq720.jpg"   # true 16:9 (hqdefault has baked-in black bars)
     mins = max(1, round(sum(len(b.get("text", "").split()) for b in a["blocks"]) / 200))
     others = [x for x in latest if x.get("slug") != a.get("slug")]
 
@@ -143,7 +143,7 @@ def render(a, latest=(), base="", disclaimer=""):
            f'<a href="https://www.facebook.com/sharer/sharer.php?u={share_url}" target="_blank" rel="noopener" title="Facebook">f</a>'
            f'<a href="https://twitter.com/intent/tweet?url={share_url}&amp;text={share_txt}" target="_blank" rel="noopener" title="X">X</a></span></div>',
            f'<figure><a class="hero" href="{e(a["url"])}" target="_blank" rel="noopener" title="צפייה בסרטון ביוטיוב"><img src="https://i.ytimg.com/vi/{e(a["vid"])}/maxresdefault.jpg" '
-           f'onerror="this.onerror=null;this.src=\'{thumb(a["vid"])}\'" alt=""></a>'
+           f'onerror="this.onerror=null;this.src=\'https://i.ytimg.com/vi/{e(a["vid"])}/hq720.jpg\'" alt=""></a>'
            f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())} · צילום מסך מתוך הסרטון</figcaption></figure>']
     if a.get("key_points"):
         out.append('<div class="keybox"><h4>עיקרי הדברים</h4><ul>' + "".join(f"<li>{e(k)}</li>" for k in a["key_points"]) + "</ul></div>")
@@ -168,7 +168,7 @@ def render(a, latest=(), base="", disclaimer=""):
     rel = [x for x in others if x["topic"] == a["topic"]][:3] or others[:3]
     if rel:
         out.append('<section class="related"><h3>כתבות נוספות</h3><div class="rel-grid">' + "".join(
-            f'<a class="rel-card" href="{art_url(x)}"><img src="{thumb(x["vid"])}" alt=""><div class="t">{e(x["topic"])}</div>'
+            f'<a class="rel-card" href="{art_url(x)}"><img src="{thumb(x["vid"])}" onerror="this.onerror=null;this.src=\'https://i.ytimg.com/vi/{e(x["vid"])}/mqdefault.jpg\'" alt=""><div class="t">{e(x["topic"])}</div>'
             f'<h4>{e(x["title"])}</h4></a>' for x in rel) + "</div></section>")
     out.append("</article><aside>")
     if others:
