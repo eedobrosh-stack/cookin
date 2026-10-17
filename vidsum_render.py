@@ -91,6 +91,34 @@ footer{background:#222;color:#aaa;padding:26px 0;font-size:12px}
 @media(max-width:900px){.page{grid-template-columns:1fr}.rel-grid{grid-template-columns:1fr}h1{font-size:31px}}
 @media(max-width:640px){.pull,.pull.alt{float:none;width:auto;margin:20px 0}}
 @media(max-width:520px){.page,.utility-inner,.masthead,.nav,.footer-inner{padding-inline:14px}.brand-note{display:none}.body{font-size:18px}.pull q{font-size:22px}}
+@media(max-width:640px){
+body{-webkit-text-size-adjust:100%}
+.utility-inner{padding-inline:12px;min-height:34px;justify-content:flex-start}
+.utility-inner>span{display:none}
+.utility-links{display:flex;gap:14px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;font-size:13px}
+.utility-links::-webkit-scrollbar{display:none}
+.masthead{height:62px;padding-inline:12px;justify-content:flex-start}
+.brand{gap:8px}.brand-logo{height:38px}.brand-mark{font-size:30px;letter-spacing:-1px}.brand-note{display:none}
+.nav-wrap{position:sticky;top:0;z-index:60;background:var(--bg);box-shadow:0 1px 0 var(--line)}
+.nav{justify-content:flex-start;padding:7px 12px;min-height:0;gap:8px;-webkit-overflow-scrolling:touch}
+.nav a{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;padding:8px 15px;font-size:14px;background:rgba(255,255,255,.6)}
+.nav a.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.page{padding:12px 14px 50px;gap:26px}
+h1{font-size:26px;line-height:1.14;letter-spacing:-.5px}
+.standfirst{font-size:17px;line-height:1.45}
+.byline{gap:4px 12px;font-size:12px;padding:10px 0}
+.share{margin-inline-start:0;width:100%;order:9}
+figure{margin-inline:-14px}figure img{aspect-ratio:16/9}figcaption{padding-inline:14px}
+.keybox{padding:12px 14px;margin-bottom:20px}.keybox li{font-size:14.5px}
+.body{font-size:18px;line-height:1.7}.body p{margin-bottom:17px}.body h2{font-size:22px;margin:26px 0 10px}
+.pull{padding:12px 14px}.pull q{font-size:20px}
+.watch{display:block;text-align:center;padding:13px}
+.rel-grid{display:flex;overflow-x:auto;gap:12px;scroll-snap-type:x mandatory;margin-inline:-14px;padding-inline:14px;scrollbar-width:none}
+.rel-grid::-webkit-scrollbar{display:none}
+.rel-card{flex:0 0 74%;scroll-snap-align:start}
+aside{margin-top:6px}
+footer .footer-inner{flex-direction:column;gap:6px;padding-inline:14px;font-size:11px}
+}
 """
 
 
@@ -185,7 +213,7 @@ def render(a, latest=(), base="", disclaimer=""):
                '<span>Summarized by Pawed (by Mr. Brosh)</span></div></footer>')
     desc = e(a["standfirst"])
     return (f'<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">'
-            f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(a["title"])} | Pawed</title>'
+            f'<meta name="theme-color" content="#e3222b"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(a["title"])} | Pawed</title>'
             f'<meta name="description" content="{desc}"><meta property="og:title" content="{e(a["title"])}">'
             f'<meta property="og:description" content="{desc}"><meta property="og:image" content="https://i.ytimg.com/vi/{e(a["vid"])}/maxresdefault.jpg">'
             f'<style>{CSS}</style></head><body style="{_theme(a["topic"])}">{"".join(out)}</body></html>')

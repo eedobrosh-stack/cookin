@@ -2,6 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8" />
+  <meta name="theme-color" content="#e3222b">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>מקורות | Pawed</title>
   <meta name="description" content="חדשות מתוך סיכומי וידאו ופודקאסטים">
@@ -129,6 +130,44 @@
     .brand-logo { height:58px; width:auto; display:block; }
     .brand-mark { color:#2a211b; font-size:46px; letter-spacing:-1.5px; font-family:"Arial Black",Arial,sans-serif; }
     .brand-note { border-right:1px solid #ccc; padding-right:12px; }
+  
+    /* ===== mobile (phones): frozen category bar, compact header, list rows — same approach as cookin ===== */
+    @media (max-width:640px) {
+      body { -webkit-text-size-adjust:100%; }
+      #today, .masthead-actions .date, #count { display:none !important; }
+      .utility-inner { padding-inline:12px; min-height:34px; justify-content:flex-start; }
+      .utility-links { display:flex !important; gap:14px; overflow-x:auto; white-space:nowrap; scrollbar-width:none; font-size:13px; }
+      .utility-links::-webkit-scrollbar { display:none; }
+      .masthead { height:62px !important; padding-inline:12px; }
+      .brand { gap:8px; }
+      .brand-logo { height:38px !important; }
+      .brand-mark { font-size:30px !important; letter-spacing:-1px !important; }
+      .brand-note { display:none !important; }
+      .masthead-actions a { font-size:12px !important; }
+      main { padding:10px 12px 40px !important; }
+      footer { padding:18px 0; }
+      .footer-inner { flex-direction:column; gap:6px; padding-inline:12px; font-size:11px; }
+    }
+
+    @media (max-width:640px) {
+      h1.page { font-size:26px; }
+      .lead-in { font-size:14px; }
+      .scroll { overflow:visible; }
+      table, tbody, tr, td { display:block; width:100%; }
+      thead { display:none; }
+      tr { background:#fff; border:1px solid var(--line); border-radius:10px; margin:0 0 10px; padding:10px 12px; }
+      td { border:0 !important; padding:5px 0 !important; font-size:14px; }
+      td::before { content:attr(data-l); display:block; font-size:11px; color:#888; font-weight:700; margin-bottom:2px; }
+      td.name { font-size:17px; padding-bottom:2px !important; }
+      td.name::before, td:last-child::before { display:none; }
+      td.url a { font-size:13px; }
+      .pendform { min-width:0; width:100%; }
+      .pendform input { flex:1; min-width:0; }
+      select, input[type=text] { font-size:16px; padding:10px; }   /* 16px stops iOS zoom-on-focus */
+      .add-btn, .rm { min-height:42px; }
+      tfoot, tfoot tr { display:block; }
+      tfoot tr.addrow { background:#faf6e6; }
+    }
   </style>
 </head>
 <body>
@@ -146,10 +185,10 @@
       <thead><tr><th>שם הפודקאסט</th><th>שפה</th><th>כתובת YouTube</th><th>תחום</th><th></th></tr></thead>
       <tbody id="rows"><tr><td colspan="5">טוען…</td></tr></tbody>
       <tfoot id="addfoot" hidden><tr class="addrow">
-        <td><input type="text" id="n_name" placeholder="שם (אופציונלי, יילקח מיוטיוב)"></td>
-        <td><select id="n_lang"></select></td>
-        <td><input type="text" id="n_url" placeholder="כתובת YouTube (ריק = מוסיף רק את השם, פעיל רק אחרי שיש כתובת)" dir="ltr"></td>
-        <td><select id="n_vert"></select></td>
+        <td data-l="שם"><input type="text" id="n_name" placeholder="שם (אופציונלי, יילקח מיוטיוב)"></td>
+        <td data-l="שפה"><select id="n_lang"></select></td>
+        <td data-l="כתובת YouTube"><input type="text" id="n_url" placeholder="כתובת YouTube (ריק = מוסיף רק את השם, פעיל רק אחרי שיש כתובת)" dir="ltr"></td>
+        <td data-l="תחום"><select id="n_vert"></select></td>
         <td><button class="add-btn" id="n_add">הוספה</button></td>
       </tr></tfoot>
     </table></div>
@@ -164,13 +203,13 @@ const opts = (obj, sel) => (Array.isArray(obj) ? obj.map(v=>[v,v]) : Object.entr
 const short = u => u.replace(/^https?:\/\/(www\.)?youtube\.com\//,'');
 function msg(t, cls){ const m=$('msg'); m.textContent=t||''; m.className=cls||''; }
 function render(){
-  const rows = D.sources.map(s => '<tr><td class="name">'+esc(s.name)+'</td>'
-    +'<td>'+(D.can_edit?'<select data-id="'+esc(s.id)+'" data-f="language">'+opts(D.languages,s.language)+'</select>':esc(D.languages[s.language]||s.language))+'</td>'
-    +'<td class="url">'+(s.pending
+  const rows = D.sources.map(s => '<tr><td class="name" data-l="שם">'+esc(s.name)+'</td>'
+    +'<td data-l="שפה">'+(D.can_edit?'<select data-id="'+esc(s.id)+'" data-f="language">'+opts(D.languages,s.language)+'</select>':esc(D.languages[s.language]||s.language))+'</td>'
+    +'<td class="url" data-l="כתובת YouTube">'+(s.pending
         ? (D.can_edit ? '<span class="pend">ממתין לכתובת</span><span class="pendform"><input type="text" dir="ltr" placeholder="https://www.youtube.com/@channel" data-url="'+esc(s.id)+'"><button class="add-btn" data-save="'+esc(s.id)+'">שמירה</button></span>'
                       : '<span class="pend">ממתין לכתובת YouTube</span>')
         : '<a href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(short(s.url))+'</a>')+'</td>'
-    +'<td>'+(D.can_edit?'<select data-id="'+esc(s.id)+'" data-f="vertical">'+opts(D.verticals,s.vertical)+'</select>':esc(s.vertical))+'</td>'
+    +'<td data-l="תחום">'+(D.can_edit?'<select data-id="'+esc(s.id)+'" data-f="vertical">'+opts(D.verticals,s.vertical)+'</select>':esc(s.vertical))+'</td>'
     +'<td>'+(D.can_edit?'<button class="rm" data-rm="'+esc(s.id)+'" data-name="'+esc(s.name)+'">הסרה</button>':'')+'</td></tr>');
   $('rows').innerHTML = rows.join('') || '<tr><td colspan="5">אין עדיין מקורות.</td></tr>';
   $('rows').querySelectorAll('select').forEach(el=>el.onchange=()=>post('update',{id:el.dataset.id,[el.dataset.f]:el.value},'נשמר'));
