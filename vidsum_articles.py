@@ -93,28 +93,44 @@ SCHEMA = {
     "type": "OBJECT",
     "properties": {
         "title": {"type": "STRING"},
-        "subtitle": {"type": "STRING"},
+        "standfirst": {"type": "STRING"},
         "topic": {"type": "STRING", "enum": TOPICS},
         "lead": {"type": "STRING"},
-        "sections": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
-            "title": {"type": "STRING"},
-            "bullets": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
-                "text": {"type": "STRING"}, "ts": {"type": "STRING"}},
-                "required": ["text", "ts"]}}},
-            "required": ["title", "bullets"]}},
+        "key_points": {"type": "ARRAY", "items": {"type": "STRING"}},
+        "blocks": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
+            "type": {"type": "STRING", "enum": ["h2", "p", "quote", "list"]},
+            "text": {"type": "STRING"},
+            "ts": {"type": "STRING"},
+            "speaker": {"type": "STRING"},
+            "items": {"type": "ARRAY", "items": {"type": "STRING"}}},
+            "required": ["type"]}},
     },
-    "required": ["title", "subtitle", "topic", "lead", "sections"],
+    "required": ["title", "standfirst", "topic", "lead", "key_points", "blocks"],
 }
 
 
-def _duration(vid):
-    """Video length in seconds from the watch page (None if unavailable)."""
+_META = {}
+
+
+def _video_meta(vid):
+    """(length in seconds, publish date YYYY-MM-DD) from the watch page; None where unavailable."""
+    if vid in _META:
+        return _META[vid]
+    dur = pub = None
     try:
         h = _http(f"https://www.youtube.com/watch?v={vid}")
         m = re.search(r'"lengthSeconds":"(\d+)"', h)
-        return int(m.group(1)) if m else None
+        dur = int(m.group(1)) if m else None
+        m = re.search(r'"publishDate":"(\d{4}-\d\d-\d\d)', h)
+        pub = m.group(1) if m else None
     except Exception:
-        return None
+        pass
+    _META[vid] = (dur, pub)
+    return _META[vid]
+
+
+def _duration(vid):
+    return _video_meta(vid)[0]
 
 
 def _fmt(sec):
@@ -129,29 +145,25 @@ def _norm_ts(ts):
 
 
 def _prompt(title, channel, dur=None, retry=False):
-    length = ""
+    m = (dur or 0) / 60
+    words = min(1800, round(500 + 10 * m)) if dur else 900
+    quotes = max(3, min(8, round(m / 12))) if dur else 4
+    extra = ""
     if dur:
-        length = (f"\nThe video is EXACTLY {_fmt(dur)} long ({dur} seconds). No timestamp may exceed {_fmt(dur)}. "
-                  + ("Use h:mm:ss for any time past 59:59. " if dur >= 3600 else "")
-                  + "Only give a timestamp you can actually place in the audio/video; never space them evenly or guess.")
-    if dur:
-        m = dur / 60
-        words = min(2600, round(900 + 14 * m))
-        bullets = max(20, round(min(m, 60) + max(m - 60, 0) * 0.4))
-        length += (f"\nSIZE TARGET: about {words} Hebrew words in total and at least {bullets} bullets, spread across the whole "
-                   "video, each bullet carrying concrete detail (names, numbers, examples, the argument's logic). "
-                   "Do not stop early and do not compress.")
+        extra = (f"\nThe video is EXACTLY {_fmt(dur)} long ({dur} seconds). No timestamp may exceed {_fmt(dur)}. "
+                 + ("Use h:mm:ss for any time past 59:59. " if dur >= 3600 else "")
+                 + "Only give a timestamp you can actually place in the audio; never space them evenly or guess.")
     if retry:
-        length += "\nYour previous attempt had timestamps beyond the video length or invented evenly-spaced ones. Re-listen and give real ones."
-    return f"""You are summarizing the attached YouTube video ("{title}", channel "{channel}").{length}
-Write a DETAILED summary in Hebrew (keep proper names / terms in their original language when natural).
-Rules:
-- title: a clear Hebrew article title (guest/topic specific, no clickbait). subtitle: one line (channel, speakers, length, date if known).
-- topic: the single best-fitting news section from the allowed list. lead: a 1-2 sentence Hebrew teaser (max 220 chars) that states the core story/claim, written like a news-site standfirst.
-- Split the video into 6-14 chronological sections, each with a short descriptive Hebrew title.
-- Each section holds 5-12 bullets, and overall roughly one bullet per 40-60 seconds of video (a 1-hour video should yield 70-100+ bullets). A bullet is 25-45 Hebrew words (never a short fragment): two full sentences giving the claim plus its supporting detail: claims, numbers, names, examples, arguments, conclusions. No filler, no "the speaker says".
-- Every bullet has "ts": the timestamp in the video where that point is made, format m:ss or h:mm:ss, accurate to within a few seconds, increasing through the video.
-- Cover the whole video to the end, not only the beginning.
+        extra += "\nYour previous attempt had timestamps beyond the video length or invented evenly-spaced ones. Re-listen and give real ones."
+    return f"""You are a news editor turning the attached YouTube video ("{title}", channel "{channel}") into a Hebrew NEWS ARTICLE for a news portal.{extra}
+Write like an Israeli news site feature, not like a meeting summary:
+- title: a sharp, specific Hebrew headline stating the main claim or story (no clickbait, no question marks unless essential). standfirst: 1-2 sentences under the headline. lead: one 200-char teaser.
+- topic: the single best-fitting section from the allowed list.
+- key_points: 4-5 short Hebrew sentences ("עיקרי הדברים").
+- blocks: the article body, in order. Use type "h2" for subheadings (a new one every 2-4 paragraphs), "p" for flowing prose paragraphs, "list" (with "items") at most once for a real enumeration, and "quote" for pull quotes.
+- About {words} Hebrew words in total across the "p" blocks. Third person, past/present tense news style, attribute claims ("לדבריו", "לטענתו"), keep concrete names, numbers, examples and the logic of the argument. Do not invent facts; do not editorialize.
+- Every "p" block has "ts": the timestamp (m:ss or h:mm:ss) where its content is said. Cover the whole video to the end, chronologically.
+- Include {quotes} "quote" blocks: the MOST PROVOCATIVE, punchy, quotable statements actually spoken, copied as close to verbatim as you can hear them, each under 25 words, with "speaker" (name + a few words of context, e.g. "אלון אולמן, על מנהיגות") and "ts". Place each quote right after the paragraph it relates to.
 Return only JSON matching the schema."""
 
 
@@ -228,8 +240,12 @@ def _captions_fallback(vid):
     return "\n".join(lines)[:900000]
 
 
+def _all_ts(data):
+    return [b.get("ts") for b in data.get("blocks", []) if b.get("type") in ("p", "quote")]
+
+
 def _ts_ok(data, dur):
-    secs = [t for t in (_ts_sec(b.get("ts")) for s in data.get("sections", []) for b in s.get("bullets", [])) if t is not None]
+    secs = [t for t in (_ts_sec(x) for x in _all_ts(data)) if t is not None]
     if not secs:
         return False
     if dur and max(secs) > dur * 1.02 + 10:
@@ -240,7 +256,7 @@ def _ts_ok(data, dur):
 def summarize(vid):
     url = f"https://www.youtube.com/watch?v={vid}"
     title, channel = _oembed(vid)
-    dur = _duration(vid)
+    dur, published = _video_meta(vid)
     method = None
     data = tokens = fin = None
     for retry in (False, True):
@@ -258,18 +274,27 @@ def summarize(vid):
         if _ts_ok(data, dur):
             break
         log(f"vidsum {vid} bad timestamps (dur={dur}); {'retrying' if not retry else 'clamping'}")
-    secs = [s for s in data.get("sections", []) if s.get("bullets")]
-    if not secs:
-        raise RuntimeError("empty summary")
-    for s in secs:
-        for b in s["bullets"]:
-            t = _ts_sec(b.get("ts"))
-            b["ts"] = "" if (t is None or (dur and t > dur + 5)) else _norm_ts(b["ts"])
-    return {"title": data["title"].strip(), "subtitle": data.get("subtitle", "").strip(), "sections": secs,
+    blocks = []
+    for b in data.get("blocks", []):
+        t = b.get("type")
+        if t == "list" and b.get("items"):
+            blocks.append({"type": "list", "items": [str(i) for i in b["items"]]})
+        elif t in ("h2", "p", "quote") and (b.get("text") or "").strip():
+            ts = b.get("ts") or ""
+            sec = _ts_sec(ts)
+            ts = "" if (sec is None or (dur and sec > dur + 5)) else _norm_ts(ts)
+            nb = {"type": t, "text": b["text"].strip(), "ts": ts}
+            if t == "quote":
+                nb["speaker"] = (b.get("speaker") or "").strip()
+            blocks.append(nb)
+    if sum(1 for b in blocks if b["type"] == "p") < 3:
+        raise RuntimeError("empty article")
+    return {"title": data["title"].strip(), "standfirst": data.get("standfirst", "").strip(), "blocks": blocks,
+            "key_points": [k.strip() for k in data.get("key_points", []) if k.strip()][:6],
             "topic": data.get("topic") if data.get("topic") in TOPICS else "תרבות",
-            "lead": (data.get("lead") or "").strip(),
+            "lead": (data.get("lead") or data.get("standfirst") or "").strip(),
             "channel": channel, "src_title": title, "tokens": tokens, "method": method, "finish": fin,
-            "duration": dur}
+            "duration": dur, "published": published}
 
 
 def _run(vid):
@@ -399,6 +424,16 @@ def index_html():
 
 
 
+import vidsum_render
+DISCLAIMER = "הדברים המובאים הם של המרואיינים ולא נבדקו. הכתבה נערכה אוטומטית מתוך תמלול של השיחה."
+
+
+def render_article(a):
+    if a.get("blocks"):
+        return vidsum_render.render(a, news_items(), base="", disclaimer=a.get("disclaimer") or DISCLAIMER)
+    return article_html(a)
+
+
 # ------------------------------------------------------------- news portal ---
 CLS_SCHEMA = {"type": "OBJECT", "properties": {"topic": {"type": "STRING", "enum": TOPICS},
                                                "lead": {"type": "STRING"}}, "required": ["topic", "lead"]}
@@ -407,7 +442,7 @@ CLS_SCHEMA = {"type": "OBJECT", "properties": {"topic": {"type": "STRING", "enum
 def backfill():
     """Older articles lack topic/lead: classify them from their text (cheap, text-only)."""
     for a in _articles():
-        if a.get("topic") and a.get("lead"):
+        if (a.get("topic") and a.get("lead")) or a.get("blocks"):
             continue
         try:
             txt = a["title"] + "\n" + "\n".join(b["text"] for s in a["sections"][:3] for b in s["bullets"][:3])
@@ -438,7 +473,7 @@ def _length_min(a):
 
 
 def news_items():
-    return [{"slug": a["slug"], "title": a["title"], "lead": a.get("lead") or a.get("subtitle", ""),
+    return [{"slug": a["slug"], "title": a["title"], "lead": a.get("lead") or a.get("standfirst") or a.get("subtitle", ""),
              "topic": a.get("topic") or "תרבות", "channel": a.get("channel", ""), "vid": a.get("vid"),
              "created": a.get("created"), "minutes": _length_min(a)} for a in _articles()]
 
@@ -603,7 +638,7 @@ def handle_get(handler, path, qs):
         if not a:
             handler._json({"error": "article not found"}, 404)
         else:
-            handler._html(article_html(a), "no-store")
+            handler._html(render_article(a), "no-store")
         return True
     if path in ("/vidsum/news", "/vidsum/news/"):
         try:
@@ -652,7 +687,37 @@ def delete_article(slug, vid=None):
     return n
 
 
+def import_article(req):
+    """Admin: store a hand-edited article dict (must have title, standfirst, topic, vid, blocks)."""
+    for k in ("title", "standfirst", "topic", "vid", "blocks"):
+        if not req.get(k):
+            raise ValueError(f"missing {k}")
+    if req["topic"] not in TOPICS:
+        raise ValueError("bad topic")
+    vid = req["vid"]
+    delete_article("", vid)
+    dur, pub = _video_meta(vid)
+    art = {"slug": _unique_slug(req["title"], vid), "url": f"https://www.youtube.com/watch?v={vid}",
+           "created": time.strftime("%Y-%m-%d %H:%M:%S"), "duration": dur, "published": pub, "lead": req["standfirst"],
+           "method": "manual", **{k: v for k, v in req.items() if k not in ("slug",)}}
+    os.makedirs(ART_DIR, exist_ok=True)
+    with open(os.path.join(ART_DIR, art["slug"] + ".json"), "w", encoding="utf-8") as f:
+        json.dump(art, f, ensure_ascii=False, indent=1)
+    _set_job(vid, status="done", slug=art["slug"], title=art["title"], error="")
+    return art["slug"]
+
+
 def handle_post(handler, path, req):
+    if path == "/api/vidsum/article/import":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            try:
+                handler._json({"ok": True, "slug": import_article(req)})
+            except Exception as e:
+                handler._json({"ok": False, "error": str(e)[:200]}, 400)
+        return True
     if path.startswith("/api/vidsum/channels"):
         user = current_user(handler)
         if not (user and user.get("admin")):
