@@ -468,9 +468,19 @@ def _http(url, timeout=20):
         return r.read().decode("utf-8", "replace")
 
 
+def _feed_url(fid):
+    return ("https://www.youtube.com/feeds/videos.xml?playlist_id=" if not fid.startswith("UC")
+            else "https://www.youtube.com/feeds/videos.xml?channel_id=") + fid
+
+
 def resolve_channel(ref):
-    """channel URL / @handle / UC… id -> (channel_id, name)"""
+    """channel URL / @handle / UC… id / playlist URL (list=PL…) -> (feed_id, name)"""
     ref = ref.strip()
+    pl = re.search(r"[?&]list=([\w-]+)", ref)
+    if pl:
+        feed = _http(_feed_url(pl.group(1)))
+        n = re.search(r"<title>([^<]+)</title>", feed)
+        return pl.group(1), _html.unescape(n.group(1)) if n else pl.group(1)
     m = re.search(r"(UC[\w-]{22})", ref)
     if m:
         cid = m.group(1)
@@ -485,7 +495,7 @@ def resolve_channel(ref):
         if not m:
             raise RuntimeError("could not resolve channel id")
         cid = m.group(1)
-    feed = _http(f"https://www.youtube.com/feeds/videos.xml?channel_id={cid}")
+    feed = _http(_feed_url(cid))
     n = re.search(r"<title>([^<]+)</title>", feed)
     return cid, _html.unescape(n.group(1)) if n else cid
 
@@ -511,7 +521,7 @@ def watch_once():
     used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit")
     for ch in d["channels"]:
         try:
-            feed = _http(f"https://www.youtube.com/feeds/videos.xml?channel_id={ch['id']}")
+            feed = _http(_feed_url(ch["id"]))
         except Exception as e:
             ch["error"] = str(e)[:120]
             continue
