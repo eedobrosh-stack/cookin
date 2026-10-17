@@ -5,7 +5,19 @@ import json, os, re, threading, time, html as _html, unicodedata
 import urllib.request, urllib.parse, urllib.error
 
 import multiuser
-from multiuser import secret, log, GEMINI_MODEL, BudgetExhausted, current_user
+from multiuser import secret, GEMINI_MODEL, BudgetExhausted, current_user
+from multiuser import log as _mlog
+
+_SECRET_RE = re.compile(r"(lr_[0-9a-fA-F]{16,}|Bearer\s+\S+|AIza[\w-]{20,}|key=[^&\s'\"]+)")
+
+
+def _scrub(msg):
+    """Never let an API key reach logs or the public job-status endpoint."""
+    return _SECRET_RE.sub("[redacted]", str(msg))
+
+
+def log(msg):
+    _mlog(_scrub(msg))
 
 ART_DIR = os.path.join(multiuser.DATA_DIR, "vidsum_articles")
 JOBS_PATH = os.path.join(multiuser.DATA_DIR, "vidsum_jobs.json")
@@ -44,6 +56,8 @@ def _save_jobs(j):
 def _set_job(vid, **kw):
     with LOCK:
         jobs = _load_jobs()
+        if "error" in kw:
+            kw["error"] = _scrub(kw["error"])
         jobs.setdefault(vid, {}).update(kw)
         jobs[vid]["updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
         _save_jobs(jobs)
@@ -177,7 +191,7 @@ Return only JSON matching the schema."""
 
 
 def _gemini(parts, media_low=True, schema=None, max_out=32768):
-    key = secret("GEMINI_API_KEY")
+    key = (secret("GEMINI_API_KEY") or "").strip()
     if not key:
         raise RuntimeError("GEMINI_API_KEY missing")
     gc = {"temperature": 0.3, "response_mime_type": "application/json",
@@ -221,7 +235,7 @@ SCHEMA_HINT = """{"title": str, "standfirst": str, "topic": one of %s, "lead": s
 
 
 def _luna(prompt, max_tokens=24000):
-    key = secret("LUNAROUTE_API_KEY")
+    key = (secret("LUNAROUTE_API_KEY") or "").strip()
     if not key:
         raise RuntimeError("LUNAROUTE_API_KEY missing")
     body = {"model": LUNA_MODEL, "max_tokens": max_tokens, "messages": [{"role": "user", "content": prompt}]}
