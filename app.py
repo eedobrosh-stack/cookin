@@ -768,6 +768,12 @@ class Handler(SimpleHTTPRequestHandler):
         if self._is_main_host() and p == "/":
             self._html(JARCUD_LANDING)
             return
+        host_ = (self.headers.get("Host") or "").split(":")[0].lower()
+        if host_ == "cookin.jarcud.com" and p in ("/vidsum/sources", "/vidsum/sources/", "/api/vidsum/sources"):
+            # Google sign-in is registered for cookin.jarcud.com only, so the sources editor is also reachable here
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if vidsum_articles.handle_get(self, p, qs):
+                return
         if self._is_main_host() and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/relay/queue")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
