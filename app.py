@@ -815,14 +815,14 @@ class Handler(SimpleHTTPRequestHandler):
             self._html(JARCUD_LANDING)
             return
         host_ = (self.headers.get("Host") or "").split(":")[0].lower()
-        if host_ == "cookin.jarcud.com" and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/pawed", "/vidsum/cover"))
+        if host_ == "cookin.jarcud.com" and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/pawed", "/vidsum/cover", "/vidsum/addep"))
                                              or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/news", "/api/vidsum/me", "/api/vidsum/links/todo",
                                                       "/api/vidsum/articles", "/api/vidsum/job")):
             # Google sign-in is registered for cookin.jarcud.com only, so the sources editor is also reachable here
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return
-        if (self._is_main_host() or self._is_pawed_host()) and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/pawed", "/vidsum/cover")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/me", "/api/vidsum/links/todo", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/relay/queue", "/api/vidsum/relay/sources")):
+        if (self._is_main_host() or self._is_pawed_host()) and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/pawed", "/vidsum/cover", "/vidsum/addep")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/me", "/api/vidsum/links/todo", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/relay/queue", "/api/vidsum/relay/sources")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return
@@ -985,7 +985,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path.split("?")[0]
-        if p in ("/api/vidsum/summarize", "/api/vidsum/article/delete", "/api/vidsum/article/import", "/api/vidsum/article/release", "/api/vidsum/article/source", "/api/vidsum/links/set", "/api/vidsum/topics/backfill") or p.startswith(("/api/vidsum/channels/", "/api/vidsum/relay/", "/api/vidsum/sources/")) or p in ("/api/vidsum/bulk", "/api/vidsum/prefs"):
+        if p in ("/api/vidsum/summarize", "/api/vidsum/article/delete", "/api/vidsum/article/import", "/api/vidsum/article/release", "/api/vidsum/article/source", "/api/vidsum/links/set", "/api/vidsum/topics/backfill", "/api/vidsum/submit") or p.startswith(("/api/vidsum/channels/", "/api/vidsum/relay/", "/api/vidsum/sources/")) or p in ("/api/vidsum/bulk", "/api/vidsum/prefs"):
             if vidsum_articles.handle_post(self, p, self._read_json()):
                 return
         if p.startswith("/api/admin/cands"):

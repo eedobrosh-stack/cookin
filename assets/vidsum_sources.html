@@ -194,7 +194,7 @@
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a><a class="auth-only" href="/vidsum/v1">הוספת סרטון</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a><a class="auth-only" href="#" id="addep">הוספת פרק</a></div></div></div>
   <header class="masthead">
     <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-txt"><span class="brand-mark">Pawed</span><span class="brand-note">Respect Your Pods</span></span></a>
     <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
@@ -318,5 +318,6 @@ document.getElementById('today').textContent = new Date().toLocaleDateString('he
 load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעינה</td></tr>'; });
 </script>
 <script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>
+<script src="/vidsum/addep.js"></script>
 </body>
 </html>

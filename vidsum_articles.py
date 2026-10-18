@@ -569,6 +569,9 @@ def _save_article(vid, d):
     src_id = _load_jobs().get(vid, {}).get("source")
     if src_id:
         d = {**d, "source_id": src_id}
+    owner_id = _load_jobs().get(vid, {}).get("owner")
+    if owner_id:
+        d = {**d, "submitted_by": owner_id}
     art = {"slug": slug, "vid": vid, "url": f"https://www.youtube.com/watch?v={vid}",
            "created": time.strftime("%Y-%m-%d %H:%M:%S"), **d}
     os.makedirs(ART_DIR, exist_ok=True)
@@ -727,7 +730,7 @@ def _run_luna(vid):
 DEFAULT_ENGINE = "luna"      # free path first (Mac relay fetches captions, LunaRoute writes); Gemini only as a fallback
 
 
-def submit(url, admin, engine=DEFAULT_ENGINE, source=None):
+def submit(url, admin, engine=DEFAULT_ENGINE, source=None, owner=None):
     """-> (http_code, payload). engine "luna": wait for the Mac relay's transcript; "gemini": immediate (costs tokens)."""
     vid = yt_id(url)
     if not vid:
@@ -750,9 +753,13 @@ def submit(url, admin, engine=DEFAULT_ENGINE, source=None):
             n = sum(1 for j in jobs.values() if j.get("public") and (j.get("submitted") or "").startswith(today))
             if n >= PUBLIC_DAILY_CAP:
                 return 429, {"ok": False, "error": "daily limit reached"}
+            if owner and sum(1 for j in jobs.values() if j.get("owner") == owner and (j.get("submitted") or "").startswith(today)) >= USER_DAILY_VIDEOS:
+                return 429, {"ok": False, "error": f"you can add up to {USER_DAILY_VIDEOS} episodes a day"}
         status = "needs_transcript" if engine == "luna" else "queued"
         jobs[vid] = {"status": status, "engine": engine, "public": not admin, "source": source or (cur or {}).get("source"),
                      "submitted": time.strftime("%Y-%m-%d %H:%M:%S")}
+        if owner:                                   # a standalone episode someone added by hand (not from a watched source)
+            jobs[vid].update(owner=owner, standalone=not jobs[vid]["source"])
         _save_jobs(jobs)
     if engine != "luna":
         threading.Thread(target=_run, args=(vid,), daemon=True).start()
@@ -1050,7 +1057,7 @@ def news_items():
     nd = vidsum_render.nodash
     return [{"slug": a["slug"], "title": nd(a["title"]), "lead": nd(a.get("lead") or a.get("standfirst") or a.get("subtitle", "")),
              "topic": a.get("topic") or "תרבות", "topics": article_topics(a), "channel": a.get("channel", ""), "vid": a.get("vid"),
-             "source_id": a.get("source_id"), "created": a.get("created"), "released": _rel(a),
+             "source_id": a.get("source_id"), "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
              "released_time": len((a.get("published_at") or "")) >= 19, "minutes": _length_min(a)} for a in _articles()]
 
 
@@ -1436,6 +1443,19 @@ def handle_get(handler, path, qs):
         except OSError:
             handler._json({"error": "logo missing"}, 404)
         return True
+    if path == "/vidsum/addep.js":
+        try:
+            with open(os.path.join(_ASSETS, "vidsum_addep.js"), "rb") as f:
+                body = f.read()
+            handler.send_response(200)
+            handler.send_header("Content-Type", "application/javascript; charset=utf-8")
+            handler.send_header("Content-Length", str(len(body)))
+            handler.send_header("Cache-Control", "no-cache")
+            handler.end_headers()
+            handler.wfile.write(body)
+        except OSError:
+            handler._json({"error": "script missing"}, 404)
+        return True
     if path in ("/vidsum/v1", "/vidsum/v1/"):
         _serve(handler, V1_PAGE)
         return True
@@ -1476,7 +1496,7 @@ def handle_get(handler, path, qs):
         personal = vis is not None
         if personal:
             base_ok = not get_vprefs(user["id"])["hideBase"]
-            items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and base_ok)]
+            items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and base_ok) or i.get("submitted_by") == user["id"]]
         handler._json({"ok": True, "topics": TOPICS, "items": items, "personal": personal,
                        "me": ({"name": user.get("name") or user.get("email")} if user and user.get("id") != "admin-token" else None)})
         return True
@@ -1802,6 +1822,19 @@ def handle_post(handler, path, req):
             handler._json({"error": "forbidden"}, 403)
         else:
             handler._json({"ok": True, "deleted": delete_article(str(req.get("slug") or ""), req.get("vid"))})
+        return True
+    if path == "/api/vidsum/submit":
+        user = current_user(handler)
+        if not user:
+            handler._json({"ok": False, "error": "sign in with Google first"}, 401)
+            return True
+        is_admin = bool(user.get("admin"))
+        owner = "admin" if user.get("id") == "admin-token" else user["id"]
+        url = str(req.get("url") or "").strip()[:300]
+        code, payload = submit(url, is_admin, "luna", None, owner)
+        if payload.get("ok") and payload.get("existing"):
+            payload["slug"] = payload.get("slug")
+        handler._json(payload, code)
         return True
     if path == "/api/vidsum/summarize":
         user = current_user(handler)

@@ -137,6 +137,7 @@ img.onerror=next;
 img.onload=function(){if(img.naturalWidth<300&&img.src.indexOf('/vidsum/cover/')<0)next();};
 next();}
 document.querySelectorAll('img[data-vid]').forEach(fix);})();</script>"""
+PAW_JS += "<script src=\"/vidsum/addep.js\"></script>"
 PAW_JS += "<script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>"
 
 
@@ -202,7 +203,7 @@ def render(a, latest=(), base="", disclaimer=""):
     share_txt = urllib.parse.quote(a["title"], safe="")
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(_he_date(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span>'
-           f'<a class="admin-only" href="{base}/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="{base}/vidsum/sources">מקורות</a><a class="admin-only" href="{base}/vidsum/logs">יומן</a><a class="auth-only" href="{base}/vidsum/v1">הוספת סרטון</a></div></div></div>'
+           f'<a class="admin-only" href="{base}/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="{base}/vidsum/sources">מקורות</a><a class="admin-only" href="{base}/vidsum/logs">יומן</a><a class="auth-only" href="#" id="addep">הוספת פרק</a></div></div></div>'
            f'<header class="masthead"><a class="brand" href="{base}/vidsum"><img class="brand-logo" src="{base}/vidsum/pawed-logo.png" alt=""><span class="brand-txt"><span class="brand-mark">Pawed</span>'
            f'<span class="brand-note">Respect Your Pods</span></span></a></header>'
            f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">ראשי</a>{nav}</nav></div>',
