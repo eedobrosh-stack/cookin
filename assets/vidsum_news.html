@@ -342,7 +342,7 @@ function sm(a){ return '<a class="sm" href="'+href(a)+'">'+im(a)+'<h4>'+esc(a.ti
 // Top story rule: the newest episode (by RELEASE date, never by when we processed it) holds the top slot until a newer one
 // arrives, but never longer than 150 minutes. After that the slot moves on to the next newest, and keeps moving every
 // 150 minutes (within the 5 newest) until a new episode is released and takes over again. Stateless, so everyone sees the same.
-const HERO_SLOT_MS = 150*60*1000, HERO_POOL = 5;
+const HERO_SLOT_MS = 150*60*1000, HERO_POOL = 12;   // walks down the 12 newest, one every 150 min (then starts over)
 function heroIndex(items){
   const n = Math.min(HERO_POOL, items.length); if(n < 2) return 0;
   const t0 = new Date((items[0].released||items[0].created).replace(' ','T')+'Z').getTime();
@@ -394,6 +394,13 @@ function moreFeed(force){
   FEED.chunk++; hydrateThumbs();
   setTimeout(()=>{ FEED.busy = false; const r = document.getElementById('sentinel').getBoundingClientRect(); if(r.top < innerHeight+900) moreFeed(); }, force?0:120);
 }
+let HERO_SHOWN = null;
+setInterval(()=>{
+  if(!DATA || FILTER===undefined) return;
+  const list = FILTER==='all' ? DATA.items : DATA.items.filter(a=>a.topic===FILTER);
+  if(!list.length || HERO_SHOWN===null) return;
+  if(heroIndex(list)!==HERO_SHOWN && window.scrollY<300) render();
+}, 60*1000);
 // floating "back to top" (the feed never ends, so the footer is out of reach)
 (function(){ const b=document.createElement('button'); b.id='totop'; b.textContent='↑'; b.setAttribute('aria-label','חזרה למעלה');
   b.onclick=()=>window.scrollTo({top:0,behavior:'smooth'}); document.body.appendChild(b);
@@ -403,7 +410,7 @@ function render(){
   const all = DATA.items, main = document.getElementById('main');
   const sorted = FILTER==='all' ? all : all.filter(a=>a.topic===FILTER);
   if(!sorted.length){ main.innerHTML='<p class="empty">אין עדיין סיכומים במדור הזה — הם יופיעו כאן אוטומטית.</p>'; return; }
-  const k = heroIndex(sorted);
+  const k = heroIndex(sorted); HERO_SHOWN = k;
   const items = k===0 ? sorted : [sorted[k], ...sorted.filter((_,i)=>i!==k)];   // featured story first, everything else still newest-first
   const used = new Set(); let h='';
   const top = take(items,1,used)[0], subs = take(items,3,used);
