@@ -4,6 +4,7 @@ article dict:
   title, standfirst, topic, channel, vid, url, published (YYYY-MM-DD), duration (sec),
   key_points [str], blocks [{"type": "h2"|"p"|"quote"|"list", "text", "ts", "speaker", "items"}]
 """
+import os
 import html as _html
 import urllib.parse
 
@@ -16,6 +17,8 @@ THEMES = {  # very mild page tint per portal category: bg, hairline, quote box, 
     "רכילות": ("#fdf0f6", "#f1cfdf", "#f9d9e7", "#9b2a5c"),     # pink
     "בריאות": ("#edf8f6", "#c9e6e0", "#d3efe9", "#17665a"),     # teal
 }
+
+SITE = os.environ.get("PAWED_SITE", "https://pawed.io")      # public address (share links, canonical, og:url)
 
 TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "רכילות", "בריאות"]
 HE_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"]
@@ -165,7 +168,7 @@ def render(a, latest=(), base="", disclaimer=""):
 
     nav = "".join(f'<a href="{base}/vidsum#{urllib.parse.quote(t)}" class="{"active" if t == a["topic"] else ""}">{e(t)}</a>'
                   for t in TOPICS)
-    share_url = urllib.parse.quote(f'https://jarcud.com/vidsum/article/{a["slug"]}', safe="")
+    share_url = urllib.parse.quote(f'{SITE}/vidsum/article/{a["slug"]}', safe="")
     share_txt = urllib.parse.quote(a["title"], safe="")
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(_he_date(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span>'
@@ -223,6 +226,7 @@ def render(a, latest=(), base="", disclaimer=""):
     desc = e(a["standfirst"])
     return (f'<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">'
             f'<meta name="theme-color" content="#e3222b"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(a["title"])} | Pawed</title>'
-            f'<meta name="description" content="{desc}"><meta property="og:title" content="{e(a["title"])}">'
+            f'<meta name="description" content="{desc}"><link rel="canonical" href="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}">'
+            f'<meta property="og:url" content="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}"><meta property="og:title" content="{e(a["title"])}">'
             f'<meta property="og:description" content="{desc}"><meta property="og:image" content="https://i.ytimg.com/vi/{e(a["vid"])}/maxresdefault.jpg">'
             f'<style>{CSS}</style></head><body style="{_theme(a["topic"])}">{"".join(out)}{PAW_JS}</body></html>')
