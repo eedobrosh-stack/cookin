@@ -767,7 +767,10 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         p = self.path.split("?")[0]
         if self._is_pawed_host():
-            # Render itself redirects pawed.io -> www.pawed.io, so both names are served here (no redirect back: that was a loop)
+            host0 = (self.headers.get("Host") or "").split(":")[0].lower()
+            if host0 == "www.pawed.io":                                   # one canonical address
+                self.send_response(301); self.send_header("Location", "https://pawed.io" + self.path)
+                self.send_header("Content-Length", "0"); self.end_headers(); return
             pawed_icons = {"/favicon.ico": ("pawed-favicon.ico", "image/x-icon"), "/favicon-32.png": ("pawed-favicon-32.png", "image/png"),
                            "/apple-touch-icon.png": ("pawed-apple-touch-icon.png", "image/png")}
             if p in pawed_icons:
