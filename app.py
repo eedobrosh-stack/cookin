@@ -459,9 +459,22 @@ _ICON_LINK_RE = re.compile(
     rb'<link\s+rel="icon"(?:[^>]*?data:image/svg\+xml,.*?</svg>")?[^>]*>\s*', re.S | re.I)
 _CHARSET_RE = re.compile(rb'<meta\s+charset=[^>]*>', re.I)
 
-def brand_html(body):
+PAWED_ICON_TAGS = (
+    '<link rel="icon" href="/favicon.ico" sizes="any">'
+    '<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">'
+    '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'
+)
+PAWED_HOSTS = ("pawed.io", "www.pawed.io")
+
+
+def secret_flag(name):
+    v = multiuser.secret(name)
+    return str(v or "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def brand_html(body, pawed=False):
     body = _ICON_LINK_RE.sub(b"", body)
-    tags = ICON_TAGS.encode("utf-8")
+    tags = (PAWED_ICON_TAGS if pawed else ICON_TAGS).encode("utf-8")
     m = _CHARSET_RE.search(body)
     if m:
         return body[:m.end()] + b"\n" + tags + b"\n" + body[m.end():]
@@ -659,6 +672,9 @@ class Handler(SimpleHTTPRequestHandler):
         host = (self.headers.get("Host") or "").split(":")[0].lower()
         return host == "jarcud.com" or host.endswith(".jarcud.com")
 
+    def _is_pawed_host(self):
+        return (self.headers.get("Host") or "").split(":")[0].lower() in PAWED_HOSTS
+
     def _is_main_host(self):
         host = (self.headers.get("Host") or "").split(":")[0].lower()
         return host in ("jarcud.com", "www.jarcud.com")
@@ -673,7 +689,7 @@ class Handler(SimpleHTTPRequestHandler):
     def _html(self, body, cache_control=None):
         if isinstance(body, str):
             body = body.encode("utf-8")
-        body = self._ga(brand_html(body))
+        body = self._ga(brand_html(body, self._is_pawed_host()))
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
@@ -750,6 +766,31 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         p = self.path.split("?")[0]
+        if self._is_pawed_host():
+            host0 = (self.headers.get("Host") or "").split(":")[0].lower()
+            if host0 == "www.pawed.io":                                   # one canonical address
+                self.send_response(301); self.send_header("Location", "https://pawed.io" + self.path)
+                self.send_header("Content-Length", "0"); self.end_headers(); return
+            pawed_icons = {"/favicon.ico": ("pawed-favicon.ico", "image/x-icon"), "/favicon-32.png": ("pawed-favicon-32.png", "image/png"),
+                           "/apple-touch-icon.png": ("pawed-apple-touch-icon.png", "image/png")}
+            if p in pawed_icons:
+                name, ctype = pawed_icons[p]
+                try:
+                    with open(os.path.join(ASSETS, name), "rb") as f:
+                        body = f.read()
+                except OSError:
+                    self._json({"error": "icon not found"}, 404); return
+                self.send_response(200); self.send_header("Content-Type", ctype); self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "public, max-age=604800"); self.end_headers(); self.wfile.write(body); return
+            if p == "/":
+                if vidsum_articles.handle_get(self, "/vidsum", {}):
+                    return
+            if not p.startswith(("/vidsum", "/api/vidsum/", "/auth/", "/api/me")):
+                self._json({"error": "not found"}, 404); return
+        elif secret_flag("PAWED_REDIRECT") and (self._is_main_host() or (self.headers.get("Host") or "").split(":")[0].lower() == "cookin.jarcud.com") \
+                and (p in ("/vidsum", "/vidsum/") or p.startswith(("/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/articles", "/vidsum/article/", "/vidsum/news"))):
+            self.send_response(301); self.send_header("Location", "https://pawed.io" + self.path)   # pages moved to pawed.io
+            self.send_header("Content-Length", "0"); self.end_headers(); return
         if p in self._ICONS:
             name, ctype = self._ICONS[p]
             try:
@@ -776,7 +817,7 @@ class Handler(SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return
-        if self._is_main_host() and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/pawed", "/vidsum/cover")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/relay/queue", "/api/vidsum/relay/sources")):
+        if (self._is_main_host() or self._is_pawed_host()) and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/pawed", "/vidsum/cover")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/relay/queue", "/api/vidsum/relay/sources")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return
