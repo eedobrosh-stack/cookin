@@ -439,12 +439,18 @@ DEFAULT = {"members": [], "votes": {}, "decision": None, "tieCounter": None, "hi
 # Google Analytics (GA4) — property "Jarcud". Injected into HTML responses for
 # the public host only (skip onrender.com previews and health checks).
 GA_ID = "G-TFS1NEQBVQ"
-GA_SNIPPET = (
-    '<script async src="https://www.googletagmanager.com/gtag/js?id=' + GA_ID + '"></script>'
-    "<script>window.dataLayer=window.dataLayer||[];"
-    "function gtag(){dataLayer.push(arguments);}"
-    "gtag('js',new Date());gtag('config','" + GA_ID + "');</script>"
-)
+def _ga_snippet(ga_id):
+    return (
+        '<script async src="https://www.googletagmanager.com/gtag/js?id=' + ga_id + '"></script>'
+        "<script>window.dataLayer=window.dataLayer||[];"
+        "function gtag(){dataLayer.push(arguments);}"
+        "gtag('js',new Date());gtag('config','" + ga_id + "');</script>"
+    )
+
+
+GA_SNIPPET = _ga_snippet(GA_ID)
+PAWED_GA_ID = "G-JHRSTQ084Y"                  # GA4 property "Pawed" (stream pawed.io), separate from Jarcud
+PAWED_GA_SNIPPET = _ga_snippet(PAWED_GA_ID)
 
 # Jarcud's face (pencil sketch, assets/favicon*.png|ico) is the favicon of every
 # HTML page this server emits, on every host: _brand() strips any per-page emoji
@@ -672,7 +678,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _inject_ga(self):
         host = (self.headers.get("Host") or "").split(":")[0].lower()
-        return host == "jarcud.com" or host.endswith(".jarcud.com")
+        return host == "jarcud.com" or host.endswith(".jarcud.com") or host in PAWED_HOSTS
 
     def _is_pawed_host(self):
         return (self.headers.get("Host") or "").split(":")[0].lower() in PAWED_HOSTS
@@ -684,7 +690,7 @@ class Handler(SimpleHTTPRequestHandler):
     def _ga(self, body):
         if not self._inject_ga():
             return body
-        snip = GA_SNIPPET.encode("utf-8")
+        snip = (PAWED_GA_SNIPPET if self._is_pawed_host() else GA_SNIPPET).encode("utf-8")
         i = body.rfind(b"</body>")
         return body[:i] + snip + body[i:] if i != -1 else body + snip
 
