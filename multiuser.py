@@ -185,6 +185,14 @@ def auth_login(handler, qs):
     nxt = (qs.get("next", ["/"])[0] or "/")
     if not nxt.startswith("/") or nxt.startswith("//"):
         nxt = "/"
+    host = (handler.headers.get("Host") or "").split(":")[0].lower()
+    if host in ("jarcud.com", "www.jarcud.com"):       # no Google redirect URI registered here: sign in on a host that has one
+        target = "https://pawed.io" if nxt.startswith("/vidsum") else "https://cookin.jarcud.com"
+        handler.send_response(302)
+        handler.send_header("Location", target + "/auth/login?next=" + urllib.parse.quote(nxt))
+        handler.send_header("Content-Length", "0")
+        handler.end_headers()
+        return
     state = secrets.token_urlsafe(24)
     with db() as c:
         c.execute("DELETE FROM oauth_states WHERE created_at<?",

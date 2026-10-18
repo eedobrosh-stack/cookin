@@ -186,14 +186,17 @@
     .rm.mute { color:#666; }
     .owner { font-size:13px; color:#555; }
       .daily { display:inline-block; background:#e3f6ea; color:#18723a; font-size:11px; font-weight:800; padding:1px 8px; border-radius:20px; margin-inline-start:6px; vertical-align:middle; }
-      .auth-only { display:none; } body.authed .auth-only { display:inline; }
+      .brand-txt { display:flex; flex-direction:column; align-items:flex-start; line-height:1; }
+    .brand-note { display:block !important; border:0 !important; padding:0 !important; font-style:italic; font-size:15px; color:#6c6c6c; margin-top:-2px; letter-spacing:.2px; direction:ltr; }
+    @media (max-width:640px) { .brand-note { font-size:11px; } }
+    .auth-only { display:none; } body.authed .auth-only { display:inline; }
   </style>
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="auth-only" href="/vidsum/articles">כל הסיכומים</a><a href="/vidsum/sources">מקורות</a><a class="auth-only" href="/vidsum/logs">יומן</a><a class="auth-only" href="/vidsum/v1">הוספת סרטון</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="auth-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="auth-only" href="/vidsum/logs">יומן</a><a class="auth-only" href="/vidsum/v1">הוספת סרטון</a></div></div></div>
   <header class="masthead">
-    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span><span class="brand-note">נעשה ונשמע</span></a>
+    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-txt"><span class="brand-mark">Pawed</span><span class="brand-note">Respect Your Pods</span></span></a>
     <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
   </header>
   <main>

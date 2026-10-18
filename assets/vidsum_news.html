@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="theme-color" content="#e3222b">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pawed | נעשה ונשמע</title>
+  <title>Pawed | Respect Your Pods</title>
   <meta name="description" content="חדשות מתוך סיכומי וידאו ופודקאסטים">
   <style>
     :root { --red:#e3222b; --red-dark:#b9141c; --ink:#171717; --muted:#6c6c6c; --line:#e5e5e5; --paper:#fff; --soft:#f4f4f4; --yellow:#ffc400; }
@@ -22,7 +22,7 @@
     .brand-mark { color:var(--red); font-weight:900; font-size:50px; letter-spacing:-5px; line-height:1; }
     .brand-note { color:#777; font-size:13px; border-right:1px solid #ccc; padding-right:12px; }
     .masthead-actions { display:flex; align-items:center; gap:13px; }
-    .date { color:#777; font-size:12px; }
+    .date { color:#777; font-size:12px; text-align:center; line-height:1.35; }
     .round-btn { width:34px; height:34px; border:1px solid #d8d8d8; border-radius:50%; background:#fff; cursor:pointer; font-size:16px; }
     .nav-wrap { border-block:1px solid var(--line); box-shadow:0 2px 0 rgba(0,0,0,.02); }
     .nav { display:flex; min-height:48px; align-items:center; gap:0; overflow:auto; scrollbar-width:none; }
@@ -269,14 +269,17 @@
     .cta-sub { color:#666; font-size:12px; line-height:1.4; max-width:290px; }
     .cta-sub b { color:#2a211b; }
     @media (max-width:640px) { .cta-sub { display:none; } .cta-btn { font-size:12px; padding:7px 12px; } }
+    .brand-txt { display:flex; flex-direction:column; align-items:flex-start; line-height:1; }
+    .brand-note { display:block !important; border:0 !important; padding:0 !important; font-style:italic; font-size:15px; color:#6c6c6c; margin-top:-2px; letter-spacing:.2px; direction:ltr; }
+    @media (max-width:640px) { .brand-note { font-size:11px; } }
     .auth-only { display:none; } body.authed .auth-only { display:inline; }
   </style>
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="auth-only" href="/vidsum/articles">כל הסיכומים</a><a href="/vidsum/sources">מקורות</a><a class="auth-only" href="/vidsum/logs">יומן</a><a class="auth-only" href="/vidsum/v1">הוספת סרטון</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="auth-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="auth-only" href="/vidsum/logs">יומן</a><a class="auth-only" href="/vidsum/v1">הוספת סרטון</a></div></div></div>
   <header class="masthead">
-    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span><span class="brand-note">נעשה ונשמע</span></a>
+    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-txt"><span class="brand-mark">Pawed</span><span class="brand-note">Respect Your Pods</span></span></a>
     <div class="masthead-actions"><span class="date" id="count"></span><div class="cta" id="cta" hidden><a class="cta-btn" href="/auth/login?next=%2Fvidsum">התחברו והוסיפו את הפודקאסטים שלכם</a><div class="cta-sub"><b>התחברו ל-Pawed והתאימו את הפודים שלכם</b><br>הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</div></div></div>
   </header>
   <div class="nav-wrap"><nav class="nav" id="nav" aria-label="נושאים"></nav></div>
@@ -477,7 +480,8 @@ fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
   if(ul && j.me){ const a=document.createElement('a'); a.href='/vidsum/sources'; a.textContent = 'שלום '+j.me.name+(j.personal?' · תצוגה מותאמת':''); a.style.fontWeight='700'; ul.appendChild(a); }
   document.getElementById('cta').hidden = !!j.me;
   const mins = j.items.reduce((t,a)=>t+(a.minutes||0),0), hrs = Math.round(mins/60);
-  document.getElementById('count').textContent = hrs>=1 ? hrs.toLocaleString('he-IL')+' שעות מבחירת הפודקאסטים שלך' : mins+' דקות מבחירת הפודקאסטים שלך';
+  const hn = hrs>=1 ? hrs : Math.round(mins/6)/10;                    // under an hour: one decimal
+  document.getElementById('count').innerHTML = '<b>'+hn.toLocaleString('en-US')+'</b> שעות האזנה<br><span dir="ltr">'+hn.toLocaleString('en-US')+' Listening Hours</span>';
   nav(); render();
 }).catch(()=>{document.getElementById('main').innerHTML='<p class="empty">שגיאה בטעינה</p>';});
 </script>
