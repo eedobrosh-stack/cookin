@@ -599,7 +599,7 @@ def relay_discovered(req):
                 continue
             code, payload = submit(f"https://www.youtube.com/watch?v={vid}", True, "luna", sid)
             seen.add(vid)
-            if code in (200, 202):
+            if code == 202:                                      # genuinely new (already-known videos answer 200)
                 used += 1
                 owner_used += 1 if ch.get("owner_id") else 0
                 out["submitted"] += 1
