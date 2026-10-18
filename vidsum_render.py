@@ -18,7 +18,7 @@ THEMES = {  # very mild page tint per portal category: bg, hairline, quote box, 
     "בריאות": ("#edf8f6", "#c9e6e0", "#d3efe9", "#17665a"),     # teal
 }
 
-SITE = os.environ.get("PAWED_SITE", "https://pawed.io")      # public address (share links, canonical, og:url)
+SITE = os.environ.get("PAWED_SITE", "https://www.pawed.io")      # public address (share links, canonical, og:url)
 
 TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "רכילות", "בריאות"]
 HE_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"]
