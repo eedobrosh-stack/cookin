@@ -263,7 +263,8 @@
     #totop.on { opacity:.92; pointer-events:auto; }
     .feedchunk { margin-top:8px; padding-top:6px; }
     .feedchunk:not(:first-child) { border-top:1px solid var(--line); padding-top:22px; }
-      .cta { display:flex; flex-direction:column; align-items:center; gap:5px; text-align:center; }
+      .cta[hidden] { display:none; }
+    .cta { display:flex; flex-direction:column; align-items:center; gap:5px; text-align:center; }
     .cta-btn { background:var(--red); color:#fff; font-weight:800; font-size:14px; padding:9px 18px; border-radius:999px; white-space:nowrap; }
     .cta-btn:hover { background:var(--red-dark,#b5161d); }
     .cta-sub { color:#666; font-size:12px; line-height:1.4; max-width:290px; }
