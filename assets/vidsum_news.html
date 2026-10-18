@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="theme-color" content="#e3222b">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pawed | חדשות מהסיכומים</title>
+  <title>Pawed | נעשה ונשמע</title>
   <meta name="description" content="חדשות מתוך סיכומי וידאו ופודקאסטים">
   <style>
     :root { --red:#e3222b; --red-dark:#b9141c; --ink:#171717; --muted:#6c6c6c; --line:#e5e5e5; --paper:#fff; --soft:#f4f4f4; --yellow:#ffc400; }
@@ -263,14 +263,21 @@
     #totop.on { opacity:.92; pointer-events:auto; }
     .feedchunk { margin-top:8px; padding-top:6px; }
     .feedchunk:not(:first-child) { border-top:1px solid var(--line); padding-top:22px; }
+      .cta { display:flex; flex-direction:column; align-items:center; gap:5px; text-align:center; }
+    .cta-btn { background:var(--red); color:#fff; font-weight:800; font-size:14px; padding:9px 18px; border-radius:999px; white-space:nowrap; }
+    .cta-btn:hover { background:var(--red-dark,#b5161d); }
+    .cta-sub { color:#666; font-size:12px; line-height:1.4; max-width:290px; }
+    .cta-sub b { color:#2a211b; }
+    @media (max-width:640px) { .cta-sub { display:none; } .cta-btn { font-size:12px; padding:7px 12px; } }
+    .auth-only { display:none; } body.authed .auth-only { display:inline; }
   </style>
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a href="/vidsum/articles">כל הסיכומים</a><a href="/vidsum/sources">מקורות</a><a href="/vidsum/logs">יומן</a><a href="/vidsum/v1">הוספת סרטון</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="auth-only" href="/vidsum/articles">כל הסיכומים</a><a href="/vidsum/sources">מקורות</a><a class="auth-only" href="/vidsum/logs">יומן</a><a class="auth-only" href="/vidsum/v1">הוספת סרטון</a></div></div></div>
   <header class="masthead">
-    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span><span class="brand-note">חדשות מתוך הסיכומים</span></a>
-    <div class="masthead-actions"><span class="date" id="count"></span></div>
+    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span><span class="brand-note">נעשה ונשמע</span></a>
+    <div class="masthead-actions"><span class="date" id="count"></span><div class="cta" id="cta" hidden><a class="cta-btn" href="/auth/login?next=%2Fvidsum">התחברו והוסיפו את הפודקאסטים שלכם</a><div class="cta-sub"><b>התחברו ל-Pawed והתאימו את הפודים שלכם</b><br>הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</div></div></div>
   </header>
   <div class="nav-wrap"><nav class="nav" id="nav" aria-label="נושאים"></nav></div>
   <main id="main"><p class="empty">טוען…</p></main>
@@ -317,6 +324,8 @@ const COL = {'פוליטיקה':'#b3171f','כלכלה':'#1b3f94','טכנולוג
 const col = t => COL[t]||'#333';
 const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" style="background-image:'+tone(a)+'"></div>';
 const when2 = a => esc(rel(a));
+// an article can sit in up to 3 sections (a.topics, primary first); the home page groups by the primary one
+const inT = (a,t) => (a.topics||[a.topic]).includes(t);
 const tagOf = a => '<span class="tg" style="color:'+col(a.topic)+'">'+esc(a.topic)+'</span>';
 
 // big hero: text on one side, large image on the other, the next stories as bullet links under it (ynet style)
@@ -412,7 +421,7 @@ function moreFeed(force){
 let HERO_SHOWN = null;
 setInterval(()=>{
   if(!DATA || FILTER===undefined) return;
-  const list = FILTER==='all' ? DATA.items : DATA.items.filter(a=>a.topic===FILTER);
+  const list = FILTER==='all' ? DATA.items : DATA.items.filter(a=>inT(a,FILTER));
   if(!list.length || HERO_SHOWN===null) return;
   if(heroIndex(list)!==HERO_SHOWN && window.scrollY<300) render();
 }, 60*1000);
@@ -423,7 +432,7 @@ setInterval(()=>{
 
 function render(){
   const all = DATA.items, main = document.getElementById('main');
-  const sorted = FILTER==='all' ? all : all.filter(a=>a.topic===FILTER);
+  const sorted = FILTER==='all' ? all : all.filter(a=>inT(a,FILTER));
   if(!sorted.length){ main.innerHTML='<p class="empty">אין עדיין סיכומים במדור הזה — הם יופיעו כאן אוטומטית.</p>'; return; }
   const k = heroIndex(sorted); HERO_SHOWN = k;
   const items = k===0 ? sorted : [sorted[k], ...sorted.filter((_,i)=>i!==k)];   // featured story first, everything else still newest-first
@@ -465,10 +474,13 @@ document.getElementById('today').textContent = new Date().toLocaleDateString('he
 fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
   DATA=j; const h=decodeURIComponent(location.hash.slice(1)); if(j.topics.includes(h)) FILTER=h;
   const ul=document.querySelector('.utility-links');
-  if(ul){ const a=document.createElement('a'); a.href='/vidsum/sources'; a.textContent = j.me ? ('שלום '+j.me.name+(j.personal?' · תצוגה מותאמת':'')) : 'התחברות'; a.style.fontWeight='700'; ul.appendChild(a); }
-  document.getElementById('count').textContent=(j.items.length===1?'סיכום אחד':j.items.length+' סיכומים');
+  if(ul && j.me){ const a=document.createElement('a'); a.href='/vidsum/sources'; a.textContent = 'שלום '+j.me.name+(j.personal?' · תצוגה מותאמת':''); a.style.fontWeight='700'; ul.appendChild(a); }
+  document.getElementById('cta').hidden = !!j.me;
+  const mins = j.items.reduce((t,a)=>t+(a.minutes||0),0), hrs = Math.round(mins/60);
+  document.getElementById('count').textContent = hrs>=1 ? hrs.toLocaleString('he-IL')+' שעות מבחירת הפודקאסטים שלך' : mins+' דקות מבחירת הפודקאסטים שלך';
   nav(); render();
 }).catch(()=>{document.getElementById('main').innerHTML='<p class="empty">שגיאה בטעינה</p>';});
 </script>
+<script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed')}).catch(function(){});</script>
 </body>
 </html>

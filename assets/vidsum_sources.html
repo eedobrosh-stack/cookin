@@ -186,13 +186,14 @@
     .rm.mute { color:#666; }
     .owner { font-size:13px; color:#555; }
       .daily { display:inline-block; background:#e3f6ea; color:#18723a; font-size:11px; font-weight:800; padding:1px 8px; border-radius:20px; margin-inline-start:6px; vertical-align:middle; }
+      .auth-only { display:none; } body.authed .auth-only { display:inline; }
   </style>
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a href="/vidsum/articles">כל הסיכומים</a><a href="/vidsum/logs">יומן</a><a href="/vidsum/v1">הוספת סרטון</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="auth-only" href="/vidsum/articles">כל הסיכומים</a><a href="/vidsum/sources">מקורות</a><a class="auth-only" href="/vidsum/logs">יומן</a><a class="auth-only" href="/vidsum/v1">הוספת סרטון</a></div></div></div>
   <header class="masthead">
-    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span><span class="brand-note">חדשות מתוך הסיכומים</span></a>
+    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span><span class="brand-note">נעשה ונשמע</span></a>
     <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
   </header>
   <main>
@@ -205,6 +206,7 @@
       <label class="chk"><input type="checkbox" id="p_base"> הצג את רשימת המקורות של Pawed</label>
       <label class="chk"><input type="checkbox" id="p_name"> הצג את שמי ליד המקורות שהוספתי</label>
       <div id="p_muted" class="mutedline" hidden></div>
+      <div id="p_hbase" class="mutedline" hidden></div>
     </div>
 
     <div class="scroll"><table>
@@ -251,7 +253,7 @@ function renderAcct(){
   } else if(D.admin){
     $('acct').innerHTML = '<span class="who">מחובר כמנהל</span>';
   } else {
-    $('acct').innerHTML = '<a class="gbtn" href="/auth/login?next='+encodeURIComponent('/vidsum/sources')+'"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 010-9.4l-7.9-6.1a24 24 0 000 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.5-4.9 2.4-8.2 2.4-6.3 0-11.6-4-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg> התחברות עם Google</a><span class="hint">התחברו כדי להוסיף מקורות משלכם ולהתאים את התצוגה</span>';
+    $('acct').innerHTML = '<a class="gbtn" href="/auth/login?next='+encodeURIComponent('/vidsum/sources')+'"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 010-9.4l-7.9-6.1a24 24 0 000 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.5-4.9 2.4-8.2 2.4-6.3 0-11.6-4-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg> התחברו והוסיפו את הפודקאסטים שלכם</a><span class="hint"><b>התחברו ל-Pawed והתאימו את הפודים שלכם:</b> הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</span>';
   }
 }
 function renderSettings(){
@@ -264,6 +266,10 @@ function renderSettings(){
   $('p_muted').hidden = !m;
   $('p_muted').innerHTML = m ? 'הסתרתם מקורות של '+m+' משתמשים · <a href="#" id="unmute">הצגה מחדש</a>' : '';
   if(m) $('unmute').onclick = async e=>{ e.preventDefault(); await savePrefs({muted:[]}); };
+  const hb = (D.hidden_base||[]).length;
+  $('p_hbase').hidden = !hb;
+  $('p_hbase').innerHTML = hb ? 'הסרתם '+hb+' ערוצים של Pawed ('+D.hidden_base.map(x=>esc(x.name)).join(', ')+') · <a href="#" id="unhb">הצגה מחדש</a>' : '';
+  if(hb) $('unhb').onclick = async e=>{ e.preventDefault(); await savePrefs({hiddenBase:[]}); };
 }
 async function savePrefs(p){
   try{ const j = await api('/api/vidsum/prefs',p); D.prefs = j.prefs; await load(); msg('נשמר','ok'); }catch(e){ msg('❌ '+e.message,'err'); }
@@ -280,11 +286,13 @@ function render(){
     +'<td data-l="תחום">'+(s.can_edit?'<select data-id="'+esc(s.id)+'" data-f="vertical">'+opts(D.verticals,s.vertical)+'</select>':esc(s.vertical))+'</td>'
     +'<td class="own" data-l="נוסף על ידי">'+(s.mine?'<b>אני</b>':esc(s.owner_label))+'</td>'
     +'<td>'+(s.can_edit?'<button class="rm" data-rm="'+esc(s.id)+'" data-name="'+esc(s.name)+'">הסרה</button>'
-          :(signed&&!s.base?'<button class="rm mute" data-mute="'+esc(s.owner_id)+'" title="הסתר את כל המקורות של המשתמש הזה">הסתר</button>':''))+'</td></tr>');
+          :(signed&&!D.admin&&s.base?'<button class="rm" data-hb="'+esc(s.id)+'" title="הסר את הערוץ מהתצוגה שלי">✕</button>'
+          :(signed&&!s.base?'<button class="rm mute" data-mute="'+esc(s.owner_id)+'" title="הסתר את כל המקורות של המשתמש הזה">הסתר</button>':'')))+'</td></tr>');
   $('rows').innerHTML = rows.join('') || '<tr><td colspan="6">אין מקורות להצגה'+(D.hidden?' (ההגדרות שלכם מסתירות '+D.hidden+')':'')+'.</td></tr>';
   $('rows').querySelectorAll('select').forEach(el=>el.onchange=async()=>{ try{ const j=await api('/api/vidsum/sources/update',{id:el.dataset.id,[el.dataset.f]:el.value}); D.sources=j.sources; msg('נשמר','ok'); }catch(e){ msg('❌ '+e.message,'err'); } });
   $('rows').querySelectorAll('[data-save]').forEach(b=>b.onclick=async()=>{ const id=b.dataset.save, v=$('rows').querySelector('[data-url="'+id+'"]').value.trim(); if(!v){ msg('יש להזין כתובת YouTube','err'); return; } b.disabled=true; try{ const j=await api('/api/vidsum/sources/update',{id,url:v}); D.sources=j.sources; render(); msg('הכתובת נשמרה, המקור פעיל','ok'); }catch(e){ msg('❌ '+e.message,'err'); b.disabled=false; } });
   $('rows').querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{ if(!confirm('להסיר את "'+b.dataset.name+'" מהמקורות?')) return; try{ const j=await api('/api/vidsum/sources/remove',{id:b.dataset.rm}); D.sources=j.sources; D.hidden=j.hidden; render(); msg('המקור הוסר','ok'); }catch(e){ msg('❌ '+e.message,'err'); } });
+  $('rows').querySelectorAll('[data-hb]').forEach(b=>b.onclick=()=>savePrefs({hiddenBase:[...new Set([...(D.prefs.hiddenBase||[]),b.dataset.hb])]}));
   $('rows').querySelectorAll('[data-mute]').forEach(b=>b.onclick=()=>savePrefs({muted:[...new Set([...D.prefs.muted,b.dataset.mute])]}));
   $('addfoot').hidden = !canAdd;
   $('n_owner').textContent = signed ? (D.prefs.hideName?'אנונימי':D.me.name) : 'Pawed';
@@ -306,5 +314,6 @@ async function load(){
 document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעינה</td></tr>'; });
 </script>
+<script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed')}).catch(function(){});</script>
 </body>
 </html>

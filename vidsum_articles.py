@@ -163,6 +163,7 @@ SCHEMA = {
         "title": {"type": "STRING"},
         "standfirst": {"type": "STRING"},
         "topic": {"type": "STRING", "enum": TOPICS},
+        "topics": {"type": "ARRAY", "items": {"type": "STRING", "enum": TOPICS}},
         "lead": {"type": "STRING"},
         "key_points": {"type": "ARRAY", "items": {"type": "STRING"}},
         "blocks": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
@@ -235,7 +236,7 @@ def _prompt(title, channel, dur=None, retry=False):
     return f"""You are a news editor turning the attached YouTube video ("{title}", channel "{channel}") into a Hebrew NEWS ARTICLE for a news portal.{extra}
 Write like an Israeli news site feature, not like a meeting summary:
 - title: a sharp, specific Hebrew headline stating the main claim or story (no clickbait, no question marks unless essential). standfirst: 1-2 sentences under the headline. lead: one 200-char teaser.
-- topic: the single best-fitting section from the allowed list.
+- topic: the single best-fitting section from the allowed list. topics: 1 to 3 sections from the allowed list that the story genuinely belongs to, primary section first (same as topic). Add a second or third only when the episode substantially covers it (e.g. tech business = טכנולוגיה + כלכלה); do not pad.
 - key_points: 4-5 short Hebrew sentences ("עיקרי הדברים").
 - blocks: the article body, in order. Every block MUST carry its content in "text" (for "list" blocks put the bullets in "items" and leave "text" empty). Use type "h2" for subheadings (a new one every 2-4 paragraphs), "p" for flowing prose paragraphs, "list" (with "items") at most once for a real enumeration, and "quote" for pull quotes.
 - About {words} Hebrew words in total across the "p" blocks. Third person, past/present tense news style, attribute claims ("לדבריו", "לטענתו"), keep concrete names, numbers, examples and the logic of the argument. Do not invent facts; do not editorialize.
@@ -322,8 +323,52 @@ def _GEM_NEXT_OK_set(t):
 # ------------------------------------------------- LunaRoute (text-only, free) ---
 LUNA_URL = "https://gw.lunaroute.com"
 LUNA_MODEL = os.environ.get("VIDSUM_LUNA_MODEL", "deepseek-4.1-flash")
-SCHEMA_HINT = """{"title": str, "standfirst": str, "topic": one of %s, "lead": str, "key_points": [str],
- "blocks": [{"type": "h2"|"p"|"quote"|"list", "text": str, "ts": "m:ss or h:mm:ss", "speaker": str (quotes only), "items": [str] (list only)}]}""" % json.dumps(TOPICS, ensure_ascii=False)
+SCHEMA_HINT = """{"title": str, "standfirst": str, "topic": one of %s, "topics": [1-3 of the same list, primary first], "lead": str, "key_points": [str],
+ "blocks": [{"type": "h2"|"p"|"quote"|"list", "text": str, "ts": "m:ss or h:mm:ss", "speaker": str (quotes only), "items": [str] (list only)}]}""" % (json.dumps(TOPICS, ensure_ascii=False))
+
+
+def _clean_topics(topics, primary):
+    """1-3 valid sections, primary first."""
+    out = [primary] if primary in TOPICS else []
+    for t in (topics if isinstance(topics, list) else []):
+        if t in TOPICS and t not in out:
+            out.append(t)
+    return out[:3] or ["תרבות"]
+
+
+def article_topics(a):
+    return _clean_topics(a.get("topics"), a.get("topic") or "תרבות")
+
+
+def _write_article(a):
+    tmp = os.path.join(ART_DIR, a["slug"] + ".json.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(a, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, os.path.join(ART_DIR, a["slug"] + ".json"))
+
+
+def backfill_topics(limit=12):
+    """Existing single-topic articles: ask the model (text-only, from headline + key points) for 1-3 sections."""
+    done = 0
+    for a in _articles():
+        if done >= limit:
+            break
+        if a.get("topics") or not a.get("blocks"):
+            continue
+        txt = a["title"] + "\n" + (a.get("standfirst") or "") + "\n" + "\n".join(a.get("key_points") or [])
+        prompt = ("Which news sections does this Hebrew podcast article belong to? Allowed sections: "
+                  + json.dumps(TOPICS, ensure_ascii=False) + ". Current primary section: " + (a.get("topic") or "תרבות")
+                  + ". Return 1 to 3 sections, primary first, adding another only if the episode substantially covers it "
+                  '(e.g. a tech-business story = טכנולוגיה + כלכלה). Reply with only JSON: {"topics": [..]}\n\n' + txt[:3500])
+        try:
+            d, _, _ = _luna(prompt, max_tokens=300)
+            a["topics"] = _clean_topics(d.get("topics"), a.get("topic"))
+            _write_article(a)
+            log(f"vidsum topics {a['slug']} -> {a['topics']}")
+            done += 1
+        except Exception as e:
+            log(f"vidsum topics failed {a.get('slug')}: {str(e)[:160]}")
+    return done
 
 
 def _luna(prompt, max_tokens=24000):
@@ -476,6 +521,7 @@ def _finalize(data, dur, extra):
     return {"title": data["title"].strip(), "standfirst": data.get("standfirst", "").strip(), "blocks": blocks,
             "key_points": [k.strip() for k in data.get("key_points", []) if k.strip()][:6],
             "topic": data.get("topic") if data.get("topic") in TOPICS else "תרבות",
+            "topics": _clean_topics(data.get("topics"), data.get("topic")),
             "lead": (data.get("lead") or data.get("standfirst") or "").strip(),
             "duration": dur, **extra}
 
@@ -1001,8 +1047,9 @@ def _length_min(a):
 
 
 def news_items():
-    return [{"slug": a["slug"], "title": a["title"], "lead": a.get("lead") or a.get("standfirst") or a.get("subtitle", ""),
-             "topic": a.get("topic") or "תרבות", "channel": a.get("channel", ""), "vid": a.get("vid"),
+    nd = vidsum_render.nodash
+    return [{"slug": a["slug"], "title": nd(a["title"]), "lead": nd(a.get("lead") or a.get("standfirst") or a.get("subtitle", "")),
+             "topic": a.get("topic") or "תרבות", "topics": article_topics(a), "channel": a.get("channel", ""), "vid": a.get("vid"),
              "source_id": a.get("source_id"), "created": a.get("created"), "released": _rel(a),
              "released_time": len((a.get("published_at") or "")) >= 19, "minutes": _length_min(a)} for a in _articles()]
 
@@ -1016,6 +1063,10 @@ def _vdb():
     c = multiuser.db()
     c.execute("CREATE TABLE IF NOT EXISTS vidsum_prefs(user_id TEXT PRIMARY KEY, hide_base INTEGER DEFAULT 0, "
               "hide_name INTEGER DEFAULT 0, muted TEXT DEFAULT '[]')")
+    try:
+        c.execute("ALTER TABLE vidsum_prefs ADD COLUMN hidden_base TEXT DEFAULT '[]'")
+    except Exception:
+        pass                                      # column already there
     return c
 
 
@@ -1023,12 +1074,16 @@ def get_vprefs(uid):
     with _vdb() as c:
         r = c.execute("SELECT * FROM vidsum_prefs WHERE user_id=?", (uid,)).fetchone()
     if not r:
-        return {"hideBase": False, "hideName": False, "muted": []}
+        return {"hideBase": False, "hideName": False, "muted": [], "hiddenBase": []}
     try:
         muted = json.loads(r["muted"] or "[]")
     except ValueError:
         muted = []
-    return {"hideBase": bool(r["hide_base"]), "hideName": bool(r["hide_name"]), "muted": muted}
+    try:
+        hidden_base = json.loads(r["hidden_base"] or "[]")
+    except (ValueError, IndexError, KeyError):
+        hidden_base = []
+    return {"hideBase": bool(r["hide_base"]), "hideName": bool(r["hide_name"]), "muted": muted, "hiddenBase": hidden_base}
 
 
 def set_vprefs(uid, req):
@@ -1039,10 +1094,13 @@ def set_vprefs(uid, req):
         p["hideName"] = bool(req["hideName"])
     if isinstance(req.get("muted"), list):
         p["muted"] = [str(x)[:40] for x in req["muted"]][:200]
+    if isinstance(req.get("hiddenBase"), list):
+        p["hiddenBase"] = [str(x)[:80] for x in req["hiddenBase"]][:300]
     with _vdb() as c:
-        c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted) VALUES(?,?,?,?) "
-                  "ON CONFLICT(user_id) DO UPDATE SET hide_base=excluded.hide_base, hide_name=excluded.hide_name, muted=excluded.muted",
-                  (uid, int(p["hideBase"]), int(p["hideName"]), json.dumps(p["muted"])))
+        c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted,hidden_base) VALUES(?,?,?,?,?) "
+                  "ON CONFLICT(user_id) DO UPDATE SET hide_base=excluded.hide_base, hide_name=excluded.hide_name, muted=excluded.muted, "
+                  "hidden_base=excluded.hidden_base",
+                  (uid, int(p["hideBase"]), int(p["hideName"]), json.dumps(p["muted"]), json.dumps(p["hiddenBase"])))
     return p
 
 
@@ -1069,7 +1127,7 @@ def _visible_source_ids(viewer):
         if owner == viewer["id"]:
             out.add(c["id"])
         elif owner is None:
-            if not p["hideBase"]:
+            if not p["hideBase"] and c["id"] not in p["hiddenBase"]:
                 out.add(c["id"])
         elif owner not in p["muted"]:
             out.add(c["id"])
@@ -1402,7 +1460,14 @@ def handle_get(handler, path, qs):
                        "me": ({"id": user["id"], "name": user.get("name") or user.get("email"), "avatar": user.get("avatar", "")}
                               if signed else None),
                        "prefs": get_vprefs(user["id"]) if signed else None, "hidden": sources_hidden_count(user) if signed else 0,
+                       "hidden_base": ([{"id": c["id"], "name": c["name"]} for c in _load_ch()["channels"]
+                                        if c.get("owner_id") is None and c["id"] in get_vprefs(user["id"])["hiddenBase"]]
+                                       if signed else []),
                        "limit": MAX_USER_SOURCES, "verticals": TOPICS, "languages": LANGS, "sources": sources_view(user)})
+        return True
+    if path == "/api/vidsum/me":
+        user = current_user(handler)
+        handler._json({"signed": bool(user)})
         return True
     if path == "/api/vidsum/news":
         user = current_user(handler)
@@ -1436,6 +1501,26 @@ def handle_get(handler, path, qs):
             handler._json({"ok": True, "sources": [
                 {"id": c["id"], "name": c["name"], "added": c.get("added", ""), "backfill": bool(c.get("backfill")),
                  "daily": c.get("cadence") == "daily", "pub_days": c.get("pub_days") or [], "seen": (c.get("seen") or [])[-300:]} for c in _load_ch()["channels"] if not c["id"].startswith("pending-")]})
+        return True
+    if path == "/api/vidsum/links/todo":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            lim = int((qs.get("limit") or ["20"])[0])
+            today = time.strftime("%Y-%m-%d")
+            todo = []
+            for a in sorted(_articles(), key=lambda x: x.get("published_at") or x.get("created") or "", reverse=True):
+                lk = a.get("links") or {}
+                if not a.get("vid") or (lk.get("apple") and lk.get("spotify")):
+                    continue
+                if lk.get("checked") and lk["checked"] >= time.strftime("%Y-%m-%d", time.localtime(time.time() - 3 * 86400)):
+                    continue                      # looked recently; new episodes appear on podcast feeds late, retry after 3 days
+                todo.append({"slug": a["slug"], "vid": a["vid"], "channel": a.get("channel", ""), "src_title": a.get("src_title", ""),
+                             "published": a.get("published") or ""})
+                if len(todo) >= lim:
+                    break
+            handler._json({"ok": True, "todo": todo})
         return True
     if path == "/api/vidsum/relay/queue":
         user = current_user(handler)
@@ -1584,6 +1669,36 @@ def handle_post(handler, path, req):
                     os.replace(tmp, os.path.join(ART_DIR, a["slug"] + ".json"))
                     n += 1
             handler._json({"ok": True, "updated": n})
+        return True
+    if path == "/api/vidsum/links/set":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            slug = str(req.get("slug") or "")
+            try:
+                with open(os.path.join(ART_DIR, os.path.basename(slug) + ".json"), encoding="utf-8") as f:
+                    a = json.load(f)
+            except Exception:
+                handler._json({"ok": False, "error": "no such article"}, 404)
+                return True
+            lk = {k: str(v)[:400] for k, v in (req.get("links") or {}).items() if k in ("apple", "spotify", "checked") and v}
+            for k in ("apple", "spotify"):                     # never overwrite a link we already have with nothing
+                if not lk.get(k) and (a.get("links") or {}).get(k):
+                    lk[k] = a["links"][k]
+            ok_host = {"apple": "https://podcasts.apple.com/", "spotify": "https://open.spotify.com/"}
+            lk = {k: v for k, v in lk.items() if k == "checked" or v.startswith(ok_host[k])}
+            a["links"] = lk
+            _write_article(a)
+            handler._json({"ok": True, "links": lk})
+        return True
+    if path == "/api/vidsum/topics/backfill":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            n = backfill_topics(int(req.get("limit") or 12))
+            handler._json({"ok": True, "done": n, "remaining": sum(1 for a in _articles() if a.get("blocks") and not a.get("topics"))})
         return True
     if path == "/api/vidsum/article/release":
         user = current_user(handler)

@@ -170,13 +170,14 @@
       td.v { grid-column:1 / -1; grid-row:2; font-size:15px; }
       td.d { grid-column:1 / -1; grid-row:3; max-width:none; font-size:12px; }
     }
+      .auth-only { display:none; } body.authed .auth-only { display:inline; }
   </style>
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a href="/vidsum/articles">כל הסיכומים</a><a href="/vidsum/sources">מקורות</a><a href="/vidsum/v1">הוספת סרטון</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="auth-only" href="/vidsum/articles">כל הסיכומים</a><a href="/vidsum/sources">מקורות</a><a class="auth-only" href="/vidsum/v1">הוספת סרטון</a></div></div></div>
   <header class="masthead">
-    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span><span class="brand-note">חדשות מתוך הסיכומים</span></a>
+    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span><span class="brand-note">נעשה ונשמע</span></a>
     <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
   </header>
   <main>
@@ -218,5 +219,6 @@ async function tick(){ try{ DATA = await (await fetch('/api/vidsum/logs?limit=40
 $('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 tick(); setInterval(tick, 4000);
 </script>
+<script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed')}).catch(function(){});</script>
 </body>
 </html>

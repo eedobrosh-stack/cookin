@@ -5,6 +5,7 @@ article dict:
   key_points [str], blocks [{"type": "h2"|"p"|"quote"|"list", "text", "ts", "speaker", "items"}]
 """
 import os
+import re
 import html as _html
 import urllib.parse
 
@@ -125,6 +126,8 @@ footer .footer-inner{flex-direction:column;gap:6px;padding-inline:14px;font-size
 """
 
 
+CSS += ".auth-only{display:none}body.authed .auth-only{display:inline}.listen{display:flex;align-items:center;gap:10px;margin:-6px 0 20px;font-size:13px;color:var(--muted)}.listen-ic{display:inline-flex;transition:transform .12s}.listen-ic:hover{transform:scale(1.12)}"
+
 PAW_JS = """<script>(function(){var seq=['maxresdefault','hq720','mqdefault'];
 function fix(img){var v=img.dataset.vid,i=0;
 function next(){if(i<seq.length){img.src='https://i.ytimg.com/vi/'+v+'/'+seq[i++]+'.jpg';}
@@ -133,6 +136,7 @@ img.onerror=next;
 img.onload=function(){if(img.naturalWidth<300&&img.src.indexOf('/vidsum/cover/')<0)next();};
 next();}
 document.querySelectorAll('img[data-vid]').forEach(fix);})();</script>"""
+PAW_JS += "<script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed')}).catch(function(){});</script>"
 
 
 def _ts_sec(ts):
@@ -156,8 +160,29 @@ def _theme(topic):
     return f"--bg:{bg};--line:{line};--quote:{quote};--acc:{acc}"
 
 
+_DASH = re.compile(r"\s*(?:--+|[\u2012\u2013\u2014\u2015])\s*")
+_KEEP = {"url", "vid", "slug", "source_id", "published", "published_at", "created", "ts", "topic"}
+
+
+def nodash(s):
+    """Double / long dashes (-- — –) always become a single spaced hyphen."""
+    return _DASH.sub(" - ", s) if isinstance(s, str) else s
+
+
+def clean_dashes(o, key=None):
+    if isinstance(o, str):
+        return o if key in _KEEP else nodash(o)
+    if isinstance(o, list):
+        return [clean_dashes(x, key) for x in o]
+    if isinstance(o, dict):
+        return {k: clean_dashes(v, k) for k, v in o.items()}
+    return o
+
+
 def render(a, latest=(), base="", disclaimer=""):
     """a: article dict. latest: [{slug,title,topic,vid,channel}] newest first. base: URL prefix ('' on the server)."""
+    a = clean_dashes(a)
+    latest = clean_dashes(list(latest))
     e = _html.escape
     ts_link = lambda ts: ("" if not _ts_sec(ts) else f'<a class="ts" href="{e(a["url"])}&amp;t={_ts_sec(ts)}s" target="_blank" rel="noopener">▶ {e(ts)}</a>'
                           if _ts_sec(ts) is not None and ts else "")
@@ -166,18 +191,22 @@ def render(a, latest=(), base="", disclaimer=""):
     mins = max(1, round(sum(len(b.get("text", "").split()) for b in a["blocks"]) / 200))
     others = [x for x in latest if x.get("slug") != a.get("slug")]
 
-    nav = "".join(f'<a href="{base}/vidsum#{urllib.parse.quote(t)}" class="{"active" if t == a["topic"] else ""}">{e(t)}</a>'
+    tps = [t for t in (a.get("topics") or []) if t in TOPICS] or [a["topic"]]
+    if a["topic"] in tps:
+        tps = [a["topic"]] + [t for t in tps if t != a["topic"]]
+    crumb_topics = " · ".join('<a href="%s/vidsum#%s">%s</a>' % (base, urllib.parse.quote(t), e(t)) for t in tps)
+    nav = "".join(f'<a href="{base}/vidsum#{urllib.parse.quote(t)}" class="{"active" if t in tps else ""}">{e(t)}</a>'
                   for t in TOPICS)
     share_url = urllib.parse.quote(f'{SITE}/vidsum/article/{a["slug"]}', safe="")
     share_txt = urllib.parse.quote(a["title"], safe="")
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(_he_date(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span>'
-           f'<a href="{base}/vidsum/articles">כל הסיכומים</a><a href="{base}/vidsum/sources">מקורות</a><a href="{base}/vidsum/logs">יומן</a><a href="{base}/vidsum/v1">הוספת סרטון</a></div></div></div>'
+           f'<a class="auth-only" href="{base}/vidsum/articles">כל הסיכומים</a><a href="{base}/vidsum/sources">מקורות</a><a class="auth-only" href="{base}/vidsum/logs">יומן</a><a class="auth-only" href="{base}/vidsum/v1">הוספת סרטון</a></div></div></div>'
            f'<header class="masthead"><a class="brand" href="{base}/vidsum"><img class="brand-logo" src="{base}/vidsum/pawed-logo.png" alt=""><span class="brand-mark">Pawed</span>'
-           f'<span class="brand-note">חדשות מתוך הסיכומים</span></a></header>'
+           f'<span class="brand-note">נעשה ונשמע</span></a></header>'
            f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">ראשי</a>{nav}</nav></div>',
            '<div class="page"><article>',
-           f'<div class="crumbs"><a href="{base}/vidsum">ראשי</a> › <a href="{base}/vidsum#{urllib.parse.quote(a["topic"])}">{e(a["topic"])}</a></div>',
+           f'<div class="crumbs"><a href="{base}/vidsum">ראשי</a> › {crumb_topics}</div>',
            f'<h1>{e(a["title"])}</h1><p class="standfirst">{e(a["standfirst"])}</p>',
            f'<div class="byline"><span>מאת <b>מערכת Pawed</b></span><span>מתוך {e(a.get("channel", "").strip())}</span>'
            f'<span>{e(_he_date(a.get("published_at") or a.get("published") or ""))}</span><span>{mins} דק׳ קריאה</span>'
@@ -186,6 +215,20 @@ def render(a, latest=(), base="", disclaimer=""):
            f'<a href="https://twitter.com/intent/tweet?url={share_url}&amp;text={share_txt}" target="_blank" rel="noopener" title="X">X</a></span></div>',
            f'<figure><a class="hero" href="{e(a["url"])}" target="_blank" rel="noopener" title="צפייה בסרטון ביוטיוב"><img data-vid="{e(a["vid"])}" alt=""></a>'
            f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())} · צילום מסך מתוך הסרטון</figcaption></figure>']
+    lk = a.get("links") or {}
+    icons = ""
+    if lk.get("spotify"):
+        icons += (f'<a class="listen-ic" href="{e(lk["spotify"])}" target="_blank" rel="noopener" title="האזנה ב-Spotify" aria-label="Spotify">'
+                  '<svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="12" r="12" fill="#1ED760"/>'
+                  '<path d="M5.4 9.2c4.2-1.2 9.2-.8 13 1.4M6.2 12.6c3.5-1 7.6-.7 10.7 1.1M7 15.8c2.8-.8 5.9-.5 8.4.9" fill="none" stroke="#000" stroke-width="1.7" stroke-linecap="round"/></svg></a>')
+    if lk.get("apple"):
+        icons += (f'<a class="listen-ic" href="{e(lk["apple"])}" target="_blank" rel="noopener" title="האזנה ב-Apple Podcasts" aria-label="Apple Podcasts">'
+                  '<svg viewBox="0 0 24 24" width="30" height="30"><defs><linearGradient id="apg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F452FF"/><stop offset="1" stop-color="#832BC1"/></linearGradient></defs>'
+                  '<rect width="24" height="24" rx="5.5" fill="url(#apg)"/><circle cx="12" cy="10" r="2" fill="#fff"/>'
+                  '<path d="M12 13.2c-1 0-1.6.7-1.5 1.6l.4 3.4c.1.8.5 1.3 1.1 1.3s1-.5 1.1-1.3l.4-3.4c.1-.9-.5-1.6-1.5-1.6z" fill="#fff"/>'
+                  '<path d="M7.6 12.2a4.7 4.7 0 117.5-.4M5.9 12.6a6.5 6.5 0 1112.2-.2" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg></a>')
+    if icons:
+        out.append(f'<div class="listen"><span>האזנה גם ב:</span>{icons}</div>')
     if a.get("key_points"):
         out.append('<div class="keybox"><h4>עיקרי הדברים</h4><ul>' + "".join(f"<li>{e(k)}</li>" for k in a["key_points"]) + "</ul></div>")
     out.append('<div class="body">')
@@ -206,7 +249,7 @@ def render(a, latest=(), base="", disclaimer=""):
     out.append(f'<a class="watch" href="{e(a["url"])}" target="_blank" rel="noopener">צפייה בשיחה המלאה ביוטיוב ↗</a>')
     if disclaimer:
         out.append(f'<p class="disclaimer">{e(disclaimer)}</p>')
-    rel = [x for x in others if x["topic"] == a["topic"]][:3] or others[:3]
+    rel = [x for x in others if set(x.get("topics") or [x["topic"]]) & set(tps)][:3] or others[:3]
     if rel:
         out.append('<section class="related"><h3>כתבות נוספות</h3><div class="rel-grid">' + "".join(
             f'<a class="rel-card" href="{art_url(x)}"><img data-vid="{e(x["vid"])}" alt=""><div class="t">{e(x["topic"])}</div>'
