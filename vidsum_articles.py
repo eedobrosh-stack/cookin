@@ -753,6 +753,8 @@ def relay_discovered(req):
         ch["error"] = ""
         if req.get("cadence") in ("daily", "regular"):
             ch["cadence"] = req["cadence"]
+        if isinstance(req.get("pub_days"), list):
+            ch["pub_days"] = sorted({int(x) for x in req["pub_days"] if str(x).isdigit() and 0 <= int(x) <= 6})
         ch.pop("backfill", None) if ch.get("backfill") and out["deferred"] == 0 else None
         _save_ch(d)
     return out
@@ -1260,7 +1262,7 @@ def sources_view(viewer=None):
         label = "Pawed" if owner is None else ("אנונימי" if owner in hidden else (c.get("owner_name") or "משתמש"))
         out.append({"id": c["id"], "name": c["name"], "language": c["language"], "url": c["url"],
                     "vertical": c["vertical"], "added": c.get("added", ""), "pending": c["id"].startswith("pending-"),
-                    "daily": c.get("cadence") == "daily", "owner_id": owner, "owner_label": label, "mine": bool(viewer and owner and owner == viewer.get("id")),
+                    "daily": c.get("cadence") == "daily", "pub_days": c.get("pub_days") or [], "owner_id": owner, "owner_label": label, "mine": bool(viewer and owner and owner == viewer.get("id")),
                     "base": owner is None, "can_edit": _can_edit_source(c, viewer)})
     return out
 
@@ -1421,7 +1423,7 @@ def handle_get(handler, path, qs):
         else:
             handler._json({"ok": True, "sources": [
                 {"id": c["id"], "name": c["name"], "added": c.get("added", ""), "backfill": bool(c.get("backfill")),
-                 "daily": c.get("cadence") == "daily", "seen": (c.get("seen") or [])[-300:]} for c in _load_ch()["channels"] if not c["id"].startswith("pending-")]})
+                 "daily": c.get("cadence") == "daily", "pub_days": c.get("pub_days") or [], "seen": (c.get("seen") or [])[-300:]} for c in _load_ch()["channels"] if not c["id"].startswith("pending-")]})
         return True
     if path == "/api/vidsum/relay/queue":
         user = current_user(handler)

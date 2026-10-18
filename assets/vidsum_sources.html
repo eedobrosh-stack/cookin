@@ -227,6 +227,15 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let D = null;
 const opts = (obj, sel) => (Array.isArray(obj) ? obj.map(v=>[v,v]) : Object.entries(obj)).map(([k,v])=>'<option value="'+esc(k)+'"'+(k===sel?' selected':'')+'>'+esc(v)+'</option>').join('');
+const HE_DAYS = {6:'א׳',0:'ב׳',1:'ג׳',2:'ד׳',3:'ה׳',4:'ו׳',5:'ש׳'}, SUN_FIRST=[6,0,1,2,3,4,5];
+function daysLabel(days){
+  if(!days||!days.length||days.length===7) return days&&days.length===7?' · כל יום':'';
+  const on = SUN_FIRST.filter(d=>days.includes(d));            // Sunday-first, collapse contiguous runs: א׳–ה׳
+  const runs=[]; let cur=[on[0]];
+  for(let i=1;i<on.length;i++){ if(SUN_FIRST.indexOf(on[i])===SUN_FIRST.indexOf(on[i-1])+1) cur.push(on[i]); else { runs.push(cur); cur=[on[i]]; } }
+  runs.push(cur);
+  return ' · '+runs.map(r=>r.length>2?HE_DAYS[r[0]]+'–'+HE_DAYS[r[r.length-1]]:r.map(d=>HE_DAYS[d]).join(',')).join(', ');
+}
 const short = u => u.replace(/^https?:\/\/(www\.)?youtube\.com\//,'');
 function msg(t, cls){ const m=$('msg'); m.textContent=t||''; m.className=cls||''; }
 async function api(path, body){
