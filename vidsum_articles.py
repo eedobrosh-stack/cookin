@@ -1,7 +1,7 @@
 """Vidsum server-side: YouTube link -> Gemini (reads the URL itself, so Render's
 blocked IP never touches YouTube) -> detailed RTL summary stored as an article
 served at /vidsum/article/<slug>."""
-import json, math, os, re, threading, uuid, time, html as _html, unicodedata
+import calendar, json, math, os, re, threading, uuid, time, html as _html, unicodedata
 import urllib.request, urllib.parse, urllib.error
 
 import multiuser
@@ -244,7 +244,32 @@ Write like an Israeli news site feature, not like a meeting summary:
 Return only JSON matching the schema."""
 
 
-def _gemini(parts, media_low=True, schema=None, max_out=32768):
+# Gemini pacing: one big video request at a time, and a gap after each one proportional to the tokens it used, so the
+# per-minute token limit is not hit by back-to-back ~300k-token requests (every rejected attempt also shows up as an error in AI Studio).
+GEM_TOKENS_PER_SEC = int(os.environ.get("VIDSUM_GEMINI_TPS", "5000"))     # gap seconds = last request tokens / this
+GEM_MIN_GAP_S = int(os.environ.get("VIDSUM_GEMINI_MIN_GAP", "20"))
+_GEM_LOCK = threading.Lock()
+_GEM_NEXT_OK = 0.0
+
+
+def _gem_wait():
+    global _GEM_NEXT_OK
+    wait = _GEM_NEXT_OK - time.time()
+    if wait > 0:
+        time.sleep(min(wait, 180))
+
+
+def _gem_after(tokens):
+    global _GEM_NEXT_OK
+    _GEM_NEXT_OK = time.time() + max(GEM_MIN_GAP_S, tokens / GEM_TOKENS_PER_SEC)
+
+
+def _retry_delay(body_text, attempt):
+    m = re.search(r'retryDelay"?\s*:\s*"?(\d+(?:\.\d+)?)s', body_text or "")
+    return min(float(m.group(1)) + 2, 120) if m else min(20 * (2 ** attempt), 120)
+
+
+def _gemini(parts, media_low=True, schema=None, max_out=32768, vid=None):
     key = (secret("GEMINI_API_KEY") or "").strip()
     if not key:
         raise RuntimeError("GEMINI_API_KEY missing")
@@ -255,30 +280,43 @@ def _gemini(parts, media_low=True, schema=None, max_out=32768):
     body = {"contents": [{"role": "user", "parts": parts}], "generationConfig": gc}
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={key}"
     last = None
-    for attempt in range(3):
-        req = urllib.request.Request(url, data=json.dumps(body).encode(),
-                                     headers={"Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=900) as r:
-                res = json.loads(r.read().decode())
-            break
-        except urllib.error.HTTPError as e:
-            last = e.read().decode()[:600]
-            if e.code == 429 and "spending cap" in last:
-                raise BudgetExhausted(last)
-            if e.code == 400 and media_low and "mediaResolution" in last:
-                return _gemini(parts, media_low=False, schema=schema, max_out=max_out)
-            if e.code in (429, 500, 503) and attempt < 2:
-                time.sleep(10 * (attempt + 1))
-                continue
-            raise RuntimeError(f"gemini {e.code}: {last}")
-    cand = res["candidates"][0]
-    text = cand["content"]["parts"][0]["text"]
-    data = json.loads(text)
-    tokens = int((res.get("usageMetadata") or {}).get("totalTokenCount") or 0)
-    global _LAST_USAGE
-    _LAST_USAGE = res.get("usageMetadata") or {}
+    with _GEM_LOCK:
+        for attempt in range(4):
+            _gem_wait()
+            req = urllib.request.Request(url, data=json.dumps(body).encode(),
+                                         headers={"Content-Type": "application/json"})
+            try:
+                with urllib.request.urlopen(req, timeout=900) as r:
+                    res = json.loads(r.read().decode())
+                break
+            except urllib.error.HTTPError as e:
+                last = e.read().decode()[:700]
+                if e.code == 429 and "spending cap" in last:
+                    raise BudgetExhausted(last)
+                if e.code == 400 and media_low and "mediaResolution" in last:
+                    return _gemini(parts, media_low=False, schema=schema, max_out=max_out, vid=vid)
+                if e.code in (429, 500, 503) and attempt < 3:
+                    d = _retry_delay(last, attempt)
+                    why = "rate limit (not the spend cap)" if e.code == 429 else f"HTTP {e.code}"
+                    log(f"vidsum gemini {why}, waiting {d:.0f}s: {' '.join(last.split())[:160]}")
+                    if vid:
+                        _event(vid, "rate_limited", f"Gemini {why}: waiting {d:.0f}s", _load_jobs().get(vid, {}))
+                    _GEM_NEXT_OK_set(time.time() + d)
+                    continue
+                raise RuntimeError(f"gemini {e.code}: {last}")
+        cand = res["candidates"][0]
+        text = cand["content"]["parts"][0]["text"]
+        data = json.loads(text)
+        tokens = int((res.get("usageMetadata") or {}).get("totalTokenCount") or 0)
+        global _LAST_USAGE
+        _LAST_USAGE = res.get("usageMetadata") or {}
+        _gem_after(tokens)
     return data, tokens, cand.get("finishReason")
+
+
+def _GEM_NEXT_OK_set(t):
+    global _GEM_NEXT_OK
+    _GEM_NEXT_OK = t
 
 
 # ------------------------------------------------- LunaRoute (text-only, free) ---
@@ -394,7 +432,7 @@ def summarize(vid):
     for retry in (False, True):
         prompt = _prompt(title, channel, dur, retry)
         try:
-            data, tokens, fin = _gemini([{"file_data": {"file_uri": url}}, {"text": prompt}])
+            data, tokens, fin = _gemini([{"file_data": {"file_uri": url}}, {"text": prompt}], vid=vid)
             method = "gemini-video"
         except BudgetExhausted:
             raise
@@ -508,6 +546,62 @@ def _run(vid):
             _set_job(vid, status="failed", error=str(e)[:300])
 
 
+# ------------------------------------------------ automatic Gemini fallback ---
+FALLBACK_AFTER_MIN = int(os.environ.get("VIDSUM_FALLBACK_AFTER_MIN", "180"))   # captions still missing after this long
+FALLBACK_DAILY_CAP = int(os.environ.get("VIDSUM_GEMINI_DAILY_CAP", "10"))     # hard daily ceiling on Gemini fallbacks
+
+
+def _gemini_today():
+    today = time.strftime("%Y-%m-%d")
+    return sum(1 for j in _load_jobs().values() if j.get("fallback") and (j.get("fallback_at") or "").startswith(today))
+
+
+def fallback_sweep():
+    """LunaRoute stays the default. A video falls back to Gemini only when its captions never arrive: YouTube has blocked the
+    relay for FALLBACK_AFTER_MIN minutes, or the video has no captions at all. Capped per day so spend stays bounded."""
+    jobs = _load_jobs()
+    now = time.time()
+    cands = []
+    for vid, j in jobs.items():
+        if j.get("fallback") or j.get("engine", "luna") != "luna":
+            continue
+        st = j.get("status")
+        if st == "no_captions":
+            cands.append((j.get("updated") or "", vid, "the video has no captions"))
+        elif st == "needs_transcript":
+            try:      # job timestamps are server time (UTC)
+                age = (now - calendar.timegm(time.strptime(j.get("submitted", ""), "%Y-%m-%d %H:%M:%S"))) / 60
+            except ValueError:
+                continue
+            if age >= FALLBACK_AFTER_MIN:
+                cands.append((j.get("submitted") or "", vid, f"captions still blocked after {int(age)} min"))
+    for _t, vid, why in sorted(cands):
+        if _gemini_today() >= FALLBACK_DAILY_CAP:
+            log(f"vidsum fallback: daily Gemini cap ({FALLBACK_DAILY_CAP}) reached, {len(cands)} waiting")
+            break
+        with LOCK:
+            jobs = _load_jobs()
+            j = jobs.get(vid) or {}
+            if j.get("fallback"):
+                continue
+            j.update({"engine": "gemini", "status": "queued", "fallback": True, "error": "",
+                      "fallback_at": time.strftime("%Y-%m-%d %H:%M:%S")})
+            jobs[vid] = j
+            _save_jobs(jobs)
+        _event(vid, "queued", f"fallback to Gemini: {why}", j)
+        threading.Thread(target=_run, args=(vid,), daemon=True).start()
+
+
+def _fallback_loop():
+    time.sleep(120)
+    while True:
+        try:
+            fallback_sweep()
+        except Exception as e:
+            log(f"vidsum fallback sweep error: {str(e)[:200]}")
+        time.sleep(600)
+
+
 # ----------------------------------------------- transcript relay (free path) ---
 TR_DIR = os.path.join(multiuser.DATA_DIR, "vidsum_transcripts")
 MAX_WAITING = 800
@@ -539,7 +633,10 @@ def _run_luna(vid):
             _set_job(vid, status="failed", error=str(e)[:300])
 
 
-def submit(url, admin, engine="luna", source=None):
+DEFAULT_ENGINE = "luna"      # free path first (Mac relay fetches captions, LunaRoute writes); Gemini only as a fallback
+
+
+def submit(url, admin, engine=DEFAULT_ENGINE, source=None):
     """-> (http_code, payload). engine "luna": wait for the Mac relay's transcript; "gemini": immediate (costs tokens)."""
     vid = yt_id(url)
     if not vid:
@@ -1087,6 +1184,7 @@ def start_background():
     resume_stuck()
     threading.Thread(target=backfill, daemon=True).start()
     threading.Thread(target=_watch_loop, daemon=True).start()
+    threading.Thread(target=_fallback_loop, daemon=True).start()
 
 
 _ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
