@@ -714,10 +714,12 @@ def submit(url, admin, engine=DEFAULT_ENGINE, source=None):
 
 
 def relay_discovered(req):
-    """The Mac relay scanned a source's feed (YouTube answers it, not Render): apply the same rules the server watcher uses."""
+    """The Mac relay scanned a source's feed (YouTube answers it, not Render): apply the same rules the server watcher uses.
+    Decisions are taken under the lock; submit() (which takes the same lock) is called AFTER releasing it."""
     sid = str(req.get("source_id") or "")
     today = time.strftime("%Y-%m-%d")
     out = {"submitted": 0, "skipped": 0, "deferred": 0}
+    to_submit = []
     with LOCK:
         d = _load_ch()
         ch = next((c for c in d["channels"] if c["id"] == sid), None)
@@ -739,15 +741,10 @@ def relay_discovered(req):
             if used >= WATCH_DAILY_CAP or (ch.get("owner_id") and owner_used >= USER_DAILY_VIDEOS):
                 out["deferred"] += 1                              # not marked seen: picked up on a later run
                 continue
-            code, payload = submit(f"https://www.youtube.com/watch?v={vid}", True, "luna", sid)
             seen.add(vid)
-            if code == 202:                                      # genuinely new (already-known videos answer 200)
-                used += 1
-                owner_used += 1 if ch.get("owner_id") else 0
-                out["submitted"] += 1
-                d["log"].append({"day": today, "kind": "submit", "vid": vid, "channel": ch["name"], "owner": ch.get("owner_id"),
-                                 "at": time.strftime("%H:%M:%S")})
-                log(f"vidsum relay discovery: {ch['name']} -> {vid} ({payload.get('status')})")
+            to_submit.append(vid)
+            used += 1
+            owner_used += 1 if ch.get("owner_id") else 0
         ch["seen"] = sorted(seen)[-300:]
         ch["checked"] = time.strftime("%Y-%m-%d %H:%M:%S")
         ch["error"] = ""
@@ -755,8 +752,23 @@ def relay_discovered(req):
             ch["cadence"] = req["cadence"]
         if isinstance(req.get("pub_days"), list):
             ch["pub_days"] = sorted({int(x) for x in req["pub_days"] if str(x).isdigit() and 0 <= int(x) <= 6})
-        ch.pop("backfill", None) if ch.get("backfill") and out["deferred"] == 0 else None
+        if ch.get("backfill") and out["deferred"] == 0:
+            ch.pop("backfill", None)
         _save_ch(d)
+        name, owner = ch["name"], ch.get("owner_id")
+    new_logs = []
+    for vid in to_submit:                                         # lock is free here
+        code, payload = submit(f"https://www.youtube.com/watch?v={vid}", True, "luna", sid)
+        if code == 202:                                           # genuinely new (already-known videos answer 200)
+            out["submitted"] += 1
+            new_logs.append({"day": today, "kind": "submit", "vid": vid, "channel": name, "owner": owner,
+                             "at": time.strftime("%H:%M:%S")})
+            log(f"vidsum relay discovery: {name} -> {vid} ({payload.get('status')})")
+    if new_logs:
+        with LOCK:
+            d = _load_ch()
+            d["log"].extend(new_logs)
+            _save_ch(d)
     return out
 
 
