@@ -567,7 +567,12 @@ def fallback_sweep():
             continue
         st = j.get("status")
         if st == "no_captions":
-            cands.append((j.get("updated") or "", vid, "the video has no captions"))
+            try:
+                age0 = (now - calendar.timegm(time.strptime(j.get("submitted", ""), "%Y-%m-%d %H:%M:%S"))) / 60
+            except ValueError:
+                age0 = 0
+            if int(j.get("attempts", 0)) >= 1 and age0 >= FALLBACK_AFTER_MIN:      # free path already retried and still nothing
+                cands.append((j.get("updated") or "", vid, "no captions after automatic retries"))
         elif st == "needs_transcript":
             try:      # job timestamps are server time (UTC)
                 age = (now - calendar.timegm(time.strptime(j.get("submitted", ""), "%Y-%m-%d %H:%M:%S"))) / 60
@@ -592,9 +597,49 @@ def fallback_sweep():
         threading.Thread(target=_run, args=(vid,), daemon=True).start()
 
 
+RETRY_FIRST_MIN = 20          # first automatic retry 20 min after a failure, then doubling
+RETRY_MAX_MIN = 360           # ...but never wait longer than 6 hours: failed videos are always being tried again
+
+
+def retry_sweep():
+    """Rule: a failed attempt is never final. Every failed / no-captions job goes back to the free path (LunaRoute) after a
+    growing delay (20 min, 40, 80 ... up to 6 h) and keeps being retried for as long as it stays failed."""
+    now = time.time()
+    due = []
+    for vid, j in _load_jobs().items():
+        if j.get("status") not in ("failed", "no_captions"):
+            continue
+        try:
+            failed_at = calendar.timegm(time.strptime(j.get("updated", ""), "%Y-%m-%d %H:%M:%S"))
+        except ValueError:
+            continue
+        delay = min(RETRY_MAX_MIN, RETRY_FIRST_MIN * (2 ** int(j.get("attempts", 0)))) * 60
+        if now - failed_at >= delay:
+            due.append((failed_at, vid))
+    for _t, vid in sorted(due)[:40]:
+        with LOCK:
+            jobs = _load_jobs()
+            j = jobs.get(vid) or {}
+            if j.get("status") not in ("failed", "no_captions"):
+                continue
+            n = int(j.get("attempts", 0)) + 1
+            has_tr = os.path.exists(os.path.join(TR_DIR, vid + ".json"))
+            j.update({"attempts": n, "engine": "luna", "error": "", "status": "queued" if has_tr else "needs_transcript"})
+            jobs[vid] = j
+            _save_jobs(jobs)
+        nxt = min(RETRY_MAX_MIN, RETRY_FIRST_MIN * (2 ** n))
+        _event(vid, "queued", f"automatic retry #{n} (if it fails again, next try in {nxt} min)", j)
+        if has_tr:
+            threading.Thread(target=_run_luna, args=(vid,), daemon=True).start()
+
+
 def _fallback_loop():
     time.sleep(120)
     while True:
+        try:
+            retry_sweep()
+        except Exception as e:
+            log(f"vidsum retry sweep error: {str(e)[:200]}")
         try:
             fallback_sweep()
         except Exception as e:
