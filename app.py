@@ -786,7 +786,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self._json({"error": "not found"}, 404); return
         elif secret_flag("PAWED_REDIRECT") and (self._is_main_host() or (self.headers.get("Host") or "").split(":")[0].lower() == "cookin.jarcud.com") \
                 and (p in ("/vidsum", "/vidsum/") or p.startswith(("/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/articles", "/vidsum/article/", "/vidsum/news"))):
-            self.send_response(301); self.send_header("Location", "https://www.pawed.io" + self.path)   # pages moved to Pawed
+            self.send_response(301); self.send_header("Location", "https://pawed.io" + self.path)   # pages moved to pawed.io
             self.send_header("Content-Length", "0"); self.end_headers(); return
         if p in self._ICONS:
             name, ctype = self._ICONS[p]
