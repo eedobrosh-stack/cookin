@@ -571,6 +571,49 @@ def submit(url, admin, engine="luna", source=None):
     return 202, {"ok": True, "id": vid, "status": status}
 
 
+def relay_discovered(req):
+    """The Mac relay scanned a source's feed (YouTube answers it, not Render): apply the same rules the server watcher uses."""
+    sid = str(req.get("source_id") or "")
+    today = time.strftime("%Y-%m-%d")
+    out = {"submitted": 0, "skipped": 0, "deferred": 0}
+    with LOCK:
+        d = _load_ch()
+        ch = next((c for c in d["channels"] if c["id"] == sid), None)
+        if not ch:
+            return out
+        seen = set(ch.setdefault("seen", []))
+        used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit")
+        owner_used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit"
+                         and ch.get("owner_id") and e.get("owner") == ch.get("owner_id"))
+        added = (ch.get("added") or "")[:19]
+        for it in sorted(req.get("items") or [], key=lambda i: i.get("published", "")):
+            vid = str(it.get("vid") or "")
+            if not re.fullmatch(r"[\w-]{11}", vid) or vid in seen:
+                continue
+            pub = (it.get("published") or "").replace("T", " ").replace("Z", "")[:19]
+            if (pub and pub < added and not ch.get("backfill")) or (it.get("duration") or 999) < 150:
+                seen.add(vid); out["skipped"] += 1               # older than the subscription, or a Short
+                continue
+            if used >= WATCH_DAILY_CAP or (ch.get("owner_id") and owner_used >= USER_DAILY_VIDEOS):
+                out["deferred"] += 1                              # not marked seen: picked up on a later run
+                continue
+            code, payload = submit(f"https://www.youtube.com/watch?v={vid}", True, "luna", sid)
+            seen.add(vid)
+            if code in (200, 202):
+                used += 1
+                owner_used += 1 if ch.get("owner_id") else 0
+                out["submitted"] += 1
+                d["log"].append({"day": today, "kind": "submit", "vid": vid, "channel": ch["name"], "owner": ch.get("owner_id"),
+                                 "at": time.strftime("%H:%M:%S")})
+                log(f"vidsum relay discovery: {ch['name']} -> {vid} ({payload.get('status')})")
+        ch["seen"] = sorted(seen)[-300:]
+        ch["checked"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        ch["error"] = ""
+        ch.pop("backfill", None) if ch.get("backfill") and out["deferred"] == 0 else None
+        _save_ch(d)
+    return out
+
+
 def relay_queue(limit=15):
     return [{"vid": v, "url": f"https://www.youtube.com/watch?v={v}", "submitted": j.get("submitted")}
             for v, j in sorted(_load_jobs().items(), key=lambda kv: kv[1].get("submitted", ""))
@@ -1226,6 +1269,15 @@ def handle_get(handler, path, qs):
         handler._json({"ok": True, "articles": [
             {k: a.get(k) for k in ("slug", "title", "subtitle", "vid", "channel", "created")} for a in _articles()]})
         return True
+    if path == "/api/vidsum/relay/sources":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            handler._json({"ok": True, "sources": [
+                {"id": c["id"], "name": c["name"], "added": c.get("added", ""), "backfill": bool(c.get("backfill")),
+                 "seen": (c.get("seen") or [])[-300:]} for c in _load_ch()["channels"] if not c["id"].startswith("pending-")]})
+        return True
     if path == "/api/vidsum/relay/queue":
         user = current_user(handler)
         if not (user and user.get("admin")):
@@ -1334,6 +1386,8 @@ def handle_post(handler, path, req):
             if path == "/api/vidsum/relay/transcript":
                 relay_transcript(req)
                 handler._json({"ok": True})
+            elif path == "/api/vidsum/relay/discovered":
+                handler._json({"ok": True, **relay_discovered(req)})
             elif path == "/api/vidsum/relay/event":
                 vid = str(req.get("vid") or "")
                 stage = req.get("stage") if req.get("stage") in ("fetching", "rate_limited") else None
