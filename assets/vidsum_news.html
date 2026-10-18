@@ -273,12 +273,21 @@
     .brand-txt { display:flex; flex-direction:column; align-items:flex-start; line-height:1; }
     .brand-note { display:block !important; border:0 !important; padding:0 !important; font-style:italic; font-size:15px; color:#6c6c6c; margin-top:-2px; letter-spacing:.2px; direction:ltr; }
     @media (max-width:640px) { .brand-note { font-size:11px; } }
-    .auth-only { display:none; } body.authed .auth-only { display:inline; }
+    /* "add your podcast channels" hint, shown to signed-in users until they open Sources */
+    .hint-pulse { position:relative; color:var(--red) !important; font-weight:800; animation:hintpulse 1.4s ease-in-out infinite; border-radius:4px; }
+    @keyframes hintpulse { 0%,100% { box-shadow:0 0 0 0 rgba(227,34,43,.55); background:rgba(227,34,43,.10); } 50% { box-shadow:0 0 0 9px rgba(227,34,43,0); background:rgba(227,34,43,.22); } }
+    #srchint { position:fixed; z-index:120; background:var(--red); color:#fff; border-radius:12px; padding:10px 14px; text-align:center; font-size:13.5px; font-weight:800; line-height:1.35; box-shadow:0 6px 22px rgba(0,0,0,.25); animation:hintin .5s ease-out both, hintbob 1.4s ease-in-out .5s infinite; max-width:260px; cursor:pointer; }
+    #srchint small { display:block; font-weight:500; font-size:12px; opacity:.92; }
+    #srchint::before { content:""; position:absolute; top:-8px; left:var(--ax,50%); margin-left:-8px; border:8px solid transparent; border-top:0; border-bottom-color:var(--red); }
+    #srchint .x { position:absolute; top:2px; right:6px; font-size:15px; opacity:.8; }
+    @keyframes hintin { from { opacity:0; transform:translateY(-14px) scale(.9); } to { opacity:1; transform:none; } }
+    @keyframes hintbob { 0%,100% { margin-top:0; } 50% { margin-top:7px; } }
+    .auth-only, .admin-only { display:none; } body.authed .auth-only, body.admin .admin-only { display:inline; }
   </style>
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="auth-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="auth-only" href="/vidsum/logs">יומן</a><a class="auth-only" href="/vidsum/v1">הוספת סרטון</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a><a class="auth-only" href="/vidsum/v1">הוספת סרטון</a></div></div></div>
   <header class="masthead">
     <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-txt"><span class="brand-mark">Pawed</span><span class="brand-note">Respect Your Pods</span></span></a>
     <div class="masthead-actions"><span class="date" id="count"></span><div class="cta" id="cta" hidden><a class="cta-btn" href="/auth/login?next=%2Fvidsum">התחברו והוסיפו את הפודקאסטים שלכם</a><div class="cta-sub"><b>התחברו ל-Pawed והתאימו את הפודים שלכם</b><br>הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</div></div></div>
@@ -475,17 +484,40 @@ function nav(){
   n.querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f; nav(); render(); history.replaceState(null,'', FILTER==='all'?location.pathname:'#'+encodeURIComponent(FILTER));});
 }
 document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+// after sign-in, point at the Sources link (once: until they open it or close the bubble)
+function showSourcesHint(){
+  let seen=false; try{ seen = localStorage.getItem('pawed_srchint')==='1'; }catch(e){}
+  if(seen) return;
+  let tries=0;
+  const iv=setInterval(()=>{
+    const a=document.querySelector('.utility-links a[href="/vidsum/sources"]');
+    if(!a || !a.offsetParent){ if(++tries>30) clearInterval(iv); return; }
+    clearInterval(iv);
+    const done=()=>{ try{ localStorage.setItem('pawed_srchint','1'); }catch(e){} a.classList.remove('hint-pulse'); const b=document.getElementById('srchint'); if(b) b.remove(); removeEventListener('resize',place); removeEventListener('scroll',place); };
+    a.classList.add('hint-pulse'); a.addEventListener('click',done,{once:true});
+    a.scrollIntoView({block:'nearest',inline:'center'});
+    const b=document.createElement('div'); b.id='srchint';
+    b.innerHTML='<span class="x" aria-label="close">×</span>Add Your Podcast Channels Here<small>הוסיפו כאן את ערוצי הפודקאסטים שלכם</small>';
+    b.onclick=e=>{ if(e.target.className==='x') done(); else location.href='/vidsum/sources'; };
+    document.body.appendChild(b);
+    function place(){ const r=a.getBoundingClientRect(), w=b.offsetWidth; let left=r.left+r.width/2-w/2; left=Math.max(8,Math.min(innerWidth-w-8,left));
+      b.style.left=left+'px'; b.style.top=(r.bottom+10)+'px'; b.style.setProperty('--ax',(r.left+r.width/2-left)+'px'); }
+    place(); addEventListener('resize',place); addEventListener('scroll',place,{passive:true});
+  },200);
+}
 fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
   DATA=j; const h=decodeURIComponent(location.hash.slice(1)); if(j.topics.includes(h)) FILTER=h;
   const ul=document.querySelector('.utility-links');
   if(ul && j.me){ const a=document.createElement('a'); a.href='/vidsum/sources'; a.textContent = 'שלום '+j.me.name+(j.personal?' · תצוגה מותאמת':''); a.style.fontWeight='700'; ul.appendChild(a); }
   document.getElementById('cta').hidden = !!j.me;
+  if(j.me) showSourcesHint();
   const mins = j.items.reduce((t,a)=>t+(a.minutes||0),0), hrs = Math.round(mins/60);
   const hn = hrs>=1 ? hrs : Math.round(mins/6)/10;                    // under an hour: one decimal
   document.getElementById('count').innerHTML = '<b>'+hn.toLocaleString('en-US')+'</b> שעות האזנה<br><span dir="ltr">'+hn.toLocaleString('en-US')+' Listening Hours</span>';
   nav(); render();
 }).catch(()=>{document.getElementById('main').innerHTML='<p class="empty">שגיאה בטעינה</p>';});
 </script>
-<script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed')}).catch(function(){});</script>
+<script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>
 </body>
 </html>

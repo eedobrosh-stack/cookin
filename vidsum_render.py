@@ -127,7 +127,7 @@ footer .footer-inner{flex-direction:column;gap:6px;padding-inline:14px;font-size
 
 
 CSS += ".brand-txt{display:flex;flex-direction:column;align-items:flex-start;line-height:1}.brand-note{display:block!important;border:0!important;padding:0!important;font-style:italic;font-size:15px;color:#6c6c6c;margin-top:-2px;direction:ltr}@media(max-width:640px){.brand-note{font-size:11px}}"
-CSS += ".auth-only{display:none}body.authed .auth-only{display:inline}.listen{display:flex;align-items:center;gap:10px;margin:-6px 0 20px;font-size:13px;color:var(--muted)}.listen-ic{display:inline-flex;transition:transform .12s}.listen-ic:hover{transform:scale(1.12)}"
+CSS += ".auth-only,.admin-only{display:none}body.authed .auth-only,body.admin .admin-only{display:inline}.listen{display:flex;align-items:center;gap:10px;margin:-6px 0 20px;font-size:13px;color:var(--muted)}.listen-ic{display:inline-flex;transition:transform .12s}.listen-ic:hover{transform:scale(1.12)}"
 
 PAW_JS = """<script>(function(){var seq=['maxresdefault','hq720','mqdefault'];
 function fix(img){var v=img.dataset.vid,i=0;
@@ -137,7 +137,7 @@ img.onerror=next;
 img.onload=function(){if(img.naturalWidth<300&&img.src.indexOf('/vidsum/cover/')<0)next();};
 next();}
 document.querySelectorAll('img[data-vid]').forEach(fix);})();</script>"""
-PAW_JS += "<script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed')}).catch(function(){});</script>"
+PAW_JS += "<script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>"
 
 
 def _ts_sec(ts):
@@ -202,7 +202,7 @@ def render(a, latest=(), base="", disclaimer=""):
     share_txt = urllib.parse.quote(a["title"], safe="")
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(_he_date(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span>'
-           f'<a class="auth-only" href="{base}/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="{base}/vidsum/sources">מקורות</a><a class="auth-only" href="{base}/vidsum/logs">יומן</a><a class="auth-only" href="{base}/vidsum/v1">הוספת סרטון</a></div></div></div>'
+           f'<a class="admin-only" href="{base}/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="{base}/vidsum/sources">מקורות</a><a class="admin-only" href="{base}/vidsum/logs">יומן</a><a class="auth-only" href="{base}/vidsum/v1">הוספת סרטון</a></div></div></div>'
            f'<header class="masthead"><a class="brand" href="{base}/vidsum"><img class="brand-logo" src="{base}/vidsum/pawed-logo.png" alt=""><span class="brand-txt"><span class="brand-mark">Pawed</span>'
            f'<span class="brand-note">Respect Your Pods</span></span></a></header>'
            f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">ראשי</a>{nav}</nav></div>',

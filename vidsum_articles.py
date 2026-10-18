@@ -1467,7 +1467,7 @@ def handle_get(handler, path, qs):
         return True
     if path == "/api/vidsum/me":
         user = current_user(handler)
-        handler._json({"signed": bool(user)})
+        handler._json({"signed": bool(user), "admin": bool(user and user.get("admin"))})
         return True
     if path == "/api/vidsum/news":
         user = current_user(handler)
