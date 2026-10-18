@@ -258,6 +258,11 @@
       .cd.big h3 { font-size:21px; }
       .fs { grid-template-columns:96px minmax(0,1fr); }
     }
+  
+    #totop { position:fixed; left:16px; bottom:18px; width:46px; height:46px; border-radius:50%; border:0; background:#2a211b; color:#fff; font-size:22px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.3); opacity:0; pointer-events:none; transition:opacity .2s; z-index:80; }
+    #totop.on { opacity:.92; pointer-events:auto; }
+    .feedchunk { margin-top:8px; padding-top:6px; }
+    .feedchunk:not(:first-child) { border-top:1px solid var(--line); padding-top:22px; }
   </style>
 </head>
 <body>
@@ -354,6 +359,45 @@ function pattern(kind, L){
   return '<div class="feat"><div class="feat-m">'+cd(L[0],true)+'</div><div class="feat-s">'+L.slice(1,5).map(a=>'<a class="fs" href="'+href(a)+'">'+im(a,'fs-i')+'<div><h4>'+esc(a.title)+'</h4><small>'+when2(a)+'</small></div></a>').join('')+'</div></div>';
 }
 const need = k => k===0 ? 3 : k===1 ? 5 : 3;
+function patternMix(L){ return '<div class="mix"><div class="mix-b">'+L.slice(0,4).map(bt).join('')+'</div><div class="mix-m">'+L.slice(4,6).map(a=>cd(a)).join('')+'</div></div>'; }
+
+// ---- endless feed: after the topic sections, keep serving tiles from ALL topics (topics interleaved, newest first),
+// in rotating arrangements, and circle back to the start when the content runs out.
+const CHUNK_KINDS = [0, 3, 1, 2], CHUNK_SIZE = {0:6, 3:6, 1:7, 2:5};
+let FEED = null;
+function interleave(items, topics){
+  const groups = topics.map(t=>items.filter(a=>a.topic===t)).filter(g=>g.length)
+                       .sort((x,y)=>(y[0].released||'').localeCompare(x[0].released||''));
+  const out=[]; for(let i=0, more=true; more; i++){ more=false; for(const g of groups){ if(i<g.length){ out.push(g[i]); more=true; } } }
+  return out;
+}
+function startFeed(items){
+  if(FEED && FEED.io) FEED.io.disconnect();
+  const seq = interleave(items, DATA.topics);
+  if(seq.length < 3){ FEED=null; return; }
+  FEED = { seq, pos: 0, chunk: 0, busy: false, io: null };
+  const sentinel = document.getElementById('sentinel');
+  FEED.io = new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)) moreFeed(); }, {rootMargin:'900px 0px'});
+  FEED.io.observe(sentinel);
+  const n = parseInt(new URLSearchParams(location.search).get('chunks')||'0',10);   // ?chunks=N pre-loads N chunks (handy for testing)
+  for(let i=0;i<n;i++) moreFeed(true);
+}
+function moreFeed(force){
+  if(!FEED || FEED.busy) return; FEED.busy = true;
+  const kind = CHUNK_KINDS[FEED.chunk % CHUNK_KINDS.length], n = CHUNK_SIZE[kind], L = [], N = FEED.seq.length;
+  for(let i=0;i<n;i++) L.push(FEED.seq[(FEED.pos+i) % N]);                       // wraps around: the feed never ends
+  FEED.pos = (FEED.pos+n) % N;
+  const lap = FEED.chunk>0 && FEED.pos < n ? ' · סיבוב נוסף' : '';
+  const head = FEED.chunk===0 ? '<div class="sec-h" style="--c:#2a211b"><b>עוד מכל התחומים</b></div>' : (FEED.chunk%4===0 ? '<div class="sec-h" style="--c:#2a211b"><b>המשך הפיד'+lap+'</b></div>' : '');
+  const html = '<section class="sec feedchunk">'+head+(kind===3 ? patternMix(L) : pattern(kind, L))+'</section>';
+  document.getElementById('feed2').insertAdjacentHTML('beforeend', html);
+  FEED.chunk++; hydrateThumbs();
+  setTimeout(()=>{ FEED.busy = false; const r = document.getElementById('sentinel').getBoundingClientRect(); if(r.top < innerHeight+900) moreFeed(); }, force?0:120);
+}
+// floating "back to top" (the feed never ends, so the footer is out of reach)
+(function(){ const b=document.createElement('button'); b.id='totop'; b.textContent='↑'; b.setAttribute('aria-label','חזרה למעלה');
+  b.onclick=()=>window.scrollTo({top:0,behavior:'smooth'}); document.body.appendChild(b);
+  addEventListener('scroll',()=>{ b.classList.toggle('on', scrollY>1400); },{passive:true}); })();
 
 function render(){
   const all = DATA.items, main = document.getElementById('main');
@@ -380,7 +424,9 @@ function render(){
     const L = rest.slice();
     for(let k=0, i=0; i<L.length; k++){ const kind=k%3, n=kind===1?7:6; h += '<section class="sec">'+(k===0?bar(FILTER,false):'')+pattern(kind, L.slice(i,i+n))+'</section>'; i+=n; }
   }
+  if(FILTER==='all') h += '<div id="feed2"></div><div id="sentinel" style="height:1px"></div>';
   main.innerHTML=h; hydrateThumbs();
+  if(FILTER==='all') startFeed(all); else if(FEED && FEED.io){ FEED.io.disconnect(); FEED=null; }
   main.querySelectorAll('[data-go]').forEach(a=>a.onclick=e=>{ e.preventDefault(); FILTER=a.dataset.go; nav(); render(); window.scrollTo({top:0}); history.replaceState(null,'','#'+encodeURIComponent(FILTER)); });
 }
 function nav(){
