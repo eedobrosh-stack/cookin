@@ -474,6 +474,8 @@ def secret_flag(name):
 
 def brand_html(body, pawed=False):
     body = _ICON_LINK_RE.sub(b"", body)
+    if pawed:                                  # the portal lives at the bare domain: pawed.io, not pawed.io/vidsum
+        body = body.replace(b'href="/vidsum"', b'href="/"').replace(b'href="/vidsum/"', b'href="/"').replace(b'href="/vidsum#', b'href="/#')
     tags = (PAWED_ICON_TAGS if pawed else ICON_TAGS).encode("utf-8")
     m = _CHARSET_RE.search(body)
     if m:
@@ -782,6 +784,9 @@ class Handler(SimpleHTTPRequestHandler):
                     self._json({"error": "icon not found"}, 404); return
                 self.send_response(200); self.send_header("Content-Type", ctype); self.send_header("Content-Length", str(len(body)))
                 self.send_header("Cache-Control", "public, max-age=604800"); self.end_headers(); self.wfile.write(body); return
+            if p in ("/vidsum", "/vidsum/"):
+                self.send_response(301); self.send_header("Location", "/")
+                self.send_header("Content-Length", "0"); self.end_headers(); return
             if p == "/":
                 if vidsum_articles.handle_get(self, "/vidsum", {}):
                     return
