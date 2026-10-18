@@ -177,6 +177,87 @@
     .nav-wrap, .utility, .masthead { background:transparent; }
     .card, .side-item, .topic-row { background:transparent; }
     @media (max-width:640px) { .nav-wrap { background:rgba(247,243,252,.97) !important; } .nav button { background:rgba(255,255,255,.65) !important; } .nav button.active { background:var(--ink) !important; } }
+  
+    /* ===== Pawed homepage v2: ynet-style varied tiles per topic ===== */
+    main { max-width:1180px; }
+    .hero2 { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.75fr); gap:22px; padding:6px 0 20px; align-items:start; }
+    .hero2-t a { color:inherit; }
+    .hero2-k { font-size:13px; color:#777; margin-bottom:8px; }
+    .hero2 h1 { font-size:36px; line-height:1.08; letter-spacing:-1.2px; margin:0 0 12px; font-weight:900; }
+    .hero2 p { font-size:16.5px; line-height:1.5; color:#333; margin:0 0 10px; }
+    .hero2-t a:hover h1 { text-decoration:underline; }
+    .hero2-m { font-size:12px; color:#999; margin-bottom:14px; }
+    .hero2-s { list-style:none; margin:0; padding:12px 0 0; border-top:1px solid var(--line); }
+    .hero2-s li { position:relative; padding:5px 16px 5px 0; font-size:15px; line-height:1.35; }
+    .hero2-s li::before { content:""; position:absolute; right:2px; top:13px; width:5px; height:5px; background:#999; border-radius:50%; }
+    .hero2-s a:hover { text-decoration:underline; }
+    .hero2-i { display:block; }
+    .im { background-size:cover; background-position:center; background-repeat:no-repeat; aspect-ratio:16/9; width:100%; background-color:#222; }
+    .hero2-i .im { aspect-ratio:16/10.2; }
+    .tg { font-size:12px; font-weight:800; }
+    .mix { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:18px; padding-bottom:22px; }
+    .mix-b { display:flex; flex-direction:column; gap:12px; }
+    .mix-m { display:flex; flex-direction:column; gap:14px; }
+    .bt { display:grid; grid-template-columns:minmax(0,1fr) 42%; background:var(--c); color:#fff; min-height:112px; overflow:hidden; }
+    .bt-t { padding:12px 16px; display:flex; flex-direction:column; justify-content:center; min-width:0; }
+    .bt h3 { margin:0 0 4px; font-size:19px; line-height:1.15; font-weight:900; }
+    .bt p { margin:0 0 6px; font-size:13.5px; line-height:1.35; opacity:.92; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .bt span { font-size:12px; opacity:.8; }
+    .bt-i { aspect-ratio:auto !important; height:100%; min-height:112px; }
+    .bt:hover h3 { text-decoration:underline; }
+    .cd { display:block; color:inherit; }
+    .cd .cd-b { padding:9px 2px 4px; }
+    .cd h3 { margin:3px 0 4px; font-size:19px; line-height:1.17; letter-spacing:-.3px; font-weight:800; }
+    .cd.big h3 { font-size:25px; line-height:1.1; letter-spacing:-.7px; }
+    .cd p { margin:0 0 6px; color:#444; font-size:15px; line-height:1.45; }
+    .cd small, .sm small, .tr small, .fs small { color:#8a8a8a; font-size:12px; display:block; }
+    .cd:hover h3, .tr:hover h4, .sm:hover h4, .fs:hover h4 { text-decoration:underline; }
+    .sec { margin:0 0 26px; }
+    .sec-h { display:flex; justify-content:space-between; align-items:center; background:var(--c); color:#fff; padding:7px 14px; margin:0 0 14px; }
+    .sec-h b { font-size:17px; font-weight:900; }
+    .sec-h a { color:#fff; font-size:13px; opacity:.92; }
+    .sec-h a:hover { text-decoration:underline; }
+    .row3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+    .strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin-top:12px; padding-top:10px; border-top:1px solid var(--line); }
+    .tr { display:block; padding:10px 0; border-bottom:1px solid var(--line); color:inherit; }
+    .tr h4 { margin:0 0 4px; font-size:17px; line-height:1.22; font-weight:800; }
+    .strip .tr { border-bottom:0; padding:0; }
+    .listimg { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:24px; }
+    .li-r { display:flex; flex-direction:column; gap:16px; }
+    .sm { display:block; color:inherit; }
+    .sm h4 { margin:7px 0 3px; font-size:16.5px; line-height:1.2; font-weight:800; }
+    .feat { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:24px; }
+    .feat-s { display:flex; flex-direction:column; }
+    .fs { display:grid; grid-template-columns:104px minmax(0,1fr); gap:12px; align-items:start; padding:10px 0; border-bottom:1px solid var(--line); color:inherit; }
+    .fs:first-child { padding-top:0; }
+    .fs .fs-i { aspect-ratio:16/10; }
+    .fs h4 { margin:0 0 4px; font-size:15.5px; line-height:1.22; font-weight:800; }
+    @media (max-width:900px) {
+      .hero2 { grid-template-columns:1fr; } .hero2-i { order:-1; }
+      .mix, .listimg, .feat { grid-template-columns:1fr; }
+    }
+    @media (max-width:640px) {
+      .hero2 { gap:12px; padding-top:0; margin:0 -12px; }
+      .hero2-t { padding:0 12px; }
+      .hero2-i .im { aspect-ratio:16/9; }
+      .hero2 h1 { font-size:25px; letter-spacing:-.6px; }
+      .hero2 p { font-size:15px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+      .hero2-s li { font-size:14.5px; }
+      .mix { gap:12px; }
+      .bt { grid-template-columns:minmax(0,1fr) 34%; min-height:96px; }
+      .bt h3 { font-size:16.5px; } .bt p { display:none; }
+      .bt-i { min-height:96px; }
+      .mix-m { flex-direction:column; }
+      .sec-h { margin-inline:-12px; padding-inline:12px; }
+      .row3 { grid-template-columns:1fr; gap:14px; }
+      .row3 .cd:nth-child(n+2) { display:grid; grid-template-columns:118px minmax(0,1fr); gap:11px; align-items:start; }
+      .row3 .cd:nth-child(n+2) .cd-b { padding:0; } .row3 .cd:nth-child(n+2) h3 { font-size:16px; margin-top:0; }
+      .strip { grid-template-columns:1fr; gap:0; }
+      .strip .tr { padding:9px 0; border-bottom:1px solid var(--line); }
+      .li-r { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+      .cd.big h3 { font-size:21px; }
+      .fs { grid-template-columns:96px minmax(0,1fr); }
+    }
   </style>
 </head>
 <body>
@@ -227,28 +308,68 @@ const rel = a => when(a.released||a.created, a.released_time);
 const meta = a => [a.channel, a.minutes? 'סיכום '+a.minutes+' דק׳':'', rel(a)].filter(Boolean).map(esc).join(' · ');
 let DATA = null, FILTER = 'all';
 
-function card(a){
-  return '<a class="card" href="'+href(a)+'"><div class="thumb img" style="background-image:'+bg(a.vid)+','+tone(a)+'"></div>'
-   +'<div class="card-body"><div class="tag">'+esc(a.topic)+'</div><h3>'+esc(a.title)+'</h3><p>'+esc(a.lead)+'</p><div class="meta">'+meta(a)+'</div></div></a>';
+const COL = {'פוליטיקה':'#b3171f','כלכלה':'#1b3f94','טכנולוגיה':'#0f2a5c','תרבות':'#6a2fa3','ספורט':'#1a7a3a','בריאות':'#0e7a6e','רכילות':'#b0276a'};
+const col = t => COL[t]||'#333';
+const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" style="background-image:'+tone(a)+'"></div>';
+const when2 = a => esc(rel(a));
+const tagOf = a => '<span class="tg" style="color:'+col(a.topic)+'">'+esc(a.topic)+'</span>';
+
+// big hero: text on one side, large image on the other, the next stories as bullet links under it (ynet style)
+function hero(a, subs){
+  return '<section class="hero2"><div class="hero2-t"><div class="hero2-k">'+tagOf(a)+' · '+when2(a)+'</div>'
+    +'<a href="'+href(a)+'"><h1>'+esc(a.title)+'</h1><p>'+esc(a.lead)+'</p></a><div class="hero2-m">'+meta(a)+'</div>'
+    +(subs.length?'<ul class="hero2-s">'+subs.map(x=>'<li><a href="'+href(x)+'">'+esc(x.title)+'</a></li>').join('')+'</ul>':'')+'</div>'
+    +'<a class="hero2-i" href="'+href(a)+'">'+im(a)+'</a></section>';
 }
+// dense coloured banner tile: headline block in the topic colour + image on the side
+function bt(a){
+  return '<a class="bt" style="--c:'+col(a.topic)+'" href="'+href(a)+'"><div class="bt-t"><h3>'+esc(a.title)+'</h3><p>'+esc(a.lead)+'</p><span>'+esc(a.topic)+' · '+when2(a)+'</span></div>'+im(a,'bt-i')+'</a>';
+}
+// image-over-headline card
+function cd(a, big){
+  return '<a class="cd'+(big?' big':'')+'" href="'+href(a)+'">'+im(a)+'<div class="cd-b">'+tagOf(a)+'<h3>'+esc(a.title)+'</h3>'+(big?'<p>'+esc(a.lead)+'</p>':'')+'<small>'+meta(a)+'</small></div></a>';
+}
+// text row with time stamp (news list)
+function tr(a){ return '<a class="tr" href="'+href(a)+'"><h4>'+esc(a.title)+'</h4><small>'+when2(a)+' · '+esc(a.channel||'')+'</small></a>'; }
+// small card for side stacks
+function sm(a){ return '<a class="sm" href="'+href(a)+'">'+im(a)+'<h4>'+esc(a.title)+'</h4><small>'+esc(a.topic)+' · '+when2(a)+'</small></a>'; }
+
+const take = (list, n, used) => { const out=[]; for(const a of list){ if(out.length>=n) break; if(!used.has(a.slug)){ used.add(a.slug); out.push(a); } } return out; };
+function bar(topic, more){ return '<div class="sec-h" style="--c:'+col(topic)+'"><b>'+esc(topic)+'</b>'+(more?'<a href="#'+encodeURIComponent(topic)+'" data-go="'+esc(topic)+'">עוד ב'+esc(topic)+' ›</a>':'')+'</div>'; }
+
+// each section uses a different arrangement so the page never reads as identical blocks stacked on each other
+function pattern(kind, L){
+  if(kind===0) return '<div class="row3">'+L.slice(0,3).map(a=>cd(a)).join('')+'</div>'+(L.length>3?'<div class="strip">'+L.slice(3,6).map(tr).join('')+'</div>':'');
+  if(kind===1) return '<div class="listimg"><div class="li-l">'+L.slice(0,5).map(tr).join('')+'</div><div class="li-r">'+L.slice(5,7).map(sm).join('')+(L.length<6?L.slice(0,2).map(sm).join(''):'')+'</div></div>';
+  return '<div class="feat"><div class="feat-m">'+cd(L[0],true)+'</div><div class="feat-s">'+L.slice(1,5).map(a=>'<a class="fs" href="'+href(a)+'">'+im(a,'fs-i')+'<div><h4>'+esc(a.title)+'</h4><small>'+when2(a)+'</small></div></a>').join('')+'</div></div>';
+}
+const need = k => k===0 ? 3 : k===1 ? 5 : 3;
+
 function render(){
-  const all = DATA.items, items = FILTER==='all' ? all : all.filter(a=>a.topic===FILTER);
-  const main = document.getElementById('main');
+  const all = DATA.items, main = document.getElementById('main');
+  const items = FILTER==='all' ? all : all.filter(a=>a.topic===FILTER);
   if(!items.length){ main.innerHTML='<p class="empty">אין עדיין סיכומים במדור הזה — הם יופיעו כאן אוטומטית.</p>'; return; }
-  let h='';
-  const lead = items[0], side = items.slice(1,4), feed = items.slice(4);
-  h+='<section class="lead-grid"'+(side.length?'':' style="grid-template-columns:1fr"')+'><a class="lead" href="'+href(lead)+'"><div class="lead-copy"><div class="eyebrow">'+esc(lead.topic)+' · '+rel(lead)+'</div>'
-    +'<h1>'+esc(lead.title)+'</h1><p class="subtitle">'+esc(lead.lead)+'</p><div class="meta">'+meta(lead)+'</div></div>'
-    +'<div class="lead-art img" style="background-image:'+bg(lead.vid)+','+tone(lead)+'"></div></a>'
-    +(side.length?'<div class="side-latest">':'<div hidden>')+side.map(a=>'<a class="side-item" href="'+href(a)+'"><div class="tag">'+esc(a.topic)+' · '+rel(a)+'</div><h2>'+esc(a.title)+'</h2><p>'+esc(a.lead)+'</p></a>').join('')+'</div></section>';
-  if(feed.length) h+='<div class="section-head"><h2>הכי חדש</h2><small>מסודר לפי מועד פרסום הפרק</small></div><section class="feed-grid">'+feed.map(card).join('')+'</section>';
+  const used = new Set(); let h='';
+  const top = take(items,1,used)[0], subs = take(items,3,used);
+  h += hero(top, subs);
+  const tiles = take(items,4,used), meds = take(items,2,used);
+  if(tiles.length||meds.length) h += '<section class="mix"><div class="mix-b">'+tiles.map(bt).join('')+'</div><div class="mix-m">'+meds.map(a=>cd(a)).join('')+'</div></section>';
+  const rest = items.filter(a=>!used.has(a.slug));
   if(FILTER==='all'){
-    const rows = DATA.topics.map(t=>{ const a = all.find(x=>x.topic===t);
-      return a ? '<a class="topic-row" href="'+href(a)+'"><div class="topic">'+esc(t)+'</div><div><h3>'+esc(a.title)+'</h3><p>'+esc(a.lead)+'</p></div></a>'
-               : '<div class="topic-row"><div class="topic">'+esc(t)+'</div><div><h3>מדור בהכנה</h3><p>יוזן מסיכומי הווידאו הבאים.</p></div></div>'; });
-    h+='<section class="topic-block"><h2>עוד לפי נושא</h2><div class="topic-grid">'+rows.join('')+'</div></section>';
+    // topic sections ordered by how fresh their newest remaining story is
+    const topics = DATA.topics.map(t=>({t, list: rest.filter(a=>a.topic===t)})).filter(x=>x.list.length)
+                      .sort((x,y)=> (y.list[0].released||'').localeCompare(x.list[0].released||''));
+    topics.forEach((x,idx)=>{
+      const kind = idx%3, n = Math.min(x.list.length, kind===1?7:6);
+      const L = take(x.list, Math.max(n, 1), used);
+      h += '<section class="sec">'+bar(x.t, true)+pattern(kind, L)+'</section>';
+    });
+  } else {
+    const L = rest.slice();
+    for(let k=0, i=0; i<L.length; k++){ const kind=k%3, n=kind===1?7:6; h += '<section class="sec">'+(k===0?bar(FILTER,false):'')+pattern(kind, L.slice(i,i+n))+'</section>'; i+=n; }
   }
   main.innerHTML=h; hydrateThumbs();
+  main.querySelectorAll('[data-go]').forEach(a=>a.onclick=e=>{ e.preventDefault(); FILTER=a.dataset.go; nav(); render(); window.scrollTo({top:0}); history.replaceState(null,'','#'+encodeURIComponent(FILTER)); });
 }
 function nav(){
   const n=document.getElementById('nav');
