@@ -767,7 +767,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         p = self.path.split("?")[0]
         if self._is_pawed_host():
-            # Render itself redirects pawed.io -> www.pawed.io, so both names are served here (no redirect back: that was a loop)
+            # pawed.io (bare domain) is canonical; Render redirects www to it, so the app must not redirect (that caused a loop)
             pawed_icons = {"/favicon.ico": ("pawed-favicon.ico", "image/x-icon"), "/favicon-32.png": ("pawed-favicon-32.png", "image/png"),
                            "/apple-touch-icon.png": ("pawed-apple-touch-icon.png", "image/png")}
             if p in pawed_icons:
@@ -786,7 +786,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self._json({"error": "not found"}, 404); return
         elif secret_flag("PAWED_REDIRECT") and (self._is_main_host() or (self.headers.get("Host") or "").split(":")[0].lower() == "cookin.jarcud.com") \
                 and (p in ("/vidsum", "/vidsum/") or p.startswith(("/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/articles", "/vidsum/article/", "/vidsum/news"))):
-            self.send_response(301); self.send_header("Location", "https://www.pawed.io" + self.path)   # pages moved to Pawed
+            self.send_response(301); self.send_header("Location", "https://pawed.io" + self.path)   # pages moved to Pawed
             self.send_header("Content-Length", "0"); self.end_headers(); return
         if p in self._ICONS:
             name, ctype = self._ICONS[p]
