@@ -766,6 +766,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         p = self.path.split("?")[0]
+        if p == "/healthz":                       # Render's health check arrives with Host: pawed.io, so answer before the host filter
+            self._json({"ok": True})
+            return
         if self._is_pawed_host():
             # pawed.io (bare domain) is canonical; Render redirects www to it, so the app must not redirect (that caused a loop)
             pawed_icons = {"/favicon.ico": ("pawed-favicon.ico", "image/x-icon"), "/favicon-32.png": ("pawed-favicon-32.png", "image/png"),
