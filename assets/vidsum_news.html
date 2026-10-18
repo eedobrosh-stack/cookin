@@ -349,6 +349,19 @@ function heroIndex(items){
   const age = Date.now() - t0;
   return age < HERO_SLOT_MS ? 0 : Math.floor(age/HERO_SLOT_MS) % n;
 }
+// One pod (the show / channel an episode comes from) appears at most once per block: the top block, each topic section,
+// each feed batch. Across the page it also prefers pods not shown yet, and only repeats one when nothing else is left.
+const podOf = a => (a.channel||a.source_id||'').trim();
+function takeD(list, n, used, blockPods, pagePods){
+  const out = [];
+  const pass = (needFreshOnPage) => { for(const a of list){
+      if(out.length>=n) break; if(used.has(a.slug)) continue;
+      const pod = podOf(a); if(blockPods.has(pod)) continue;
+      if(needFreshOnPage && pagePods.has(pod)) continue;
+      used.add(a.slug); blockPods.add(pod); pagePods.add(pod); out.push(a); } };
+  pass(true); if(out.length<n) pass(false);
+  return out;
+}
 const take = (list, n, used) => { const out=[]; for(const a of list){ if(out.length>=n) break; if(!used.has(a.slug)){ used.add(a.slug); out.push(a); } } return out; };
 function bar(topic, more){ return '<div class="sec-h" style="--c:'+col(topic)+'"><b>'+esc(topic)+'</b>'+(more?'<a href="#'+encodeURIComponent(topic)+'" data-go="'+esc(topic)+'">עוד ב'+esc(topic)+' ›</a>':'')+'</div>'; }
 
@@ -385,8 +398,10 @@ function startFeed(items){
 function moreFeed(force){
   if(!FEED || FEED.busy) return; FEED.busy = true;
   const kind = CHUNK_KINDS[FEED.chunk % CHUNK_KINDS.length], n = CHUNK_SIZE[kind], L = [], N = FEED.seq.length;
-  for(let i=0;i<n;i++) L.push(FEED.seq[(FEED.pos+i) % N]);                       // wraps around: the feed never ends
-  FEED.pos = (FEED.pos+n) % N;
+  const pods = new Set(); let step = 0;
+  while(L.length<n && step<N){ const a = FEED.seq[(FEED.pos+step) % N]; step++; const pod = podOf(a); if(pods.has(pod)) continue; pods.add(pod); L.push(a); }
+  for(let i=0; L.length<n; i++) L.push(FEED.seq[(FEED.pos+step+i) % N]);        // not enough different pods: fill up anyway
+  FEED.pos = (FEED.pos+step) % N;                                                // wraps around: the feed never ends
   const lap = FEED.chunk>0 && FEED.pos < n ? ' · סיבוב נוסף' : '';
   const head = FEED.chunk===0 ? '<div class="sec-h" style="--c:#2a211b"><b>עוד מכל התחומים</b></div>' : (FEED.chunk%4===0 ? '<div class="sec-h" style="--c:#2a211b"><b>המשך הפיד'+lap+'</b></div>' : '');
   const html = '<section class="sec feedchunk">'+head+(kind===3 ? patternMix(L) : pattern(kind, L))+'</section>';
@@ -412,10 +427,10 @@ function render(){
   if(!sorted.length){ main.innerHTML='<p class="empty">אין עדיין סיכומים במדור הזה — הם יופיעו כאן אוטומטית.</p>'; return; }
   const k = heroIndex(sorted); HERO_SHOWN = k;
   const items = k===0 ? sorted : [sorted[k], ...sorted.filter((_,i)=>i!==k)];   // featured story first, everything else still newest-first
-  const used = new Set(); let h='';
-  const top = take(items,1,used)[0], subs = take(items,3,used);
+  const used = new Set(); let h=''; const pagePods = new Set(), topPods = new Set();
+  const top = takeD(items,1,used,topPods,pagePods)[0], subs = takeD(items,3,used,topPods,pagePods);
   h += hero(top, subs);
-  const tiles = take(items,4,used), meds = take(items,2,used);
+  const tiles = takeD(items,4,used,topPods,pagePods), meds = takeD(items,2,used,topPods,pagePods);
   if(tiles.length||meds.length) h += '<section class="mix"><div class="mix-b">'+tiles.map(bt).join('')+'</div><div class="mix-m">'+meds.map(a=>cd(a)).join('')+'</div></section>';
   const rest = items.filter(a=>!used.has(a.slug));
   if(FILTER==='all'){
@@ -424,12 +439,17 @@ function render(){
                       .sort((x,y)=> (y.list[0].released||'').localeCompare(x.list[0].released||''));
     topics.forEach((x,idx)=>{
       const kind = idx%3, n = Math.min(x.list.length, kind===1?7:6);
-      const L = take(x.list, Math.max(n, 1), used);
+      const L = takeD(x.list, Math.max(n, 1), used, new Set(), pagePods);
       h += '<section class="sec">'+bar(x.t, true)+pattern(kind, L)+'</section>';
     });
   } else {
-    const L = rest.slice();
-    for(let k=0, i=0; i<L.length; k++){ const kind=k%3, n=kind===1?7:6; h += '<section class="sec">'+(k===0?bar(FILTER,false):'')+pattern(kind, L.slice(i,i+n))+'</section>'; i+=n; }
+    const pool = rest.slice();
+    for(let k=0; pool.length; k++){
+      const kind=k%3, n=kind===1?7:6, L=[], pods=new Set();
+      for(const a of pool.slice()){ if(L.length>=n) break; const pod=podOf(a); if(pods.has(pod)) continue; pods.add(pod); L.push(a); pool.splice(pool.indexOf(a),1); }
+      if(!L.length) L.push(pool.shift());
+      h += '<section class="sec">'+(k===0?bar(FILTER,false):'')+pattern(kind, L)+'</section>';
+    }
   }
   if(FILTER==='all') h += '<div id="feed2"></div><div id="sentinel" style="height:1px"></div>';
   main.innerHTML=h; hydrateThumbs();
