@@ -201,7 +201,7 @@
   </header>
   <main>
     <h1 class="page">מקורות</h1>
-    <p class="lead-in">פודקאסטים וערוצי יוטיוב ש-Pawed עוקב אחריהם. סרטון חדש בכל אחד מהם מסוכם אוטומטית ומופיע בעמוד הראשי. אפשר להתחבר עם Google, להוסיף מקורות משלכם ולהתאים את מה שמוצג לכם.</p>
+    <p class="lead-in">פודקאסטים וערוצי יוטיוב ש-Pawed עוקב אחריהם. אפשר להוסיף גם עמוד של פודקאסט באתר חיצוני (למשל mako) או כתובת RSS. פרק חדש בכל אחד מהם מסוכם אוטומטית ומופיע בעמוד הראשי. אפשר להתחבר עם Google, להוסיף מקורות משלכם ולהתאים את מה שמוצג לכם.</p>
 
     <div class="acct" id="acct"></div>
     <div class="settings" id="settings" hidden>
@@ -213,12 +213,12 @@
     </div>
 
     <div class="scroll"><table>
-      <thead><tr><th>שם הפודקאסט</th><th>שפה</th><th>כתובת YouTube</th><th>תחום</th><th>נוסף על ידי</th><th></th></tr></thead>
+      <thead><tr><th>שם הפודקאסט</th><th>שפה</th><th>כתובת</th><th>תחום</th><th>נוסף על ידי</th><th></th></tr></thead>
       <tbody id="rows"><tr><td colspan="6">טוען…</td></tr></tbody>
       <tfoot id="addfoot" hidden><tr class="addrow">
-        <td data-l="שם"><input type="text" id="n_name" placeholder="שם (אופציונלי, יילקח מיוטיוב)"></td>
+        <td data-l="שם"><input type="text" id="n_name" placeholder="שם (אופציונלי). אתר שחוסם קריאה? הזינו כאן את שם התוכנית"></td>
         <td data-l="שפה"><select id="n_lang"></select></td>
-        <td data-l="כתובת YouTube"><input type="text" id="n_url" placeholder="כתובת YouTube (ריק = מוסיף רק את השם, פעיל רק אחרי שיש כתובת)" dir="ltr"></td>
+        <td data-l="כתובת"><input type="text" id="n_url" placeholder="YouTube, עמוד פודקאסט (למשל mako) או RSS · ריק = רק השם" dir="ltr"></td>
         <td data-l="תחום"><select id="n_vert"></select></td>
         <td data-l="נוסף על ידי"><span class="owner" id="n_owner"></span></td>
         <td><button class="add-btn" id="n_add">הוספה</button></td>
@@ -280,10 +280,10 @@ async function savePrefs(p){
 function render(){
   renderAcct(); renderSettings();
   const signed = !!D.me, canAdd = signed || D.admin;
-  const rows = D.sources.map(s => '<tr><td class="name" data-l="שם">'+esc(s.name)+'</td>'
+  const rows = D.sources.map(s => '<tr><td class="name" data-l="שם">'+esc(s.name)+(s.kind==='rss'?' <span class="daily" style="background:#e6edfb;color:#1d3f9a">פודקאסט RSS</span>':'')+'</td>'
     +'<td data-l="שפה">'+(s.can_edit?'<select data-id="'+esc(s.id)+'" data-f="language">'+opts(D.languages,s.language)+'</select>':esc(D.languages[s.language]||s.language))+'</td>'
-    +'<td class="url" data-l="כתובת YouTube">'+(s.pending
-        ? (s.can_edit ? '<span class="pend">ממתין לכתובת</span><span class="pendform"><input type="text" dir="ltr" placeholder="https://www.youtube.com/@channel" data-url="'+esc(s.id)+'"><button class="add-btn" data-save="'+esc(s.id)+'">שמירה</button></span>'
+    +'<td class="url" data-l="כתובת">'+(s.pending
+        ? (s.can_edit ? '<span class="pend">ממתין לכתובת</span><span class="pendform"><input type="text" dir="ltr" placeholder="YouTube / פודקאסט / RSS" data-url="'+esc(s.id)+'"><button class="add-btn" data-save="'+esc(s.id)+'">שמירה</button></span>'
                       : '<span class="pend">ממתין לכתובת YouTube</span>')
         : '<a href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(short(s.url))+'</a>')+'</td>'
     +'<td data-l="תחום">'+(s.can_edit?'<select data-id="'+esc(s.id)+'" data-f="vertical">'+opts(D.verticals,s.vertical)+'</select>':esc(s.vertical))+'</td>'

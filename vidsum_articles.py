@@ -710,6 +710,9 @@ def _run_luna(vid):
                 tr = json.load(f)
             dur, pub = tr.get("duration"), tr.get("published")
             title, channel = tr.get("title", ""), tr.get("channel", "")
+            job = _load_jobs().get(vid, {})
+            rss_extra = ({"kind": "rss", "url": job.get("page") or job.get("audio"), "audio": job.get("audio"), "image": job.get("image") or ""}
+                         if job.get("kind") == "rss" else {})
             data = fin = None
             for retry in (False, True):
                 prompt = _text_prompt(title, channel, dur, tr["transcript"], retry)
@@ -720,8 +723,8 @@ def _run_luna(vid):
                     break
                 log(f"vidsum {vid} luna bad timestamps (dur={dur}); {'retrying' if not retry else 'accepting'}")
             _save_article(vid, _finalize(data, dur, {"channel": channel, "src_title": title, "tokens": tokens,
-                                                     "method": "luna-captions", "finish": fin, "published": pub,
-                                                     "published_at": tr.get("published_at")}))
+                                                     "method": "luna-whisper" if rss_extra else "luna-captions", "finish": fin, "published": pub,
+                                                     "published_at": tr.get("published_at"), **rss_extra}))
         except Exception as e:
             log(f"vidsum {vid} luna FAILED: {str(e)[:400]}")
             _set_job(vid, status="failed", error=str(e)[:300])
@@ -826,9 +829,17 @@ def relay_discovered(req):
 
 
 def relay_queue(limit=15):
-    return [{"vid": v, "url": f"https://www.youtube.com/watch?v={v}", "submitted": j.get("submitted")}
-            for v, j in sorted(_load_jobs().items(), key=lambda kv: kv[1].get("submitted", ""))
-            if j.get("status") == "needs_transcript"][:limit]
+    out = []
+    for v, j in sorted(_load_jobs().items(), key=lambda kv: kv[1].get("submitted", "")):
+        if j.get("status") != "needs_transcript":
+            continue
+        row = {"vid": v, "url": f"https://www.youtube.com/watch?v={v}", "submitted": j.get("submitted")}
+        if j.get("kind") == "rss":                  # podcast episode: the Mac downloads the audio and transcribes it (Whisper)
+            row.update(kind="rss", url=j.get("page") or j.get("audio"), audio=j.get("audio"), title=j.get("title"), channel=j.get("channel"),
+                       duration=j.get("duration"), published_at=j.get("published_at"), description=j.get("description"),
+                       language=j.get("language") or "he")
+        out.append(row)
+    return out[:limit]
 
 
 def relay_transcript(req):
@@ -924,6 +935,7 @@ def index_html():
 
 
 import vidsum_render
+import vidsum_feeds
 DISCLAIMER = "הדברים המובאים הם של המרואיינים ולא נבדקו. הכתבה נערכה אוטומטית מתוך תמלול של השיחה."
 
 
@@ -1058,7 +1070,7 @@ def news_items():
     daily_ids = {c["id"] for c in _load_ch()["channels"] if c.get("cadence") == "daily"}     # daily pods own the morning slots
     return [{"slug": a["slug"], "title": nd(a["title"]), "lead": nd(a.get("lead") or a.get("standfirst") or a.get("subtitle", "")),
              "topic": a.get("topic") or "תרבות", "topics": article_topics(a), "channel": a.get("channel", ""), "vid": a.get("vid"),
-             "source_id": a.get("source_id"), "daily": a.get("source_id") in daily_ids, "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
+             "source_id": a.get("source_id"), "image": a.get("image") or "", "kind": a.get("kind") or "yt", "daily": a.get("source_id") in daily_ids, "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
              "released_time": len((a.get("published_at") or "")) >= 19, "minutes": _length_min(a)} for a in _articles()]
 
 
@@ -1201,6 +1213,14 @@ def _feed_url(fid):
             else "https://www.youtube.com/feeds/videos.xml?channel_id=") + fid
 
 
+def _is_youtube_ref(ref):
+    ref = (ref or "").strip()
+    if not ref.startswith("http"):
+        return ref.startswith("@") or bool(re.match(r"UC[\w-]{22}$", ref))
+    host = (urllib.parse.urlparse(ref).hostname or "").lower()
+    return host == "youtu.be" or host == "youtube.com" or host.endswith(".youtube.com")
+
+
 def resolve_channel(ref):
     """channel URL / @handle / UC… id / playlist URL (list=PL…) -> (feed_id, name)"""
     ref = ref.strip()
@@ -1252,7 +1272,7 @@ def watch_once():
     today = time.strftime("%Y-%m-%d")
     used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit")
     for ch in d["channels"]:
-        if ch["id"].startswith("pending-"):          # name only, no YouTube URL yet: not a valid source
+        if ch["id"].startswith("pending-") or ch.get("kind") == "rss":     # name only (not valid yet) / podcast feeds have their own loop
             continue
         try:
             feed = _http(_feed_url(ch["id"]))
@@ -1297,6 +1317,89 @@ def watch_once():
     _save_ch(d)
 
 
+RSS_EVERY_S = 20 * 60
+
+
+def _submit_rss(ch, it):
+    """Queue one podcast episode for the Mac relay (download audio + Whisper). -> True if queued."""
+    vid = vidsum_feeds.episode_id(it)
+    if _find_by_vid(vid):
+        return True
+    with LOCK:
+        jobs = _load_jobs()
+        cur = jobs.get(vid)
+        if cur and cur.get("status") in ("queued", "running", "needs_transcript"):
+            return True
+        if sum(1 for j in jobs.values() if j.get("status") == "needs_transcript") >= MAX_WAITING:
+            return False
+        jobs[vid] = {"status": "needs_transcript", "engine": "luna", "public": False, "source": ch["id"], "kind": "rss",
+                     "audio": it["audio"], "title": it["title"], "channel": ch["name"], "duration": it["duration"],
+                     "published_at": it["published_at"], "page": it["link"], "image": it["image"],
+                     "description": it["description"], "language": ch.get("language") or "he",
+                     "submitted": time.strftime("%Y-%m-%d %H:%M:%S")}
+        _save_jobs(jobs)
+    return True
+
+
+def watch_rss():
+    """Podcast-feed sources: queue episodes published after the source was added (the newest one right away on a new source)."""
+    d = _load_ch()
+    today = time.strftime("%Y-%m-%d")
+    used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit")
+    for ch in d["channels"]:
+        if ch.get("kind") != "rss":
+            continue
+        try:
+            feed = vidsum_feeds.parse_feed(vidsum_feeds.fetch(ch["feed_url"]))
+        except Exception as e:
+            ch["error"] = str(e)[:120]
+            continue
+        ch["error"] = ""
+        ch["checked"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        seen = set(ch.setdefault("seen", []))
+        items = feed["items"]
+        if ch.pop("take_latest", False) and items:           # new subscription: the latest episode (if recent) plus nothing older
+            fresh = [i for i in items if i["published_at"] and i["published_at"] >= time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 30 * 86400))]
+            for i in items:
+                if not fresh or i is not fresh[0]:
+                    seen.add(vidsum_feeds.episode_id(i))
+            first = fresh[:1]
+        else:
+            first = []
+        for it in reversed(items) if not first else first:   # oldest first
+            eid = vidsum_feeds.episode_id(it)
+            if eid in seen and not first:
+                continue
+            if not first:
+                pub = (it["published_at"] or "").replace("T", " ").replace("Z", "")
+                if (pub and pub < ch["added"][:19] and not ch.get("backfill")) or (it["duration"] or 999) < 150:
+                    seen.add(eid)
+                    continue
+            if used >= WATCH_DAILY_CAP:
+                break
+            if ch.get("owner_id") and sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit"
+                                          and e.get("owner") == ch["owner_id"]) >= USER_DAILY_VIDEOS:
+                continue
+            if _submit_rss(ch, it):
+                seen.add(eid)
+                used += 1
+                d["log"].append({"day": today, "kind": "submit", "vid": eid, "channel": ch["name"], "owner": ch.get("owner_id"),
+                                 "at": time.strftime("%H:%M:%S")})
+                log(f"vidsum rss: {ch['name']} -> {it['title'][:60]} ({eid})")
+        ch["seen"] = sorted(seen)[-400:]
+    _save_ch(d)
+
+
+def _rss_loop():
+    time.sleep(120)
+    while True:
+        try:
+            watch_rss()
+        except Exception as e:
+            log(f"vidsum rss watcher error: {str(e)[:200]}")
+        time.sleep(RSS_EVERY_S)
+
+
 def _watch_loop():
     time.sleep(90)
     while True:
@@ -1311,6 +1414,7 @@ def start_background():
     resume_stuck()
     threading.Thread(target=backfill, daemon=True).start()
     threading.Thread(target=_watch_loop, daemon=True).start()
+    threading.Thread(target=_rss_loop, daemon=True).start()
     threading.Thread(target=_fallback_loop, daemon=True).start()
 
 
@@ -1341,7 +1445,7 @@ def sources_view(viewer=None):
         out.append({"id": c["id"], "name": c["name"], "language": c["language"], "url": c["url"],
                     "vertical": c["vertical"], "added": c.get("added", ""), "pending": c["id"].startswith("pending-"),
                     "daily": c.get("cadence") == "daily", "pub_days": c.get("pub_days") or [], "owner_id": owner, "owner_label": label, "mine": bool(viewer and owner and owner == viewer.get("id")),
-                    "base": owner is None, "can_edit": _can_edit_source(c, viewer)})
+                    "base": owner is None, "kind": c.get("kind") or "yt", "can_edit": _can_edit_source(c, viewer)})
     return out
 
 
@@ -1375,6 +1479,19 @@ def add_source(req, user=None):
             cid = "pending-" + uuid.uuid4().hex[:8]
             d["channels"].append({"id": cid, "name": name[:120], "url": "", "language": lang, "vertical": vert,
                                   "added": time.strftime("%Y-%m-%d %H:%M:%S"), "owner_id": owner_id, "owner_name": owner_name})
+            _save_ch(d)
+        return cid
+    if not _is_youtube_ref(url):                    # a podcast page, an RSS feed or a show name: read it as a podcast feed
+        info = vidsum_feeds.resolve_feed(url, name)
+        cid = info["id"]
+        with LOCK:
+            d = _load_ch()
+            if any(c["id"] == cid for c in d["channels"]):
+                raise ValueError("this source is already in the table")
+            d["channels"].append({"id": cid, "kind": "rss", "feed_url": info["feed_url"], "image": info["image"],
+                                  "name": (name or info["name"])[:120], "url": url[:300], "language": req.get("language") if req.get("language") in LANGS else info["language"],
+                                  "vertical": vert, "added": time.strftime("%Y-%m-%d %H:%M:%S"), "take_latest": True,
+                                  "owner_id": owner_id, "owner_name": owner_name})
             _save_ch(d)
         return cid
     cid, found = resolve_channel(url)
@@ -1521,7 +1638,7 @@ def handle_get(handler, path, qs):
         else:
             handler._json({"ok": True, "sources": [
                 {"id": c["id"], "name": c["name"], "added": c.get("added", ""), "backfill": bool(c.get("backfill")),
-                 "daily": c.get("cadence") == "daily", "pub_days": c.get("pub_days") or [], "seen": (c.get("seen") or [])[-300:]} for c in _load_ch()["channels"] if not c["id"].startswith("pending-")]})
+                 "daily": c.get("cadence") == "daily", "pub_days": c.get("pub_days") or [], "seen": (c.get("seen") or [])[-300:]} for c in _load_ch()["channels"] if not c["id"].startswith("pending-") and c.get("kind") != "rss"]})
         return True
     if path == "/api/vidsum/links/todo":
         user = current_user(handler)
@@ -1549,7 +1666,7 @@ def handle_get(handler, path, qs):
             handler._json({"error": "forbidden"}, 403)
         else:
             handler._json({"ok": True, "queue": relay_queue(int((qs.get("limit") or ["15"])[0])),
-                           "need_dates": [a["vid"] for a in _articles() if a.get("vid") and not a.get("published_at")][:25]})
+                           "need_dates": [a["vid"] for a in _articles() if a.get("vid") and not a.get("published_at") and a.get("kind") != "rss"][:25]})
         return True
     if path == "/api/vidsum/diag":
         user = current_user(handler)
@@ -1766,7 +1883,14 @@ def handle_post(handler, path, req):
                         d["channels"] = [c for c in d["channels"] if c["id"] != req.get("id")]
                     elif hit:
                         c = hit
-                        if (req.get("url") or "").strip():
+                        if (req.get("url") or "").strip() and not _is_youtube_ref(req["url"]):
+                            info = vidsum_feeds.resolve_feed(req["url"].strip(), req.get("name") or c.get("name"))
+                            if info["id"] != c["id"] and any(x["id"] == info["id"] for x in d["channels"]):
+                                raise ValueError("this source is already in the table")
+                            c.update(id=info["id"], kind="rss", feed_url=info["feed_url"], image=info["image"], url=req["url"].strip()[:300],
+                                     added=time.strftime("%Y-%m-%d %H:%M:%S"), take_latest=True)
+                            c.pop("seen", None)
+                        elif (req.get("url") or "").strip():
                             newid, _found = resolve_channel(req["url"].strip())      # raises if not a valid channel
                             if newid != c["id"] and any(x["id"] == newid for x in d["channels"]):
                                 raise ValueError("this YouTube source is already in the table")

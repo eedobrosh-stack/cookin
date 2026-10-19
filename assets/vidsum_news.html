@@ -305,16 +305,18 @@ const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 // YouTube serves a tiny grey placeholder (120px wide) for thumbnails it has not produced yet: only accept real frames,
 // otherwise fall back to a generated cover that matches the episode's topic.
 const THUMB_CACHE = {};
-function probe(url){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i.naturalWidth>=300?url:null); i.onerror=()=>res(null); i.src=url; }); }
-async function bestThumb(v){
+function probe(url, min){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i.naturalWidth>=(min||300)?url:null); i.onerror=()=>res(null); i.src=url; }); }
+async function bestThumb(v, img){
   if(THUMB_CACHE[v]) return THUMB_CACHE[v];
+  if(img && await probe(img, 100)) return THUMB_CACHE[v]=img;        // podcast episodes carry their own artwork
+  if(img) return THUMB_CACHE[v]='/vidsum/cover/'+v+'.svg';
   for(const f of ['maxresdefault','hq720','mqdefault']){ const u='https://i.ytimg.com/vi/'+v+'/'+f+'.jpg'; if(await probe(u)){ return THUMB_CACHE[v]=u; } }
   return THUMB_CACHE[v]='/vidsum/cover/'+v+'.svg';
 }
 function hydrateThumbs(){
   document.querySelectorAll('[data-vid]').forEach(async el=>{
     if(el.dataset.done) return; el.dataset.done='1';
-    const u = await bestThumb(el.dataset.vid);
+    const u = await bestThumb(el.dataset.vid, el.dataset.img);
     el.style.backgroundImage = 'url('+u+'),'+(el.style.backgroundImage||'none');
   });
 }
@@ -335,7 +337,7 @@ let DATA = null, FILTER = 'all';
 
 const COL = {'פוליטיקה':'#b3171f','כלכלה':'#1b3f94','טכנולוגיה':'#0f2a5c','תרבות':'#6a2fa3','ספורט':'#1a7a3a','בריאות':'#0e7a6e','רכילות':'#b0276a'};
 const col = t => COL[t]||'#333';
-const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" style="background-image:'+tone(a)+'"></div>';
+const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" data-img="'+esc(a.image||'')+'" style="background-image:'+tone(a)+'"></div>';
 const when2 = a => esc(rel(a));
 // an article can sit in up to 3 sections (a.topics, primary first); the home page groups by the primary one
 const inT = (a,t) => (a.topics||[a.topic]).includes(t);

@@ -130,8 +130,8 @@ CSS += ".brand-txt{display:flex;flex-direction:column;align-items:flex-start;lin
 CSS += ".auth-only,.admin-only{display:none}body.authed .auth-only,body.admin .admin-only{display:inline}.listen{display:flex;align-items:center;gap:10px;margin:-6px 0 20px;font-size:13px;color:var(--muted)}.listen-ic{display:inline-flex;transition:transform .12s}.listen-ic:hover{transform:scale(1.12)}"
 
 PAW_JS = """<script>(function(){var seq=['maxresdefault','hq720','mqdefault'];
-function fix(img){var v=img.dataset.vid,i=0;
-function next(){if(i<seq.length){img.src='https://i.ytimg.com/vi/'+v+'/'+seq[i++]+'.jpg';}
+function fix(img){var v=img.dataset.vid,i=0,own=img.dataset.img;
+function next(){if(own){var o=own;own=null;img.src=o;return;}if(i<seq.length){img.src='https://i.ytimg.com/vi/'+v+'/'+seq[i++]+'.jpg';}
 else{img.onload=img.onerror=null;img.src='/vidsum/cover/'+v+'.svg';}}
 img.onerror=next;
 img.onload=function(){if(img.naturalWidth<300&&img.src.indexOf('/vidsum/cover/')<0)next();};
@@ -186,7 +186,9 @@ def render(a, latest=(), base="", disclaimer=""):
     a = clean_dashes(a)
     latest = clean_dashes(list(latest))
     e = _html.escape
-    ts_link = lambda ts: ("" if not _ts_sec(ts) else f'<a class="ts" href="{e(a["url"])}&amp;t={_ts_sec(ts)}s" target="_blank" rel="noopener">▶ {e(ts)}</a>'
+    rss = a.get("kind") == "rss"            # a podcast episode: no YouTube deep links, the time is shown as plain text
+    ts_link = lambda ts: ("" if not _ts_sec(ts) else (f'<span class="ts">{e(ts)}</span>' if rss else
+                          f'<a class="ts" href="{e(a["url"])}&amp;t={_ts_sec(ts)}s" target="_blank" rel="noopener">▶ {e(ts)}</a>')
                           if _ts_sec(ts) is not None and ts else "")
     art_url = lambda s: f'{base}/vidsum/article/{urllib.parse.quote(s["slug"])}'
     thumb = lambda v: f"https://i.ytimg.com/vi/{v}/hq720.jpg"   # true 16:9 (hqdefault has baked-in black bars)
@@ -215,8 +217,8 @@ def render(a, latest=(), base="", disclaimer=""):
            f'<span class="share"><a href="https://wa.me/?text={share_txt}%20{share_url}" target="_blank" rel="noopener" title="WhatsApp">W</a>'
            f'<a href="https://www.facebook.com/sharer/sharer.php?u={share_url}" target="_blank" rel="noopener" title="Facebook">f</a>'
            f'<a href="https://twitter.com/intent/tweet?url={share_url}&amp;text={share_txt}" target="_blank" rel="noopener" title="X">X</a></span></div>',
-           f'<figure><a class="hero" href="{e(a["url"])}" target="_blank" rel="noopener" title="צפייה בסרטון ביוטיוב"><img data-vid="{e(a["vid"])}" alt=""></a>'
-           f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())} · צילום מסך מתוך הסרטון</figcaption></figure>']
+           f'<figure><a class="hero" href="{e(a["url"])}" target="_blank" rel="noopener" title="{"האזנה לפרק" if rss else "צפייה בסרטון ביוטיוב"}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""></a>'
+           f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())}{"" if rss else " · צילום מסך מתוך הסרטון"}</figcaption></figure>']
     lk = a.get("links") or {}
     icons = ""
     if lk.get("spotify"):
@@ -248,13 +250,13 @@ def render(a, latest=(), base="", disclaimer=""):
         elif t == "list":
             out.append('<ul class="l">' + "".join(f"<li>{e(i)}</li>" for i in b["items"]) + "</ul>")
     out.append("</div>")
-    out.append(f'<a class="watch" href="{e(a["url"])}" target="_blank" rel="noopener">צפייה בשיחה המלאה ביוטיוב ↗</a>')
+    out.append(f'<a class="watch" href="{e(a["url"])}" target="_blank" rel="noopener">{"האזנה לפרק המלא ↗" if rss else "צפייה בשיחה המלאה ביוטיוב ↗"}</a>')
     if disclaimer:
         out.append(f'<p class="disclaimer">{e(disclaimer)}</p>')
     rel = [x for x in others if set(x.get("topics") or [x["topic"]]) & set(tps)][:3] or others[:3]
     if rel:
         out.append('<section class="related"><h3>כתבות נוספות</h3><div class="rel-grid">' + "".join(
-            f'<a class="rel-card" href="{art_url(x)}"><img data-vid="{e(x["vid"])}" alt=""><div class="t">{e(x["topic"])}</div>'
+            f'<a class="rel-card" href="{art_url(x)}"><img data-vid="{e(x["vid"])}" data-img="{e(x.get("image") or "")}" alt=""><div class="t">{e(x["topic"])}</div>'
             f'<h4>{e(x["title"])}</h4></a>' for x in rel) + "</div></section>")
     out.append("</article><aside>")
     if others:
@@ -273,5 +275,5 @@ def render(a, latest=(), base="", disclaimer=""):
             f'<meta name="theme-color" content="#e3222b"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(a["title"])} | Pawed</title>'
             f'<meta name="description" content="{desc}"><link rel="canonical" href="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}">'
             f'<meta property="og:url" content="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}"><meta property="og:title" content="{e(a["title"])}">'
-            f'<meta property="og:description" content="{desc}"><meta property="og:image" content="https://i.ytimg.com/vi/{e(a["vid"])}/maxresdefault.jpg">'
+            f'<meta property="og:description" content="{desc}"><meta property="og:image" content="{e(a.get("image")) if rss and a.get("image") else "https://i.ytimg.com/vi/" + e(a["vid"]) + "/maxresdefault.jpg"}">'
             f'<style>{CSS}</style></head><body style="{_theme(a["topic"])}">{"".join(out)}{PAW_JS}</body></html>')
