@@ -1473,6 +1473,11 @@ def add_source(req, user=None):
         mine = sum(1 for c in _load_ch()["channels"] if c.get("owner_id") == owner_id)
         if mine >= MAX_USER_SOURCES:
             raise ValueError(f"you can have up to {MAX_USER_SOURCES} sources")
+    if not url and name and len(name) >= 3:        # pod name only: look the show up on Apple Podcasts first
+        try:
+            url = vidsum_feeds.itunes_find(name) or ""
+        except Exception:
+            url = ""
     if not url:                                   # pod name only: stays inactive until a YouTube URL is attached
         if not name:
             raise ValueError("enter a podcast name, or a YouTube URL")
