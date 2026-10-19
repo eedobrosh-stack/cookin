@@ -46,6 +46,10 @@
   .links a { margin-inline-end:8px; color:var(--red); text-decoration:none; font-weight:700; }
   .hostg { font-style:italic; color:var(--muted); }
   .count { font-weight:700; }
+  header { position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--line); }
+  #selbar { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:30; display:none; align-items:center; gap:12px; background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:30px; box-shadow:0 6px 24px rgba(0,0,0,.3); }
+  #selbar.on { display:flex; } #selbar button { border:0; border-radius:20px; padding:6px 14px; font-weight:700; }
+  #selbar .go { background:var(--red); color:#fff; } #selbar .clr { background:transparent; color:var(--bg); text-decoration:underline; padding:6px 4px; }
 </style>
 </head>
 <body>
@@ -87,6 +91,7 @@
   </table>
   </div>
 </main>
+<div id="selbar"><b id="selcount"></b><button class="go" id="selgo">הוסף ל-Pawed</button><button class="clr" id="selclr">נקה בחירה</button></div>
 <script>
 const $ = id => document.getElementById(id);
 let SEL = new Set(), DATA = null, sortKey = 'score', sortAsc = false, F = {}, shown = [];
@@ -157,7 +162,7 @@ function render() {
     await api('/api/podscanner/verdict', {id, verdict: v}); p.manual = v || null; render();
   });
 }
-function selUi() { $('promote').disabled = !SEL.size; $('promote').textContent = 'הוסף ל-Pawed' + (SEL.size ? ' (' + SEL.size + ')' : ''); }
+function selUi() { $('selbar').classList.toggle('on', SEL.size > 0); $('selcount').textContent = SEL.size + ' נבחרו'; $('promote').disabled = !SEL.size; $('promote').textContent = 'הוסף ל-Pawed' + (SEL.size ? ' (' + SEL.size + ')' : ''); }
 $('promote').onclick = async () => {
   const ids = [...SEL].slice(0, 25);
   if (!confirm('להוסיף ' + ids.length + ' פודקאסטים כמקורות ב-Pawed? כל אחד יפיק מאמר מהפרק האחרון שלו (30 הימים האחרונים).')) return;
@@ -169,6 +174,8 @@ $('promote').onclick = async () => {
   const dup = r.results.filter(x => x.twin).map(x => (DATA.pods.find(q => q.id === x.id)||{}).name);
   alert((r.results.length - bad.length - dup.length) + ' נוספו' + (dup.length ? '\nכבר קיימים במקורות (דולגו): ' + dup.join(', ') : '') + (bad.length ? '\nנכשלו: ' + bad.map(x => (DATA.pods.find(q => q.id === x.id)||{}).name + ' (' + x.error + ')').join('; ') : '') + '\nהם יופיעו בטבלת המקורות, והמאמרים יופיעו כשהפרקים יעובדו.');
 };
+$('selgo').onclick = () => $('promote').onclick();
+$('selclr').onclick = () => { SEL.clear(); render(); };
 function fillSettings() {
   const s = DATA.settings;
   $('s_days').value = s.max_days_since; $('s_eps').value = s.min_episodes; $('s_gap').value = s.max_gap_days;
