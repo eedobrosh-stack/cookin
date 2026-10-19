@@ -78,6 +78,39 @@ def _event(vid, stage, detail="", rec=None):
         pass
 
 
+RELAY_STATUS_PATH = os.path.join(multiuser.DATA_DIR, "vidsum_relay_status.json")
+
+
+def relay_status_get():
+    try:
+        with open(RELAY_STATUS_PATH, encoding="utf-8") as f:
+            st = json.load(f)
+    except Exception:
+        st = {}
+    rss = [c.get("checked") for c in _load_ch()["channels"] if c.get("kind") == "rss" and c.get("checked")]
+    if rss:
+        st["rss_checked_at"] = calendar.timegm(time.strptime(max(rss), "%Y-%m-%d %H:%M:%S"))
+    st["now"] = time.time()
+    return st
+
+
+def relay_status_set(req):
+    st = relay_status_get()
+    st.pop("now", None)
+    st.pop("rss_checked_at", None)
+    now = time.time()
+    st["tick_at"] = now                                       # the Mac relay is alive
+    if req.get("kind") == "discover":
+        st["discover_at"] = now
+        st["discover"] = {"sources": int(req.get("sources") or 0), "reachable": int(req.get("reachable") or 0), "found": int(req.get("found") or 0)}
+    if req.get("kind") == "tick":
+        st["waiting"] = int(req.get("waiting") or 0)
+    tmp = RELAY_STATUS_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(st, f)
+    os.replace(tmp, RELAY_STATUS_PATH)
+
+
 def _recent_events(limit=300):
     try:
         with EV_LOCK, open(EVENTS_PATH, encoding="utf-8") as f:
@@ -1672,7 +1705,7 @@ def handle_get(handler, path, qs):
         for j in jobs.values():
             cnt[j.get("status", "?")] = cnt.get(j.get("status", "?"), 0) + 1
         handler._json({"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "summary": cnt, "total": len(jobs),
-                       "events": _recent_events(int((qs.get("limit") or ["300"])[0]))})
+                       "events": _recent_events(int((qs.get("limit") or ["300"])[0])), "relay": relay_status_get()})
         return True
     if path == "/api/vidsum/sources":
         user = current_user(handler)
@@ -1853,6 +1886,9 @@ def handle_post(handler, path, req):
                 handler._json({"ok": True})
             elif path == "/api/vidsum/relay/discovered":
                 handler._json({"ok": True, **relay_discovered(req)})
+            elif path == "/api/vidsum/relay/status":
+                relay_status_set(req)
+                handler._json({"ok": True})
             elif path == "/api/vidsum/relay/event":
                 vid = str(req.get("vid") or "")
                 stage = req.get("stage") if req.get("stage") in ("fetching", "rate_limited") else None
