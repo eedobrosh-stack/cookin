@@ -1,7 +1,7 @@
 """Vidsum server-side: YouTube link -> Gemini (reads the URL itself, so Render's
 blocked IP never touches YouTube) -> detailed RTL summary stored as an article
 served at /vidsum/article/<slug>."""
-import calendar, json, math, os, re, threading, uuid, time, html as _html, unicodedata
+import calendar, datetime, json, math, os, re, threading, uuid, time, html as _html, unicodedata
 import urllib.request, urllib.parse, urllib.error
 
 import multiuser
@@ -428,6 +428,39 @@ def _oembed(vid):
         return "", ""
 
 
+def _norm_title(t):
+    return re.sub(r"[\W_]+", " ", (t or "").lower()).strip()
+
+
+def find_duplicate(title, vid, source_id=None, channel=None, pub=None):
+    """The same episode re-uploaded under a new video id (the channel replaced a video): an article for a DIFFERENT vid with the
+    same original title, from the same source / channel, released within 3 days. -> that article or None."""
+    nt = _norm_title(title)
+    if len(nt) < 8:
+        return None
+    for a in _articles():
+        if a.get("vid") == vid or _norm_title(a.get("src_title")) != nt:
+            continue
+        if not ((source_id and a.get("source_id") == source_id) or (channel and (a.get("channel") or "").strip() == channel.strip())):
+            continue
+        if pub and _rel(a)[:10]:
+            try:
+                d1 = datetime.date.fromisoformat(str(pub)[:10])
+                d2 = datetime.date.fromisoformat(_rel(a)[:10])
+                if abs((d1 - d2).days) > 3:
+                    continue
+            except ValueError:
+                pass
+        return a
+    return None
+
+
+def _mark_duplicate(vid, art):
+    """Close a job whose episode already has an article (re-upload): no more retries, the log says why."""
+    _set_job(vid, status="done", slug=art["slug"], title=art.get("src_title") or art["title"], channel=art.get("channel") or "",
+             detail=f"duplicate of an existing article ({art['vid']}): same episode re-uploaded", error="")
+
+
 def _captions_fallback(vid):
     """Best-effort transcript via yt-dlp (often blocked from datacenter IPs)."""
     import subprocess, sys, tempfile, glob
@@ -670,6 +703,17 @@ def retry_sweep():
         if now - failed_at >= delay:
             due.append((failed_at, vid))
     for _t, vid in sorted(due)[:40]:
+        j0 = _load_jobs().get(vid) or {}
+        if j0.get("status") not in ("failed", "no_captions"):
+            continue
+        ttl, ch_name = j0.get("title") or "", j0.get("channel") or ""
+        if not ttl and j0.get("kind") != "rss":
+            ttl, au = _oembed(vid)                              # a deleted video has no title: nothing to compare, retry as usual
+            ch_name = ch_name or au
+        dup = find_duplicate(ttl, vid, j0.get("source"), ch_name) if ttl else None
+        if dup:                                                 # the channel replaced this video with a new upload of the same episode
+            _mark_duplicate(vid, dup)
+            continue
         with LOCK:
             jobs = _load_jobs()
             j = jobs.get(vid) or {}
@@ -801,6 +845,10 @@ def relay_discovered(req):
             if used >= WATCH_DAILY_CAP or (ch.get("owner_id") and owner_used >= USER_DAILY_VIDEOS):
                 out["deferred"] += 1                              # not marked seen: picked up on a later run
                 continue
+            if it.get("title") and find_duplicate(it["title"], vid, sid, ch.get("name"), pub):
+                seen.add(vid); out["skipped"] += 1               # same episode re-uploaded under a new video id
+                log(f"vidsum relay discovery: {ch['name']} -> {vid} skipped (duplicate of an existing article)")
+                continue
             seen.add(vid)
             to_submit.append(vid)
             used += 1
@@ -850,6 +898,11 @@ def relay_transcript(req):
     vid = str(req.get("vid") or "")
     if not re.fullmatch(r"[\w-]{11}", vid) or len(req.get("transcript") or "") < 200:
         raise ValueError("bad vid or transcript too short")
+    dup = find_duplicate(req.get("title") or "", vid, _load_jobs().get(vid, {}).get("source"), req.get("channel"),
+                         req.get("published_at") or req.get("published"))
+    if dup:
+        _mark_duplicate(vid, dup)
+        return
     os.makedirs(TR_DIR, exist_ok=True)
     with open(os.path.join(TR_DIR, vid + ".json"), "w", encoding="utf-8") as f:
         json.dump({k: req.get(k) for k in ("transcript", "duration", "published", "published_at", "title", "channel", "description", "source")},
@@ -1310,6 +1363,11 @@ def watch_once():
                     continue
             if _is_short(vid):
                 seen.add(vid)
+                continue
+            tm = re.search(r"<title>([^<]*)</title>", ent)
+            if tm and find_duplicate(_html.unescape(tm.group(1)), vid, ch["id"], ch.get("name"), pub):
+                seen.add(vid)                                # same episode re-uploaded: already has an article
+                log(f"vidsum watcher: {ch['name']} -> {vid} skipped (duplicate of an existing article)")
                 continue
             code, payload = submit(f"https://www.youtube.com/watch?v={vid}", True, "luna", ch["id"])
             seen.add(vid)
