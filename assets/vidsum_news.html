@@ -365,7 +365,24 @@ function sm(a){ return '<a class="sm" href="'+href(a)+'">'+im(a)+'<h4>'+esc(a.ti
 // arrives, but never longer than 150 minutes. After that the slot moves on to the next newest, and keeps moving every
 // 150 minutes (within the 5 newest) until a new episode is released and takes over again. Stateless, so everyone sees the same.
 const HERO_SLOT_MS = 150*60*1000, HERO_POOL = 12;   // walks down the 12 newest, one every 150 min (then starts over)
+// Morning slots (07:00-11:00 Israel time): DAILY pods (HaKarnaf and the like) take the top story, one pod per hour, rotating
+// hourly through the latest episode of each daily pod released in the last 30 hours. Outside those hours (or with no fresh
+// daily episode) the normal rule below applies. Category pages never rotate: their top story is simply the newest.
+function ilHour(){ return +new Intl.DateTimeFormat('en-GB',{hour:'2-digit',hour12:false,timeZone:'Asia/Jerusalem'}).format(new Date()) % 24; }
+function morningPick(items){
+  const h = ilHour(); if(h<7 || h>=11) return -1;
+  const seen = new Set(), daily = [];
+  for(const a of items){                                   // items are newest first: the first hit per pod is its latest episode
+    if(!a.daily) continue;
+    const t = new Date((a.released||a.created).replace(' ','T')+'Z').getTime();
+    if(Date.now()-t > 30*3600*1000) continue;
+    const pod = podOf(a); if(seen.has(pod)) continue; seen.add(pod); daily.push(a);
+  }
+  return daily.length ? items.indexOf(daily[(h-7) % daily.length]) : -1;
+}
 function heroIndex(items){
+  if(FILTER!=='all') return 0;
+  const m = morningPick(items); if(m>=0) return m;
   const n = Math.min(HERO_POOL, items.length); if(n < 2) return 0;
   const t0 = new Date((items[0].released||items[0].created).replace(' ','T')+'Z').getTime();
   const age = Date.now() - t0;
@@ -373,6 +390,7 @@ function heroIndex(items){
 }
 // One pod (the show / channel an episode comes from) appears at most once per block: the top block, each topic section,
 // each feed batch. Across the page it also prefers pods not shown yet, and only repeats one when nothing else is left.
+const byNewest = (x,y) => (y.released||'').localeCompare(x.released||'');
 const podOf = a => (a.channel||a.source_id||'').trim();
 function takeD(list, n, used, blockPods, pagePods){
   const out = [];
@@ -461,7 +479,7 @@ function render(){
                       .sort((x,y)=> (y.list[0].released||'').localeCompare(x.list[0].released||''));
     topics.forEach((x,idx)=>{
       const kind = idx%3, n = Math.min(x.list.length, kind===1?7:6);
-      const L = takeD(x.list, Math.max(n, 1), used, new Set(), pagePods);
+      const L = takeD(x.list, Math.max(n, 1), used, new Set(), pagePods).sort(byNewest);   // newest at the top of every section
       h += '<section class="sec">'+bar(x.t, true)+pattern(kind, L)+'</section>';
     });
   } else {
@@ -470,6 +488,7 @@ function render(){
       const kind=k%3, n=kind===1?7:6, L=[], pods=new Set();
       for(const a of pool.slice()){ if(L.length>=n) break; const pod=podOf(a); if(pods.has(pod)) continue; pods.add(pod); L.push(a); pool.splice(pool.indexOf(a),1); }
       if(!L.length) L.push(pool.shift());
+      L.sort(byNewest);
       h += '<section class="sec">'+(k===0?bar(FILTER,false):'')+pattern(kind, L)+'</section>';
     }
   }

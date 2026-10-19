@@ -1055,9 +1055,10 @@ def _length_min(a):
 
 def news_items():
     nd = vidsum_render.nodash
+    daily_ids = {c["id"] for c in _load_ch()["channels"] if c.get("cadence") == "daily"}     # daily pods own the morning slots
     return [{"slug": a["slug"], "title": nd(a["title"]), "lead": nd(a.get("lead") or a.get("standfirst") or a.get("subtitle", "")),
              "topic": a.get("topic") or "תרבות", "topics": article_topics(a), "channel": a.get("channel", ""), "vid": a.get("vid"),
-             "source_id": a.get("source_id"), "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
+             "source_id": a.get("source_id"), "daily": a.get("source_id") in daily_ids, "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
              "released_time": len((a.get("published_at") or "")) >= 19, "minutes": _length_min(a)} for a in _articles()]
 
 
