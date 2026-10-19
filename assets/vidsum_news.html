@@ -196,6 +196,8 @@
     .hero2-i .im { aspect-ratio:16/10.2; }
     .tg { font-size:12px; font-weight:800; }
     .mix { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:18px; padding-bottom:22px; }
+    .mix.solo { grid-template-columns:1fr; }                      /* only one of the two columns has stories (short category head): use the full width */
+    .mix.solo .mix-b, .mix.solo .mix-m { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
     .mix-b { display:flex; flex-direction:column; gap:12px; }
     .mix-m { display:flex; flex-direction:column; gap:14px; }
     .bt { display:grid; grid-template-columns:minmax(0,1fr) 42%; background:var(--c); color:#fff; min-height:112px; overflow:hidden; }
@@ -234,7 +236,7 @@
     .fs h4 { margin:0 0 4px; font-size:15.5px; line-height:1.22; font-weight:800; }
     @media (max-width:900px) {
       .hero2 { grid-template-columns:1fr; } .hero2-i { order:-1; }
-      .mix, .listimg, .feat { grid-template-columns:1fr; }
+      .mix, .listimg, .feat, .mix.solo .mix-b, .mix.solo .mix-m { grid-template-columns:1fr; }
     }
     @media (max-width:640px) {
       .hero2 { gap:12px; padding-top:0; margin:0 -12px; }
@@ -476,7 +478,7 @@ function render(){
   const top = takeD(headList,1,used,topPods,pagePods)[0], subs = takeD(headList,3,used,topPods,pagePods);
   if(top) h += hero(top, subs);
   const tiles = takeD(headList,4,used,topPods,pagePods), meds = takeD(headList,2,used,topPods,pagePods);
-  if(tiles.length||meds.length) h += '<section class="mix"><div class="mix-b">'+tiles.map(bt).join('')+'</div><div class="mix-m">'+meds.map(a=>cd(a)).join('')+'</div></section>';
+  if(tiles.length||meds.length) h += '<section class="mix'+((!tiles.length||!meds.length)?' solo':'')+'"><div class="mix-b">'+tiles.map(bt).join('')+'</div><div class="mix-m">'+meds.map(a=>cd(a)).join('')+'</div></section>';
   const rest = items.filter(a=>!used.has(a.slug));
   if(FILTER==='all'){
     // topic sections ordered by how fresh their newest remaining story is
