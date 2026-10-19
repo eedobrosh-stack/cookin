@@ -383,6 +383,54 @@ def stage_classify(d, cap=600):
             _save(d)
 
 
+def run_judge(cap=150, min_score=0):
+    """LunaRoute fit grade 1-10 for Pawed, best-scored pods currently vetted 'in' first."""
+    if STATUS["running"]:
+        return False
+    _status(running=True, stage="judge", done=0, total=0, msg="", started=time.strftime("%Y-%m-%d %H:%M:%S"), finished=None, error=None)
+
+    def work():
+        try:
+            with LOCK:
+                d = _load()
+            todo = [p for p in d["pods"].values() if (p.get("manual") or p.get("auto")) == "in" and not p.get("fit") and score_of(p) >= min_score]
+            todo.sort(key=lambda p: -score_of(p))
+            todo = todo[:cap]
+            _status(total=len(todo))
+            for i in range(0, len(todo), 10):
+                batch = todo[i:i + 10]
+                items = [{"id": p["id"], "name": p["name"], "hosts": p.get("hosts"), "topic": p.get("topic"), "language": p.get("language"),
+                          "genres": p.get("genres", [])[:2], "cadence": p.get("cadence"), "episodes": p.get("episodes"),
+                          "description": (p.get("desc") or "")[:300]} for p in batch]
+                prompt = ("Pawed is a Hebrew news portal that turns podcast episodes into long, sourced articles (politics, tech, economy, sport, "
+                          "culture, health). Grade each podcast 1-10 for how well its episodes would make good Pawed articles: substantive spoken "
+                          "content with real information, opinion or interviews scores high; music, meditation, sound-only, kids, pure comedy bits, "
+                          "promo or one-note gimmick shows score low; a well known professional show with a clear host scores higher than an obscure one. "
+                          'Reply with only JSON: {"<id>": {"fit": 1-10, "why": "max 12 words in English"}, ...}\n\n' + json.dumps(items, ensure_ascii=False))
+                try:
+                    res, _, _ = va._luna(prompt, max_tokens=3000)
+                except Exception as e:
+                    log(f"judge batch failed: {str(e)[:160]}")
+                    continue
+                for p in batch:
+                    r = res.get(p["id"]) if isinstance(res, dict) else None
+                    if isinstance(r, dict) and isinstance(r.get("fit"), (int, float)):
+                        p["fit"] = max(1, min(10, int(r["fit"])))
+                        p["fit_why"] = str(r.get("why") or "")[:120]
+                _status(done=min(i + 10, len(todo)))
+                with LOCK:
+                    _save(d)
+            _status(msg=f"{len(todo)} pods graded")
+        except Exception as e:
+            log("judge failed: " + str(e)[:200])
+            _status(error=str(e)[:200])
+        finally:
+            _status(running=False, stage="done", finished=time.strftime("%Y-%m-%d %H:%M:%S"))
+
+    threading.Thread(target=work, daemon=True).start()
+    return True
+
+
 def fill_defaults(d):
     """topic from the Apple genre (and hosts from the feed author) wherever the model hasn't spoken"""
     for p in d["pods"].values():
@@ -489,6 +537,17 @@ def ingest(items, source="client"):
 
 
 # ------------------------------------------------------------------ view + HTTP
+def score_of(p):
+    """0-100 popularity/consistency score from chart rank, breadth, depth and regularity"""
+    ranks = [r if r else 50 for r in p.get("geo", {}).values()]
+    best = (101 - min(ranks)) if ranks else 0
+    breadth = min(len(ranks), 6) / 6 * 100
+    eps = min((p.get("episodes") or 0), 500) / 500 * 100
+    g = p.get("gap_days")
+    reg = 0 if g is None else max(0, 100 - g * 6)
+    return round(0.5 * best + 0.2 * breadth + 0.1 * eps + 0.2 * reg)
+
+
 def _row(p):
     cs = sorted(p.get("geo", {}).items(), key=lambda kv: (kv[1] or 999, kv[0]))
     return {"id": p["id"], "name": p.get("name", ""), "hosts": p.get("hosts", []), "hosts_guess": p.get("hosts_guess", False),
@@ -497,7 +556,7 @@ def _row(p):
             "episodes": p.get("episodes"), "cadence": p.get("cadence", ""), "gap_days": p.get("gap_days"),
             "last_ep": p.get("last_ep") or p.get("last_ep_apple") or "", "days_since": days_since(p),
             "link": p.get("link", ""), "feed": p.get("feed", ""), "site": p.get("site", ""), "image": p.get("image", ""),
-            "auto": p.get("auto", "out"), "why": p.get("why", []), "manual": p.get("manual"), "source": p.get("source", "")}
+            "promoted": p.get("promoted", ""), "score": score_of(p), "fit": p.get("fit"), "fit_why": p.get("fit_why", ""), "auto": p.get("auto", "out"), "why": p.get("why", []), "manual": p.get("manual"), "source": p.get("source", "")}
 
 
 def _admin(handler):
@@ -547,6 +606,10 @@ def handle_post(handler, path, req):
                       bool(req.get("force_enrich")), bool(req.get("skip_charts")))
         handler._json({"ok": ok, "error": None if ok else "a scan is already running", "status": STATUS})
         return True
+    if path == "/api/podscanner/judge":
+        ok = run_judge(int(req.get("cap") or 150), int(req.get("min_score") or 0))
+        handler._json({"ok": ok, "error": None if ok else "a scan is already running", "status": STATUS})
+        return True
     if path == "/api/podscanner/verdict":
         with LOCK:
             d = _load()
@@ -573,6 +636,34 @@ def handle_post(handler, path, req):
             revet_all(d)
             _save(d)
         handler._json({"ok": True, "settings": st})
+        return True
+    if path == "/api/podscanner/promote":
+        user = _admin(handler)
+        out = []
+        for pid in (req.get("ids") or [])[:25]:
+            with LOCK:
+                p = _load()["pods"].get(pid)
+            if not p or not p.get("feed"):
+                out.append({"id": pid, "ok": False, "error": "no feed"})
+                continue
+            try:
+                va.add_source({"url": p["feed"], "name": p.get("name"), "language": p.get("language") if p.get("language") in va.LANGS else "he",
+                               "vertical": p.get("topic") if p.get("topic") in va.TOPICS else "תרבות"}, user)
+                err = None
+            except ValueError as e:
+                err = str(e)
+            except Exception as e:
+                err = "failed: " + str(e)[:120]
+            ok = err is None or "already in the table" in err
+            if ok:
+                with LOCK:
+                    d = _load()
+                    if pid in d["pods"]:
+                        d["pods"][pid]["promoted"] = time.strftime("%Y-%m-%d")
+                        d["pods"][pid]["manual"] = "in"
+                        _save(d)
+            out.append({"id": pid, "ok": ok, "error": err if not ok else None, "already": bool(err and ok)})
+        handler._json({"ok": True, "results": out})
         return True
     if path == "/api/podscanner/ingest":
         items = req.get("items") if isinstance(req.get("items"), list) else []

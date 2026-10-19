@@ -52,7 +52,7 @@
 <div class="topline"></div>
 <header>
   <div><h1>Pod<span>Scanner</span></h1><div class="sub">סורק פודקאסטים עולמי · רק למנהלים · <a href="/">חזרה ל-Pawed</a></div></div>
-  <div class="bar"><span class="count" id="count"></span><button id="csv">ייצוא CSV</button></div>
+  <div class="bar"><span class="count" id="count"></span><button id="promote" class="primary" disabled>הוסף ל-Pawed</button><button id="csv">ייצוא CSV</button></div>
 </header>
 <main>
   <details id="scanbox">
@@ -63,6 +63,7 @@
       <label>סיווג ב-LunaRoute (מקס׳ פודים בריצה)<input type="number" id="ccap" value="600" min="0" max="3000"></label>
       <label style="flex-direction:row;align-items:center"><input type="checkbox" id="skipcharts"> רענון בלבד (בלי צ׳ארטים חדשים)</label>
       <button class="primary" id="scan">הפעל סריקה</button>
+      <label>דירוג התאמה (מקס׳ פודים)<input type="number" id="jcap" value="150" min="10" max="1000"></label><button id="judge">דרג התאמה ל-Pawed (LunaRoute)</button>
     </div>
     <div id="prog"><i></i></div><div class="sub" id="pst"></div>
     <hr style="border:0;border-top:1px solid var(--line);margin:10px 0">
@@ -88,10 +89,10 @@
 </main>
 <script>
 const $ = id => document.getElementById(id);
-let DATA = null, sortKey = 'days_since', sortAsc = true, F = {}, shown = [];
+let SEL = new Set(), DATA = null, sortKey = 'score', sortAsc = false, F = {}, shown = [];
 const COLS = [
-  ['name','שם'], ['hosts','מגישים'], ['geo','גיאוגרפיה'], ['language','שפה'], ['topic','נושא'], ['episodes','פרקים'],
-  ['cadence','קצב'], ['last_ep','פרק אחרון'], ['days_since','ימים מאז'], ['link','קישור'], ['verdict','החלטה']];
+  ['sel',''], ['name','שם'], ['hosts','מגישים'], ['geo','גיאוגרפיה'], ['language','שפה'], ['topic','נושא'], ['episodes','פרקים'],
+  ['cadence','קצב'], ['score','ציון'], ['fit','התאמה'], ['last_ep','פרק אחרון'], ['days_since','ימים מאז'], ['link','קישור'], ['verdict','החלטה']];
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const verdict = p => p.manual || p.auto;
 
@@ -101,14 +102,14 @@ async function api(path, body) {
 }
 function opts(vals, all='הכל') { return '<option value="">'+all+'</option>' + vals.map(v => '<option>'+esc(v)+'</option>').join(''); }
 function buildHead() {
-  $('heads').innerHTML = COLS.map(([k,l]) => '<th class="'+(['link'].includes(k)?'':'s')+(sortKey===k?' on'+(sortAsc?' asc':''):'')+'" data-k="'+k+'">'+l+'</th>').join('');
+  $('heads').innerHTML = COLS.map(([k,l]) => '<th class="'+(['link','sel'].includes(k)?'':'s')+(sortKey===k?' on'+(sortAsc?' asc':''):'')+'" data-k="'+k+'">'+l+'</th>').join('');
   document.querySelectorAll('th.s').forEach(th => th.onclick = () => { const k = th.dataset.k; if (sortKey===k) sortAsc = !sortAsc; else { sortKey=k; sortAsc=true; } buildHead(); render(); });
   const uniq = f => [...new Set(DATA.pods.flatMap(f))].filter(Boolean).sort();
   const t = k => '<th><input data-f="'+k+'" placeholder="סנן" value="'+esc(F[k]||'')+'"></th>';
   const sel = (k, vals) => '<th><select data-f="'+k+'">'+opts(vals)+'</select></th>';
   const rng = k => '<th><input data-f="'+k+'" placeholder="מ-..עד" value="'+esc(F[k]||'')+'" title="למשל 50-200 או &gt;100 או &lt;30"></th>';
-  $('filters').innerHTML = t('name') + t('hosts') + sel('geo', uniq(p => p.geo)) + sel('language', uniq(p => [p.language])) +
-    sel('topic', uniq(p => [p.topic])) + rng('episodes') + sel('cadence', uniq(p => [p.cadence.replace(' (irregular)','')])) + t('last_ep') + rng('days_since') +
+  $('filters').innerHTML = '<th><input type="checkbox" id="selall" title="בחר את כל המוצגים (עד 25)"></th>' + t('name') + t('hosts') + sel('geo', uniq(p => p.geo)) + sel('language', uniq(p => [p.language])) +
+    sel('topic', uniq(p => [p.topic])) + rng('episodes') + sel('cadence', uniq(p => [p.cadence.replace(' (irregular)','')])) + rng('score') + rng('fit') + t('last_ep') + rng('days_since') +
     '<th></th><th><select data-f="verdict"><option value="">הכל</option><option value="in">נכנס</option><option value="out">נפסל</option><option value="manual">שיפוט ידני</option></select></th>';
   document.querySelectorAll('#filters [data-f]').forEach(el => {
     const k = el.dataset.f; if (F[k] != null && el.tagName === 'SELECT') el.value = F[k];
@@ -129,7 +130,7 @@ function render() {
   shown = DATA.pods.filter(p =>
     (!F.name || has(p.name, F.name)) && (!F.hosts || has(p.hosts.join(' '), F.hosts)) &&
     (!F.geo || p.geo.includes(F.geo)) && (!F.language || p.language === F.language) && (!F.topic || p.topic === F.topic) &&
-    num(p.episodes, F.episodes) && (!F.cadence || p.cadence.replace(' (irregular)','') === F.cadence) &&
+    num(p.episodes, F.episodes) && num(p.score, F.score) && num(p.fit, F.fit) && (!F.cadence || p.cadence.replace(' (irregular)','') === F.cadence) &&
     (!F.last_ep || has(p.last_ep, F.last_ep)) && num(p.days_since, F.days_since) &&
     (!F.verdict || (F.verdict === 'manual' ? !!p.manual : verdict(p) === F.verdict)));
   const key = sortKey === 'verdict' ? (p => verdict(p)) : sortKey === 'geo' ? (p => p.geo[0]||'') : sortKey === 'hosts' ? (p => p.hosts[0]||'') : (p => p[sortKey]);
@@ -139,7 +140,7 @@ function render() {
   $('count').textContent = shown.length.toLocaleString() + ' פודים מוצגים מתוך ' + DATA.pods.length.toLocaleString() + ' · ' + nin.toLocaleString() + ' נכנסים';
   $('body').innerHTML = shown.slice(0, 600).map(p => {
     const v = verdict(p);
-    return '<tr><td><div class="name">'+(p.image?'<img loading="lazy" src="'+esc(p.image)+'" alt="">':'')+'<b>'+esc(p.name)+'</b></div></td>' +
+    return '<tr><td><input type="checkbox" class="sel" data-id="'+p.id+'" '+(SEL.has(p.id)?'checked':'')+(p.promoted?' disabled':'')+'></td><td><div class="name">'+(p.image?'<img loading="lazy" src="'+esc(p.image)+'" alt="">':'')+'<b>'+esc(p.name)+'</b>'+(p.promoted?' <span class="pill in">ב-Pawed</span>':'')+'</div></td>' +
       '<td class="'+(p.hosts_guess?'hostg':'')+'" title="'+(p.hosts_guess?'לא אומת, מתוך שדה המפיק בפיד':'')+'">'+esc(p.hosts.join(', '))+'</td>' +
       '<td>'+esc(p.geo.slice(0,3).join(', '))+(p.geo.length>3?' +'+(p.geo.length-3):'')+'</td><td>'+esc(p.language)+'</td><td>'+esc(p.topic)+'</td>' +
       '<td class="num">'+esc(p.episodes ?? '')+'</td><td>'+esc(p.cadence)+'</td><td class="num">'+esc(p.last_ep)+'</td>' +
@@ -147,12 +148,26 @@ function render() {
       '<td class="links">'+(p.link?'<a target="_blank" rel="noopener" href="'+esc(p.link)+'">Apple</a>':'')+(p.site?'<a target="_blank" rel="noopener" href="'+esc(p.site)+'">אתר</a>':'')+(p.feed?'<a target="_blank" rel="noopener" href="'+esc(p.feed)+'">RSS</a>':'')+'</td>' +
       '<td><span class="pill '+v+'">'+(v==='in'?'נכנס':'נפסל')+'</span>'+(p.manual?' <span class="why">(ידני)</span>':'<div class="why">'+esc(p.why.join(' · '))+'</div>')+
       '<div class="vb" data-id="'+p.id+'"><button data-v="in" class="'+(p.manual==='in'?'on':'')+'">נכנס</button> <button data-v="out" class="'+(p.manual==='out'?'on':'')+'">נפסל</button> <button data-v="">אוטו׳</button></div></td></tr>';
-  }).join('') + (shown.length > 600 ? '<tr><td colspan="11" class="mut">מוצגות 600 הראשונות, צמצמו עם הסינון</td></tr>' : '');
+  }).join('') + (shown.length > 600 ? '<tr><td colspan="14" class="mut">מוצגות 600 הראשונות, צמצמו עם הסינון</td></tr>' : '');
+  document.querySelectorAll('.sel').forEach(c => c.onchange = () => { c.checked ? SEL.add(c.dataset.id) : SEL.delete(c.dataset.id); selUi(); });
+  const sa = $('selall'); if (sa) sa.onchange = () => { shown.filter(p => !p.promoted).slice(0, 25).forEach(p => sa.checked ? SEL.add(p.id) : SEL.delete(p.id)); render(); };
+  selUi();
   document.querySelectorAll('.vb button').forEach(b => b.onclick = async () => {
     const id = b.parentElement.dataset.id, v = b.dataset.v, p = DATA.pods.find(x => x.id === id);
     await api('/api/podscanner/verdict', {id, verdict: v}); p.manual = v || null; render();
   });
 }
+function selUi() { $('promote').disabled = !SEL.size; $('promote').textContent = 'הוסף ל-Pawed' + (SEL.size ? ' (' + SEL.size + ')' : ''); }
+$('promote').onclick = async () => {
+  const ids = [...SEL].slice(0, 25);
+  if (!confirm('להוסיף ' + ids.length + ' פודקאסטים כמקורות ב-Pawed? כל אחד יפיק מאמר מהפרק האחרון שלו (30 הימים האחרונים).')) return;
+  $('promote').disabled = true; $('promote').textContent = 'מוסיף...';
+  const r = await api('/api/podscanner/promote', {ids});
+  const bad = r.results.filter(x => !x.ok);
+  r.results.filter(x => x.ok).forEach(x => { const p = DATA.pods.find(q => q.id === x.id); if (p) { p.promoted = 'now'; p.manual = 'in'; } SEL.delete(x.id); });
+  render();
+  alert((r.results.length - bad.length) + ' נוספו' + (bad.length ? '\nנכשלו: ' + bad.map(x => (DATA.pods.find(q => q.id === x.id)||{}).name + ' (' + x.error + ')').join('; ') : '') + '\nהם יופיעו בטבלת המקורות, והמאמרים יופיעו כשהפרקים יעובדו.');
+};
 function fillSettings() {
   const s = DATA.settings;
   $('s_days').value = s.max_days_since; $('s_eps').value = s.min_episodes; $('s_gap').value = s.max_gap_days;
@@ -169,12 +184,13 @@ $('scan').onclick = async () => {
   const r = await api('/api/podscanner/scan', {countries:cs, limit:+$('limit').value, classify_cap:+$('ccap').value, skip_charts:$('skipcharts').checked});
   if (!r.ok) alert(r.error); poll();
 };
+$('judge').onclick = async () => { const r = await api('/api/podscanner/judge', {cap:+$('jcap').value}); if (!r.ok) alert(r.error); poll(); };
 let timer = null;
 async function poll() {
   clearTimeout(timer);
   const s = (await api('/api/podscanner/status')).status;
-  $('scan').disabled = s.running;
-  const stages = {charts:'צ׳ארטים', lookup:'פרטי פודים', enrich:'קריאת RSS', classify:'סיווג LunaRoute', starting:'מתחיל', done:'הסתיים'};
+  $('scan').disabled = $('judge').disabled = s.running;
+  const stages = {charts:'צ׳ארטים', lookup:'פרטי פודים', enrich:'קריאת RSS', classify:'סיווג LunaRoute', judge:'דירוג התאמה', starting:'מתחיל', done:'הסתיים'};
   $('prog').firstElementChild.style.width = (s.total ? Math.round(100*s.done/s.total) : (s.running?5:0)) + '%';
   $('pst').textContent = s.running ? (stages[s.stage]||s.stage)+' '+s.done+'/'+s.total : (s.error ? 'שגיאה: '+s.error : (s.finished ? 'ריצה אחרונה הסתיימה '+s.finished+' · '+s.msg : ''));
   if (s.running) timer = setTimeout(poll, 3000); else if (s.finished) load(true);
