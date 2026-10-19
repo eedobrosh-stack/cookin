@@ -559,6 +559,22 @@ def _row(p):
             "promoted": p.get("promoted", ""), "score": score_of(p), "fit": p.get("fit"), "fit_why": p.get("fit_why", ""), "auto": p.get("auto", "out"), "why": p.get("why", []), "manual": p.get("manual"), "source": p.get("source", "")}
 
 
+def _nname(n):
+    return re.sub(r"[^\w]", "", n or "").lower()
+
+
+def _existing_source(name):
+    """name of a source already in the Pawed table whose name matches (either contains the other), else None"""
+    k = _nname(name)
+    if len(k) < 3:
+        return None
+    for c in va._load_ch()["channels"]:
+        o = _nname(c.get("name"))
+        if o and (o in k or k in o):
+            return c.get("name")
+    return None
+
+
 def _admin(handler):
     u = multiuser.current_user(handler)
     return u if u and u.get("admin") else None
@@ -645,6 +661,15 @@ def handle_post(handler, path, req):
                 p = _load()["pods"].get(pid)
             if not p or not p.get("feed"):
                 out.append({"id": pid, "ok": False, "error": "no feed"})
+                continue
+            twin = _existing_source(p.get("name") or "")
+            if twin:                                  # already followed (often as a YouTube channel, so the feed id differs)
+                with LOCK:
+                    d = _load()
+                    d["pods"][pid]["promoted"] = time.strftime("%Y-%m-%d")
+                    d["pods"][pid]["manual"] = "in"
+                    _save(d)
+                out.append({"id": pid, "ok": True, "already": True, "error": None, "twin": twin})
                 continue
             try:
                 va.add_source({"url": p["feed"], "name": p.get("name"), "language": p.get("language") if p.get("language") in va.LANGS else "he",

@@ -166,7 +166,8 @@ $('promote').onclick = async () => {
   const bad = r.results.filter(x => !x.ok);
   r.results.filter(x => x.ok).forEach(x => { const p = DATA.pods.find(q => q.id === x.id); if (p) { p.promoted = 'now'; p.manual = 'in'; } SEL.delete(x.id); });
   render();
-  alert((r.results.length - bad.length) + ' נוספו' + (bad.length ? '\nנכשלו: ' + bad.map(x => (DATA.pods.find(q => q.id === x.id)||{}).name + ' (' + x.error + ')').join('; ') : '') + '\nהם יופיעו בטבלת המקורות, והמאמרים יופיעו כשהפרקים יעובדו.');
+  const dup = r.results.filter(x => x.twin).map(x => (DATA.pods.find(q => q.id === x.id)||{}).name);
+  alert((r.results.length - bad.length - dup.length) + ' נוספו' + (dup.length ? '\nכבר קיימים במקורות (דולגו): ' + dup.join(', ') : '') + (bad.length ? '\nנכשלו: ' + bad.map(x => (DATA.pods.find(q => q.id === x.id)||{}).name + ' (' + x.error + ')').join('; ') : '') + '\nהם יופיעו בטבלת המקורות, והמאמרים יופיעו כשהפרקים יעובדו.');
 };
 function fillSettings() {
   const s = DATA.settings;
