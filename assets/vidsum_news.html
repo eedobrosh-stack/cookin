@@ -469,10 +469,13 @@ function render(){
   if(!sorted.length){ main.innerHTML='<p class="empty">אין עדיין סיכומים במדור הזה — הם יופיעו כאן אוטומטית.</p>'; return; }
   const k = heroIndex(sorted); HERO_SHOWN = k;
   const items = k===0 ? sorted : [sorted[k], ...sorted.filter((_,i)=>i!==k)];   // featured story first, everything else still newest-first
+  // A category's head (top story, the three under it, the first tiles) only holds articles whose PRIMARY category it is, so an
+  // article is never the head of two categories. Secondary-category articles follow below, newest first.
+  const prim = FILTER==='all' ? [] : items.filter(a=>a.topic===FILTER), headList = FILTER==='all' ? items : prim;      // a short list just means a shorter head: never fill it with another category's article
   const used = new Set(); let h=''; const pagePods = new Set(), topPods = new Set();
-  const top = takeD(items,1,used,topPods,pagePods)[0], subs = takeD(items,3,used,topPods,pagePods);
-  h += hero(top, subs);
-  const tiles = takeD(items,4,used,topPods,pagePods), meds = takeD(items,2,used,topPods,pagePods);
+  const top = takeD(headList,1,used,topPods,pagePods)[0], subs = takeD(headList,3,used,topPods,pagePods);
+  if(top) h += hero(top, subs);
+  const tiles = takeD(headList,4,used,topPods,pagePods), meds = takeD(headList,2,used,topPods,pagePods);
   if(tiles.length||meds.length) h += '<section class="mix"><div class="mix-b">'+tiles.map(bt).join('')+'</div><div class="mix-m">'+meds.map(a=>cd(a)).join('')+'</div></section>';
   const rest = items.filter(a=>!used.has(a.slug));
   if(FILTER==='all'){

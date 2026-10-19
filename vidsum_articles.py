@@ -236,7 +236,7 @@ def _prompt(title, channel, dur=None, retry=False):
     return f"""You are a news editor turning the attached YouTube video ("{title}", channel "{channel}") into a Hebrew NEWS ARTICLE for a news portal.{extra}
 Write like an Israeli news site feature, not like a meeting summary:
 - title: a sharp, specific Hebrew headline stating the main claim or story (no clickbait, no question marks unless essential). standfirst: 1-2 sentences under the headline. lead: one 200-char teaser.
-- topic: the single best-fitting section from the allowed list. topics: 1 to 3 sections from the allowed list that the story genuinely belongs to, primary section first (same as topic). Add a second or third only when the episode substantially covers it (e.g. tech business = טכנולוגיה + כלכלה); do not pad.
+- topic: the single best-fitting section from the allowed list. topics: the primary section first (same as topic) plus at most ONE secondary section, and only when the episode substantially covers it (e.g. tech business = טכנולוגיה + כלכלה). The primary section is what the episode is mostly ABOUT (a TV-history conversation is תרבות even if it mentions money).
 - key_points: 4-5 short Hebrew sentences ("עיקרי הדברים").
 - blocks: the article body, in order. Every block MUST carry its content in "text" (for "list" blocks put the bullets in "items" and leave "text" empty). Use type "h2" for subheadings (a new one every 2-4 paragraphs), "p" for flowing prose paragraphs, "list" (with "items") at most once for a real enumeration, and "quote" for pull quotes.
 - About {words} Hebrew words in total across the "p" blocks. Third person, past/present tense news style, attribute claims ("לדבריו", "לטענתו"), keep concrete names, numbers, examples and the logic of the argument. Do not invent facts; do not editorialize.
@@ -323,7 +323,7 @@ def _GEM_NEXT_OK_set(t):
 # ------------------------------------------------- LunaRoute (text-only, free) ---
 LUNA_URL = "https://gw.lunaroute.com"
 LUNA_MODEL = os.environ.get("VIDSUM_LUNA_MODEL", "deepseek-4.1-flash")
-SCHEMA_HINT = """{"title": str, "standfirst": str, "topic": one of %s, "topics": [1-3 of the same list, primary first], "lead": str, "key_points": [str],
+SCHEMA_HINT = """{"title": str, "standfirst": str, "topic": one of %s, "topics": [primary, optional secondary: from the same list], "lead": str, "key_points": [str],
  "blocks": [{"type": "h2"|"p"|"quote"|"list", "text": str, "ts": "m:ss or h:mm:ss", "speaker": str (quotes only), "items": [str] (list only)}]}""" % (json.dumps(TOPICS, ensure_ascii=False))
 
 
@@ -333,7 +333,7 @@ def _clean_topics(topics, primary):
     for t in (topics if isinstance(topics, list) else []):
         if t in TOPICS and t not in out:
             out.append(t)
-    return out[:3] or ["תרבות"]
+    return out[:2] or ["תרבות"]                       # one primary section and at most one secondary
 
 
 def article_topics(a):
@@ -347,22 +347,26 @@ def _write_article(a):
     os.replace(tmp, os.path.join(ART_DIR, a["slug"] + ".json"))
 
 
-def backfill_topics(limit=12):
-    """Existing single-topic articles: ask the model (text-only, from headline + key points) for 1-3 sections."""
+def backfill_topics(limit=12, redo=False):
+    """Existing articles: ask the model (text-only) for ONE primary section (what the episode is mostly about) and at most one
+    secondary. redo=True re-judges articles classified under the older rules too (marker topics_v == 2)."""
     done = 0
     for a in _articles():
         if done >= limit:
             break
-        if a.get("topics") or not a.get("blocks"):
+        if not a.get("blocks") or (a.get("topics_v") == 2 if redo else a.get("topics")):
             continue
-        txt = a["title"] + "\n" + (a.get("standfirst") or "") + "\n" + "\n".join(a.get("key_points") or [])
-        prompt = ("Which news sections does this Hebrew podcast article belong to? Allowed sections: "
-                  + json.dumps(TOPICS, ensure_ascii=False) + ". Current primary section: " + (a.get("topic") or "תרבות")
-                  + ". Return 1 to 3 sections, primary first, adding another only if the episode substantially covers it "
-                  '(e.g. a tech-business story = טכנולוגיה + כלכלה). Reply with only JSON: {"topics": [..]}\n\n' + txt[:3500])
+        txt = a["title"] + "\n" + (a.get("standfirst") or "") + "\n" + "\n".join(a.get("key_points") or []) + "\n" + \
+            " ".join(b.get("text", "") for b in a["blocks"] if b.get("type") == "p")[:1200]
+        prompt = ("Choose the news sections for this Hebrew podcast article. Allowed sections: " + json.dumps(TOPICS, ensure_ascii=False)
+                  + ". primary = the section the episode is mostly ABOUT (judge the subject, not the vocabulary: a conversation about a TV "
+                  "show's history is תרבות even if it mentions money; stock-market analysis is כלכלה). secondary = ONE other section only if the "
+                  'episode substantially covers it, otherwise null. Reply with only JSON: {"primary": "..", "secondary": ".." or null}\n\n' + txt[:3500])
         try:
             d, _, _ = _luna(prompt, max_tokens=300)
-            a["topics"] = _clean_topics(d.get("topics"), a.get("topic"))
+            prim = d.get("primary") if d.get("primary") in TOPICS else (a.get("topic") or "תרבות")
+            sec = d.get("secondary") if d.get("secondary") in TOPICS and d.get("secondary") != prim else None
+            a["topic"], a["topics"], a["topics_v"] = prim, [prim] + ([sec] if sec else []), 2
             _write_article(a)
             log(f"vidsum topics {a['slug']} -> {a['topics']}")
             done += 1
@@ -1835,8 +1839,9 @@ def handle_post(handler, path, req):
         if not (user and user.get("admin")):
             handler._json({"error": "forbidden"}, 403)
         else:
-            n = backfill_topics(int(req.get("limit") or 12))
-            handler._json({"ok": True, "done": n, "remaining": sum(1 for a in _articles() if a.get("blocks") and not a.get("topics"))})
+            redo = bool(req.get("redo"))
+            n = backfill_topics(int(req.get("limit") or 12), redo)
+            handler._json({"ok": True, "done": n, "remaining": sum(1 for a in _articles() if a.get("blocks") and (a.get("topics_v") != 2 if redo else not a.get("topics")))})
         return True
     if path == "/api/vidsum/article/release":
         user = current_user(handler)
