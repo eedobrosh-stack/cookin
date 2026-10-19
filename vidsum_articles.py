@@ -1232,7 +1232,7 @@ def resolve_channel(ref):
         host = (urllib.parse.urlparse(ref).hostname or "").lower()
         if not (host == "youtu.be" or host == "youtube.com" or host.endswith(".youtube.com")):
             raise ValueError("only YouTube channel or playlist links are allowed")
-    pl = re.search(r"[?&]list=([\w-]+)", ref)
+    pl = re.search(r"[?&]list=([\w-]+)", ref) or re.search(r"youtube\.com/show/VL(PL[\w-]+)", ref)    # a /show/ page is a playlist: VL + its id
     if pl:
         feed = _http(_feed_url(pl.group(1)))
         n = re.search(r"<title>([^<]+)</title>", feed)
@@ -1245,7 +1245,10 @@ def resolve_channel(ref):
             ref = "https://www.youtube.com/" + ref
         if not ref.startswith("http"):
             ref = "https://www.youtube.com/@" + ref
-        html = _http(ref.split("?")[0])
+        try:
+            html = _http(ref.split("?")[0])
+        except urllib.error.HTTPError as e:
+            raise ValueError(f"YouTube could not open this link (HTTP {e.code}). Use a channel link (youtube.com/@name) or a playlist link (youtube.com/playlist?list=...)")
         m = (re.search(r'"channelId":"(UC[\w-]{22})"', html) or re.search(r'channel_id=(UC[\w-]{22})', html)
              or re.search(r'youtube\.com/channel/(UC[\w-]{22})', html))
         if not m:
