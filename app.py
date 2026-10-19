@@ -15,6 +15,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 import multiuser
 import cands
 import vidsum_articles
+import podscanner
 
 # Category landing pages: /salads serves the gallery with the Salads category
 # preselected, so browser "back" from a dish returns to that category rather
@@ -796,7 +797,7 @@ class Handler(SimpleHTTPRequestHandler):
             if p == "/":
                 if vidsum_articles.handle_get(self, "/vidsum", {}):
                     return
-            if not p.startswith(("/vidsum", "/api/vidsum/", "/auth/", "/api/me")):
+            if not p.startswith(("/vidsum", "/api/vidsum/", "/auth/", "/api/me", "/podscanner", "/api/podscanner/")):
                 self._json({"error": "not found"}, 404); return
         elif secret_flag("PAWED_REDIRECT") and (self._is_main_host() or (self.headers.get("Host") or "").split(":")[0].lower() == "cookin.jarcud.com") \
                 and (p in ("/vidsum", "/vidsum/") or p.startswith(("/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/articles", "/vidsum/article/", "/vidsum/news"))):
@@ -831,6 +832,10 @@ class Handler(SimpleHTTPRequestHandler):
         if (self._is_main_host() or self._is_pawed_host()) and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/pawed", "/vidsum/cover", "/vidsum/addep")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/me", "/api/vidsum/links/todo", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/relay/queue", "/api/vidsum/relay/sources")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
+                return
+        if p in ("/podscanner", "/podscanner/") or p.startswith("/api/podscanner/"):
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if podscanner.handle_get(self, p, qs):
                 return
         if p in ("/cands", "/cands/") or p.startswith("/api/admin/cands"):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
@@ -993,6 +998,9 @@ class Handler(SimpleHTTPRequestHandler):
         p = self.path.split("?")[0]
         if p in ("/api/vidsum/summarize", "/api/vidsum/article/delete", "/api/vidsum/article/import", "/api/vidsum/article/release", "/api/vidsum/article/source", "/api/vidsum/links/set", "/api/vidsum/topics/backfill", "/api/vidsum/submit") or p.startswith(("/api/vidsum/channels/", "/api/vidsum/relay/", "/api/vidsum/sources/")) or p in ("/api/vidsum/bulk", "/api/vidsum/prefs"):
             if vidsum_articles.handle_post(self, p, self._read_json()):
+                return
+        if p.startswith("/api/podscanner/"):
+            if podscanner.handle_post(self, p, self._read_json()):
                 return
         if p.startswith("/api/admin/cands"):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
