@@ -834,12 +834,25 @@ def relay_discovered(req):
         owner_used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit"
                          and ch.get("owner_id") and e.get("owner") == ch.get("owner_id"))
         added = (ch.get("added") or "")[:19]
+        # a new subscription takes the newest episode (from the last 30 days) right away instead of waiting for the next one
+        latest_vid = None
+        if ch.get("take_latest"):
+            cut = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time() - 30 * 86400))
+            fresh = [i for i in req.get("items") or [] if re.fullmatch(r"[\w-]{11}", str(i.get("vid") or "")) and str(i.get("vid")) not in seen
+                     and (i.get("duration") or 999) >= 150 and (i.get("published") or "").replace("T", " ").replace("Z", "")[:19] >= cut]
+            if fresh:
+                latest_vid = max(fresh, key=lambda i: i.get("published", ""))["vid"]
+            if req.get("items"):
+                ch.pop("take_latest", None)
         for it in sorted(req.get("items") or [], key=lambda i: i.get("published", "")):
             vid = str(it.get("vid") or "")
             if not re.fullmatch(r"[\w-]{11}", vid) or vid in seen:
                 continue
             pub = (it.get("published") or "").replace("T", " ").replace("Z", "")[:19]
-            if (pub and pub < added and not ch.get("backfill")) or (it.get("duration") or 999) < 150:
+            if latest_vid and vid != latest_vid and pub < added:
+                seen.add(vid); out["skipped"] += 1               # older than the newest one taken when subscribing
+                continue
+            if (pub and pub < added and not ch.get("backfill") and vid != latest_vid) or (it.get("duration") or 999) < 150:
                 seen.add(vid); out["skipped"] += 1               # older than the subscription, or a Short
                 continue
             if used >= WATCH_DAILY_CAP or (ch.get("owner_id") and owner_used >= USER_DAILY_VIDEOS):
@@ -1571,7 +1584,7 @@ def add_source(req, user=None):
             raise ValueError("this source is already in the table")
         d["channels"].append({"id": cid, "name": (name or found)[:120], "url": url[:300],
                               "language": lang, "vertical": vert, "added": time.strftime("%Y-%m-%d %H:%M:%S"),
-                              "owner_id": owner_id, "owner_name": owner_name,
+                              "owner_id": owner_id, "owner_name": owner_name, "take_latest": True,
                               "backfill": bool(req.get("backfill")) and admin})
         _save_ch(d)
     return cid
@@ -2004,6 +2017,18 @@ def handle_post(handler, path, req):
                     d["channels"] = [c for c in d["channels"] if c["id"] != req.get("id")]
                     _save_ch(d)
                 handler._json({"ok": True})
+            elif path == "/api/vidsum/channels/take_latest":
+                ids = {str(x) for x in (req.get("ids") or [])}
+                with LOCK:
+                    d = _load_ch()
+                    n = 0
+                    for c in d["channels"]:
+                        if c["id"] in ids and c.get("kind") != "rss":
+                            c["take_latest"] = True
+                            c["seen"] = []                      # the next scan sees the whole feed again; only the newest is taken
+                            n += 1
+                    _save_ch(d)
+                handler._json({"ok": True, "armed": n})
             elif path == "/api/vidsum/channels/run":
                 threading.Thread(target=watch_once, daemon=True).start()
                 handler._json({"ok": True, "started": True})
