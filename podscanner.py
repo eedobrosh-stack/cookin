@@ -68,6 +68,9 @@ def _load():
     d.setdefault("pods", {})
     d.setdefault("settings", dict(DEFAULT_SETTINGS))
     d.setdefault("runs", [])
+    st = d["settings"]
+    if "רכילות" in st.get("topics", []):                 # category renamed 2026-10-20
+        st["topics"] = ["לייפסטייל" if t == "רכילות" else t for t in st["topics"]]
     return d
 
 
@@ -434,6 +437,8 @@ def run_judge(cap=150, min_score=0):
 def fill_defaults(d):
     """topic from the Apple genre (and hosts from the feed author) wherever the model hasn't spoken"""
     for p in d["pods"].values():
+        if p.get("topic") in _TOPIC_FIX:
+            p["topic"] = _TOPIC_FIX[p["topic"]]
         if not p.get("topic"):
             for g in p.get("genres", []):
                 if g in GENRE_TOPIC:
@@ -534,6 +539,87 @@ def ingest(items, source="client"):
     with LOCK:
         _save(d)
     return added
+
+
+# ------------------------------------------------------------------ public catalog (feeds the sources page for every signed-in user)
+QUALITY = {"min_episodes": 51, "max_days": 45, "min_score": 50}      # "high quality": >50 episodes, last episode <=45 days, chart score >=50
+_CAT = {"mtime": 0.0, "pods": []}
+_TOPIC_FIX = {"רכילות": "לייפסטייל"}
+
+
+def _catalog():
+    """lightweight pod list for search/browse; cached until the scanner file changes"""
+    try:
+        m = os.path.getmtime(DATA_PATH)
+    except OSError:
+        return []
+    if m != _CAT["mtime"]:
+        with LOCK:
+            d = _load()
+        pods = []
+        for p in d["pods"].values():
+            if p.get("missing") or not p.get("feed") or not p.get("name"):
+                continue
+            row = _row(p)
+            row["topic"] = _TOPIC_FIX.get(row["topic"], row["topic"])
+            row["_n"] = _nname(p["name"])
+            pods.append(row)
+        _CAT["mtime"], _CAT["pods"] = m, pods
+    return _CAT["pods"]
+
+
+def _pub(r):
+    return {"id": r["id"], "name": r["name"], "hosts": r["hosts"][:2], "language": r["language"], "topic": r["topic"], "episodes": r["episodes"],
+            "days_since": r["days_since"], "cadence": r["cadence"], "geo": r["geo"][:2], "image": r["image"], "score": r["score"]}
+
+
+def catalog_suggest(q, limit=8):
+    k = _nname(q)
+    if len(k) < 2:
+        return []
+    hits = [r for r in _catalog() if k in r["_n"]]
+    hits.sort(key=lambda r: (not r["_n"].startswith(k), -r["score"]))
+    return [_pub(r) for r in hits[:limit]]
+
+
+def catalog_quality(r):
+    return ((r["episodes"] or 0) >= QUALITY["min_episodes"] and r["days_since"] is not None and r["days_since"] <= QUALITY["max_days"]
+            and r["score"] >= QUALITY["min_score"])
+
+
+def catalog_browse(language="", country="", topic="", limit=30):
+    out = [r for r in _catalog() if catalog_quality(r) and (not language or r["language"] == language) and (not country or country in r["geo_codes"])
+           and (not topic or r["topic"] == topic)]
+    out.sort(key=lambda r: -r["score"])
+    return [_pub(r) for r in out[:limit]], len(out)
+
+
+def catalog_options():
+    """languages / countries that actually have quality pods, for the pickers"""
+    langs, ctry = {}, {}
+    for r in _catalog():
+        if catalog_quality(r):
+            langs[r["language"]] = langs.get(r["language"], 0) + 1
+            for c in r["geo_codes"]:
+                if c in COUNTRIES:
+                    ctry[c] = ctry.get(c, 0) + 1
+    return ({k: v for k, v in sorted(langs.items(), key=lambda kv: -kv[1]) if k},
+            [{"code": c, "name": COUNTRIES.get(c, (c.upper(), ""))[0], "n": n} for c, n in sorted(ctry.items(), key=lambda kv: -kv[1])])
+
+
+def catalog_pod(pid):
+    with LOCK:
+        d = _load()
+    p = d["pods"].get(pid)
+    if not p or not p.get("feed"):
+        return None
+    r = _row(p)
+    r["topic"] = _TOPIC_FIX.get(r["topic"], r["topic"])
+    return r
+
+
+def existing_source_name(name):
+    return _existing_source(name)
 
 
 # ------------------------------------------------------------------ view + HTTP

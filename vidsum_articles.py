@@ -1243,19 +1243,17 @@ def _viewer(handler):
 
 
 def _visible_source_ids(viewer):
-    """Source ids a signed-in viewer sees in their own view (None = no filtering)."""
-    if not viewer or viewer.get("id") == "admin-token":
+    """Source ids a viewer sees (None = no filtering, admins only). A user's own sources are private to them; the Pawed roster
+    (owner None) is shown to everyone unless the signed-in viewer hid it whole or per source."""
+    if viewer and (viewer.get("id") == "admin-token" or viewer.get("admin")):
         return None
-    p = get_vprefs(viewer["id"])
+    p = get_vprefs(viewer["id"]) if viewer else {"hideBase": False, "hiddenBase": [], "muted": []}
     out = set()
     for c in _load_ch()["channels"]:
         owner = c.get("owner_id")
-        if owner == viewer["id"]:
+        if viewer and owner == viewer["id"]:
             out.add(c["id"])
-        elif owner is None:
-            if not p["hideBase"] and c["id"] not in p["hiddenBase"]:
-                out.add(c["id"])
-        elif owner not in p["muted"]:
+        elif owner is None and not p["hideBase"] and c["id"] not in p["hiddenBase"]:
             out.add(c["id"])
     return out
 
@@ -1781,6 +1779,24 @@ def handle_get(handler, path, qs):
                                        if signed else []),
                        "limit": MAX_USER_SOURCES, "verticals": TOPICS, "languages": LANGS, "sources": sources_view(user)})
         return True
+    if path.startswith("/api/vidsum/catalog/"):
+        user = current_user(handler)
+        if not user:
+            handler._json({"ok": False, "error": "sign in with Google first"}, 401)
+            return True
+        import podscanner
+        if path == "/api/vidsum/catalog/suggest":
+            handler._json({"ok": True, "pods": podscanner.catalog_suggest((qs.get("q") or [""])[0])})
+        elif path == "/api/vidsum/catalog/options":
+            langs, ctry = podscanner.catalog_options()
+            handler._json({"ok": True, "languages": langs, "countries": ctry, "topics": TOPICS, "rules": podscanner.QUALITY})
+        elif path == "/api/vidsum/catalog/browse":
+            g = lambda k: (qs.get(k) or [""])[0]
+            pods, total = podscanner.catalog_browse(g("language"), g("country"), g("topic"))
+            handler._json({"ok": True, "pods": pods, "total": total})
+        else:
+            return False
+        return True
     if path == "/api/vidsum/cooking":
         try:
             handler._json(cooking_today())
@@ -1799,10 +1815,12 @@ def handle_get(handler, path, qs):
         user = current_user(handler)
         items = news_items()
         vis = _visible_source_ids(user)
-        personal = vis is not None
-        if personal:
-            base_ok = not get_vprefs(user["id"])["hideBase"]
-            items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and base_ok) or i.get("submitted_by") == user["id"]]
+        personal = vis is not None and bool(user)
+        if vis is not None:                              # guests and signed-in users: private sources and one-off episodes stay private
+            uid = user["id"] if user else None
+            base_ok = not get_vprefs(uid)["hideBase"] if uid else True
+            items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and not i.get("submitted_by") and base_ok)
+                     or (uid and i.get("submitted_by") == uid)]
         handler._json({"ok": True, "topics": TOPICS, "items": items, "personal": personal,
                        "me": ({"name": user.get("name") or user.get("email")} if user and user.get("id") != "admin-token" else None)})
         return True
@@ -2064,6 +2082,16 @@ def handle_post(handler, path, req):
             return True
         try:
             if path == "/api/vidsum/sources/add":
+                if req.get("catalog_id"):                   # picked from the scanner catalog: name, feed, language and topic are already known
+                    import podscanner
+                    p = podscanner.catalog_pod(str(req["catalog_id"]))
+                    if not p:
+                        raise ValueError("this podcast is not in the catalog")
+                    twin = podscanner.existing_source_name(p["name"])
+                    if twin:
+                        raise ValueError(f"already in the sources table as \"{twin}\"")
+                    req = {"url": p["feed"], "name": p["name"], "language": p["language"] if p["language"] in LANGS else "other",
+                           "vertical": p["topic"] if p["topic"] in TOPICS else "תרבות"}
                 add_source(req, user)
             elif path in ("/api/vidsum/sources/remove", "/api/vidsum/sources/update"):
                 with LOCK:

@@ -193,7 +193,7 @@
     .hero2-s a:hover { text-decoration:underline; }
     .hero2-i { display:block; }
     .im { background-size:cover; background-position:center; background-repeat:no-repeat; aspect-ratio:16/9; width:100%; background-color:#222; }
-    .hero2-i .im { aspect-ratio:16/10.2; }
+    .hero2-i .im { aspect-ratio:16/9; }              /* a 16:9 thumbnail must not be cropped: the taller 16/10.2 box cut the text off its left edge */
     .tg { font-size:12px; font-weight:800; }
     .mix { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:18px; padding-bottom:22px; }
     .mix.solo { grid-template-columns:1fr; }                      /* only one of the two columns has stories (short category head): use the full width */
