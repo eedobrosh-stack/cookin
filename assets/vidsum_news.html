@@ -333,16 +333,6 @@
     .brand-wordmark { height:88px; width:auto; display:block; }
     @media (max-width:640px) { .masthead { grid-template-columns:1fr; min-height:0; padding-block:8px; } .masthead .brand { grid-column:1; } .masthead .masthead-actions { grid-column:1; grid-row:2; justify-self:center; margin-top:4px; } .brand-wordmark { height:56px; } }
 
-    /* Quality Podcast Hours: an old gas-pump counter, wheels roll up when another hour is added */
-    #count { display:block; line-height:1; }
-    .pump { display:flex; flex-direction:column; align-items:center; gap:5px; direction:ltr; }
-    .pump-bezel { background:linear-gradient(#e6e6e6,#8d8d8d 48%,#c4c4c4); padding:4px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.45), inset 0 1px 0 #fff; }
-    .pump-wheels { display:flex; gap:2px; background:#0a0a0a; padding:3px; border-radius:5px; box-shadow:inset 0 2px 6px #000; }
-    .pw { position:relative; width:23px; height:36px; overflow:hidden; background:#1c1c1c; border-radius:2px; }
-    .pw::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(rgba(0,0,0,.85) 0,rgba(0,0,0,0) 28%,rgba(0,0,0,0) 72%,rgba(0,0,0,.85) 100%), linear-gradient(90deg,rgba(255,255,255,.07),rgba(255,255,255,0) 40%,rgba(0,0,0,.25)); }
-    .pw-strip { transition:transform .95s cubic-bezier(.25,1.4,.5,1); will-change:transform; }
-    .pw-d { height:36px; font:700 27px/36px "Courier New",Courier,monospace; text-align:center; color:#f6f1df; text-shadow:0 0 5px rgba(255,244,200,.35); }
-    .pump-cap { font:italic 600 11.5px Arial,sans-serif; color:#6c6c6c; letter-spacing:.2px; white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -350,7 +340,7 @@
   <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a><a class="admin-only" href="/podscanner">PodScanner</a></div></div></div>
   <header class="masthead">
     <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
-    <div class="masthead-actions"><span class="date" id="count"></span><div class="cta" id="cta" hidden><a class="cta-btn" href="/auth/login?next=%2Fvidsum">התחברו והוסיפו את הפודקאסטים שלכם</a><div class="cta-sub"><b>התחברו ל-Pawed והתאימו את הפודים שלכם</b><br>הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</div></div></div>
+    <div class="masthead-actions"><div class="cta" id="cta" hidden><a class="cta-btn" href="/auth/login?next=%2Fvidsum">התחברו והוסיפו את הפודקאסטים שלכם</a><div class="cta-sub"><b>התחברו ל-Pawed והתאימו את הפודים שלכם</b><br>הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</div></div></div>
   </header>
   <div class="nav-wrap"><nav class="nav" id="nav" aria-label="נושאים"></nav></div>
   <main id="main"><p class="empty">טוען…</p></main>
@@ -629,40 +619,6 @@ function ckShow(){
   if(!CK) fetch('/api/vidsum/cooking').then(r=>r.json()).then(j=>{ CK=j; if(FILTER===COOK) ckRender(); }).catch(()=>{ CK={ok:false}; if(FILTER===COOK) ckRender(); });
 }
 
-// ---- Quality Podcast Hours: 4-wheel gas-pump counter ----
-const PUMP = { wheels: [], shown: null };
-function pumpBuild(){
-  const box = document.getElementById('count'); if(!box || PUMP.wheels.length) return;
-  box.innerHTML = '<div class="pump" title="Quality Podcast Hours"><div class="pump-bezel"><div class="pump-wheels"></div></div><div class="pump-cap">Quality Podcast Hours</div></div>';
-  const wrap = box.querySelector('.pump-wheels');
-  for(let i=0;i<4;i++){ const w=document.createElement('div'); w.className='pw'; const s=document.createElement('div'); s.className='pw-strip';
-    s.innerHTML = [0,1,2,3,4,5,6,7,8,9,0].map(d=>'<div class="pw-d">'+d+'</div>').join(''); w.appendChild(s); wrap.appendChild(w); PUMP.wheels.push({s, d:0}); }
-}
-function pumpRow(wh, row, animate, delay){
-  wh.s.style.transition = animate ? 'transform .95s cubic-bezier(.25,1.4,.5,1) '+delay+'ms' : 'none';
-  wh.s.style.transform = 'translateY(' + (-row*36) + 'px)';
-}
-function pumpSet(n, animate){
-  pumpBuild(); n = Math.max(0, Math.min(9999, Math.round(n))); const digs = String(n).padStart(4,'0').split('').map(Number);
-  PUMP.wheels.forEach((wh, i) => {
-    const nd = digs[i], wraps = animate && nd < wh.d;                    // 9 -> 0 keeps rolling forward through the extra 0 row, then snaps back
-    pumpRow(wh, wraps ? 10 : nd, animate, (3-i)*90);                      // the units wheel moves first, then tens, hundreds, thousands
-    if(wraps) wh.s.addEventListener('transitionend', function f(){ wh.s.removeEventListener('transitionend', f); pumpRow(wh, nd, false, 0); }, {once:true});
-    wh.d = nd;
-  });
-  PUMP.shown = n;
-}
-function pumpUpdate(hours){
-  let last = null; try{ last = parseInt(localStorage.getItem('pawed_hours'),10); if(isNaN(last)) last=null; }catch(e){}
-  if(PUMP.shown===null){
-    if(last===null){ pumpSet(0,false); setTimeout(()=>pumpSet(hours,true),350); }              // first visit: the wheels spin up to the total
-    else if(hours>last){ pumpSet(last,false); setTimeout(()=>pumpSet(hours,true),600); }       // new hours since your last visit: roll them up
-    else pumpSet(hours,false);
-  } else if(hours!==PUMP.shown){ pumpSet(hours, hours>PUMP.shown); }                            // another hour arrived while the page is open
-  try{ localStorage.setItem('pawed_hours', String(hours)); }catch(e){}
-}
-const hoursOf = items => Math.round(items.reduce((t,a)=>t+(a.minutes||0),0)/60);
-setInterval(()=>{ fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{ if(j.items) pumpUpdate(hoursOf(j.items)); }).catch(()=>{}); }, 5*60*1000);
 function nav(){
   const n=document.getElementById('nav');
   const live=DATA.topics.filter(t=>DATA.items.some(a=>(a.topics||[a.topic]).includes(t)));   // a section with nothing in it (e.g. all its sources switched off) disappears
@@ -699,7 +655,6 @@ fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
   if(ul && j.me){ const a=document.createElement('a'); a.href='/vidsum/sources'; a.textContent = 'שלום '+j.me.name+(j.personal?' · תצוגה מותאמת':''); a.style.fontWeight='700'; ul.appendChild(a); }
   document.getElementById('cta').hidden = !!j.me;
   if(j.me) showSourcesHint();
-  pumpUpdate(hoursOf(j.items));
   nav(); render();
 }).catch(()=>{document.getElementById('main').innerHTML='<p class="empty">שגיאה בטעינה</p>';});
 </script>
