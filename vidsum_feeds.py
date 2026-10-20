@@ -91,8 +91,18 @@ def _strip(html_text):
     return re.sub(r"\s+", " ", _html.unescape(re.sub(r"<[^>]+>", " ", html_text or ""))).strip()
 
 
+def _repair_truncated(xml_text):
+    """a very large feed is read only up to MAX_BYTES and can end mid-item (e.g. inside a CDATA block): keep the complete items"""
+    k = xml_text.rfind("</item>")
+    return xml_text[:k + 7] + "</channel></rss>" if k > 0 else xml_text
+
+
 def parse_feed(xml_text):
-    root = ET.fromstring(xml_text.lstrip("﻿").encode("utf-8"))
+    text = xml_text.lstrip("\ufeff")
+    try:
+        root = ET.fromstring(text.encode("utf-8"))
+    except ET.ParseError:
+        root = ET.fromstring(_repair_truncated(text).encode("utf-8"))
     ch = root.find("channel")
     if ch is None:
         raise ValueError("not an RSS podcast feed")

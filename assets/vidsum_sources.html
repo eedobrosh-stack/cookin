@@ -400,9 +400,11 @@ $('ch_list').onclick = e => { const el=e.target.closest('.pod[data-id]'); if(!el
   $('ch_add').onclick=()=>addCatalog([p.id],()=>{ $('ch_picked').innerHTML=''; $('ch_q').value=''; }); };
 document.addEventListener('click',e=>{ if(!e.target.closest('.ac')) $('ch_list').hidden=true; });
 async function addCatalog(ids, done){
-  let added=0, err='';
-  for(const id of ids){ try{ const j=await api('/api/vidsum/sources/add',{catalog_id:id}); D.sources=j.sources; D.hidden=j.hidden; added++; render(); }catch(e){ err=e.message; break; } }
-  addSay(added?('✓ נוספו '+added+' מקורות. התוכן החדש שלהם יופיע באתר בשעות הקרובות.'+(err?' עצירה: '+err:'')):('❌ '+err), !!added && !err);
+  let added=0; const failed=[];
+  const nameOf = id => ((PK.find(p=>p.id===id)||(PICKED&&PICKED.id===id?PICKED:null)||{}).name)||id;
+  for(const id of ids){ try{ const j=await api('/api/vidsum/sources/add',{catalog_id:id}); D.sources=j.sources; D.hidden=j.hidden; added++; render(); }
+    catch(e){ failed.push(nameOf(id)+' ('+e.message+')'); if(/up to \d+ sources/.test(e.message)) break; } }          // one bad feed must not stop the rest; only the quota ends the run
+  addSay((added?('✓ נוספו '+added+' מקורות. התוכן החדש שלהם יופיע באתר בשעות הקרובות.'):'')+(failed.length?((added?' ':'')+'❌ לא נוספו: '+failed.join(' · ')):''), !!added && !failed.length);
   if(done) done(); if(PK.length) renderPick();
 }
 // 3) pick by language / country / topic: quality channels only
