@@ -413,6 +413,9 @@ function bar(topic, more){ return '<div class="sec-h" style="--c:'+col(topic)+'"
 
 // each section uses a different arrangement so the page never reads as identical blocks stacked on each other
 function pattern(kind, L){
+  // a thin section (the pod-per-block rule leaves few stories) must not pad a two-column layout with duplicates or leave one
+  // column empty: fall back to the plain card row
+  if((kind===1 && L.length<6) || (kind===2 && L.length<3)) kind = 0;
   if(kind===0) return '<div class="row3">'+L.slice(0,3).map(a=>cd(a)).join('')+'</div>'+(L.length>3?'<div class="strip">'+L.slice(3,6).map(tr).join('')+'</div>':'');
   if(kind===1) return '<div class="listimg"><div class="li-l">'+L.slice(0,5).map(tr).join('')+'</div><div class="li-r">'+L.slice(5,7).map(sm).join('')+(L.length<6?L.slice(0,2).map(sm).join(''):'')+'</div></div>';
   return '<div class="feat"><div class="feat-m">'+cd(L[0],true)+'</div><div class="feat-s">'+L.slice(1,5).map(a=>'<a class="fs" href="'+href(a)+'">'+im(a,'fs-i')+'<div><h4>'+esc(a.title)+'</h4><small>'+when2(a)+'</small></div></a>').join('')+'</div></div>';
