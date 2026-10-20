@@ -102,7 +102,7 @@ body{-webkit-text-size-adjust:100%}
 .utility-inner>span{display:none}
 .utility-links{display:flex;gap:14px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;font-size:13px}
 .utility-links::-webkit-scrollbar{display:none}
-.masthead{height:62px;padding-inline:12px;justify-content:flex-start}
+.masthead{height:auto;min-height:64px;padding-inline:12px;justify-content:center}
 .brand{gap:8px}.brand-logo{height:38px}.brand-mark{font-size:30px;letter-spacing:-1px}.brand-note{display:none}
 .nav-wrap{position:sticky;top:0;z-index:60;background:var(--bg);box-shadow:0 1px 0 var(--line)}
 .nav{justify-content:flex-start;padding:7px 12px;min-height:0;gap:8px;-webkit-overflow-scrolling:touch}
@@ -128,7 +128,7 @@ footer .footer-inner{flex-direction:column;gap:6px;padding-inline:14px;font-size
 
 
 CSS += ".brand-txt{display:flex;flex-direction:column;align-items:flex-start;line-height:1}.brand-note{display:block!important;border:0!important;padding:0!important;font-style:italic;font-size:15px;color:#6c6c6c;margin-top:-2px;direction:ltr}@media(max-width:640px){.brand-note{font-size:11px}}"
-CSS += ".auth-only,.admin-only{display:none}body.authed .auth-only,body.admin .admin-only{display:inline}.listen{display:flex;align-items:center;gap:10px;margin:-6px 0 20px;font-size:13px;color:var(--muted)}.listen-ic{display:inline-flex;transition:transform .12s}.listen-ic:hover{transform:scale(1.12)}"
+CSS += ".brand-wordmark{height:88px;width:auto;display:block}@media(max-width:640px){.brand-wordmark{height:56px}}.auth-only,.admin-only{display:none}body.authed .auth-only,body.admin .admin-only{display:inline}.listen{display:flex;align-items:center;gap:10px;margin:-6px 0 20px;font-size:13px;color:var(--muted)}.listen-ic{display:inline-flex;transition:transform .12s}.listen-ic:hover{transform:scale(1.12)}"
 
 PAW_JS = """<script>(function(){var seq=['maxresdefault','hq720','mqdefault'];
 function fix(img){var v=img.dataset.vid,i=0,own=img.dataset.img;var p=img.parentNode;if(!p.classList||!p.classList.contains('imgw')){var w=document.createElement('div');w.className='imgw';p.insertBefore(w,img);w.appendChild(img);}
@@ -206,8 +206,7 @@ def render(a, latest=(), base="", disclaimer=""):
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(_he_date(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span>'
            f'<a class="admin-only" href="{base}/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="{base}/vidsum/sources">מקורות</a><a class="admin-only" href="{base}/vidsum/logs">יומן</a></div></div></div>'
-           f'<header class="masthead"><a class="brand" href="{base}/vidsum"><img class="brand-logo" src="{base}/vidsum/pawed-logo.png" alt=""><span class="brand-txt"><span class="brand-mark">Pawed</span>'
-           f'<span class="brand-note">Respect Your Pods</span></span></a></header>'
+           f'<header class="masthead"><a class="brand" href="{base}/"><img class="brand-wordmark" src="{base}/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a></header>'
            f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">ראשי</a>{nav}</nav></div>',
            '<div class="page"><article>',
            f'<div class="crumbs"><a href="{base}/vidsum">ראשי</a> › {crumb_topics}</div>',

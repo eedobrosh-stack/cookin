@@ -1859,6 +1859,19 @@ def handle_get(handler, path, qs):
         except OSError:
             handler._json({"error": "logo missing"}, 404)
         return True
+    if path == "/vidsum/pawed-wordmark.png":
+        try:
+            with open(os.path.join(_ASSETS, "pawed-wordmark.png"), "rb") as f:
+                body = f.read()
+            handler.send_response(200)
+            handler.send_header("Content-Type", "image/png")
+            handler.send_header("Content-Length", str(len(body)))
+            handler.send_header("Cache-Control", "public, max-age=86400")
+            handler.end_headers()
+            handler.wfile.write(body)
+        except OSError:
+            handler._json({"error": "logo missing"}, 404)
+        return True
     if path == "/vidsum/addep.js":
         try:
             with open(os.path.join(_ASSETS, "vidsum_addep.js"), "rb") as f:

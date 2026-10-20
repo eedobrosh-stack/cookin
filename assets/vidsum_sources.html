@@ -230,13 +230,20 @@
     .ucard { border-top:1px solid #eee; padding:10px 0; } .ucard:first-of-type { border-top:0; } .ucard b { font-size:15.5px; } .ucard small { color:#777; }
     .ucard .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; } .ucard .chip { background:#f2f2f2; border-radius:999px; padding:3px 11px; font-size:13px; } .ucard .chip.off { opacity:.5; text-decoration:line-through; }
     details#adv { margin:22px 0; } details#adv summary { cursor:pointer; font-weight:700; padding:8px 0; color:#555; }
+
+    /* wordmark logo, centred on every page */
+    .masthead { display:grid !important; grid-template-columns:1fr auto 1fr; align-items:center; height:auto !important; min-height:104px; padding-block:6px; }
+    .masthead .brand { grid-column:2; grid-row:1; justify-self:center; }
+    .masthead .masthead-actions { grid-column:3; grid-row:1; justify-self:end; }
+    .brand-wordmark { height:88px; width:auto; display:block; }
+    @media (max-width:640px) { .masthead { grid-template-columns:1fr; min-height:0; padding-block:8px; } .masthead .brand { grid-column:1; } .masthead .masthead-actions { grid-column:1; grid-row:2; justify-self:center; margin-top:4px; } .brand-wordmark { height:56px; } }
   </style>
 </head>
 <body>
   <div class="topline"></div>
   <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a></div></div></div>
   <header class="masthead">
-    <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-txt"><span class="brand-mark">Pawed</span><span class="brand-note">Respect Your Pods</span></span></a>
+    <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
     <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
   </header>
   <main>
