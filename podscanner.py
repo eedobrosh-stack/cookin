@@ -47,7 +47,7 @@ DEFAULT_SETTINGS = {
     "min_episodes": 20,
     "max_gap_days": 21,          # typical gap between episodes
     "languages": ["he", "en"],
-    "topics": ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "רכילות", "בריאות"],
+    "topics": ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות"],
     "block_genres": ["Kids & Family", "Religion & Spirituality", "Music"],
 }
 

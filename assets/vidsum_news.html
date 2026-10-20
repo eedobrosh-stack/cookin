@@ -285,6 +285,24 @@
     @keyframes hintin { from { opacity:0; transform:translateY(-14px) scale(.9); } to { opacity:1; transform:none; } }
     @keyframes hintbob { 0%,100% { margin-top:0; } 50% { margin-top:7px; } }
     .auth-only, .admin-only { display:none; } body.authed .auth-only, body.admin .admin-only { display:inline; }
+
+    /* Live Shows: upcoming Israeli events from Supercaly */
+    .lv-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:6px 0 16px; }
+    .lv-bar button, .lv-bar select, .lv-bar input { font:inherit; font-size:14px; padding:7px 12px; border:1px solid var(--line); border-radius:20px; background:#fff; color:inherit; }
+    .lv-bar button.on { background:#c2410c; border-color:#c2410c; color:#fff; font-weight:700; }
+    .lv-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+    .lv-c { display:flex; flex-direction:column; color:inherit; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#fff; }
+    .lv-c:hover h3 { text-decoration:underline; }
+    .lv-i { aspect-ratio:16/9; background:linear-gradient(135deg,#9a3412,#f59e0b); background-size:cover; background-position:center; position:relative; }
+    .lv-d { position:absolute; top:10px; inset-inline-start:10px; background:#fff; color:#111; border-radius:6px; padding:4px 9px; font-weight:800; font-size:13px; line-height:1.15; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+    .lv-d b { display:block; font-size:19px; }
+    .lv-b { padding:10px 13px 13px; display:flex; flex-direction:column; gap:3px; flex:1; }
+    .lv-b h3 { margin:0; font-size:18px; line-height:1.2; font-weight:800; }
+    .lv-b small { color:#777; font-size:13px; } .lv-b .lv-go { margin-top:auto; padding-top:8px; color:#c2410c; font-weight:700; font-size:13px; }
+    .lv-more { display:block; margin:22px auto; padding:10px 28px; border:1px solid var(--line); background:#fff; border-radius:24px; font:inherit; font-weight:700; cursor:pointer; }
+    .lv-src { color:#888; font-size:12px; margin-top:8px; } .lv-src a { color:inherit; }
+    @media (max-width:900px) { .lv-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:560px) { .lv-grid { grid-template-columns:1fr; gap:12px; } .lv-c { flex-direction:row; } .lv-i { width:112px; aspect-ratio:1; flex:none; } .lv-d { display:none; } }
   </style>
 </head>
 <body>
@@ -337,7 +355,7 @@ const rel = a => when(a.released||a.created, a.released_time);
 const meta = a => [a.channel, a.minutes? 'סיכום '+a.minutes+' דק׳':'', rel(a)].filter(Boolean).map(esc).join(' · ');
 let DATA = null, FILTER = 'all';
 
-const COL = {'פוליטיקה':'#b3171f','כלכלה':'#1b3f94','טכנולוגיה':'#0f2a5c','תרבות':'#6a2fa3','ספורט':'#1a7a3a','בריאות':'#0e7a6e','רכילות':'#b0276a'};
+const COL = {'פוליטיקה':'#b3171f','כלכלה':'#1b3f94','טכנולוגיה':'#0f2a5c','תרבות':'#6a2fa3','ספורט':'#1a7a3a','בריאות':'#0e7a6e','לייפסטייל':'#b0276a','Live Shows':'#c2410c'};
 const col = t => COL[t]||'#333';
 const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" data-img="'+esc(a.image||'')+'" style="background-image:'+tone(a)+'"></div>';
 const when2 = a => esc(rel(a));
@@ -471,6 +489,7 @@ setInterval(()=>{
   addEventListener('scroll',()=>{ b.classList.toggle('on', scrollY>1400); },{passive:true}); })();
 
 function render(){
+  if(FILTER===LIVE){ lvShow(); return; }
   const all = DATA.items, main = document.getElementById('main');
   const sorted = FILTER==='all' ? all : all.filter(a=>inT(a,FILTER));
   if(!sorted.length){ main.innerHTML='<p class="empty">אין עדיין סיכומים במדור הזה — הם יופיעו כאן אוטומטית.</p>'; return; }
@@ -510,9 +529,48 @@ function render(){
   if(FILTER==='all') startFeed(all); else if(FEED && FEED.io){ FEED.io.disconnect(); FEED=null; }
   main.querySelectorAll('[data-go]').forEach(a=>a.onclick=e=>{ e.preventDefault(); FILTER=a.dataset.go; nav(); render(); window.scrollTo({top:0}); history.replaceState(null,'','#'+encodeURIComponent(FILTER)); });
 }
+
+// ---- Live Shows (upcoming Israeli events from Supercaly) ----
+const LIVE = 'Live Shows';
+let LV = null, LVF = {cat:'', city:'', q:'', when:'all', n:48};
+const LV_CATS = {Music:'מוזיקה', Comedy:'סטנדאפ וקומדיה', Dance:'מחול', Festival:'פסטיבלים', Art:'אמנות'};
+const lvDate = d => new Date(d+'T12:00:00');
+function lvCard(e){
+  const dt = lvDate(e.date), day = dt.toLocaleDateString('he-IL',{day:'numeric'}), mon = dt.toLocaleDateString('he-IL',{month:'short'}), wd = dt.toLocaleDateString('he-IL',{weekday:'long'});
+  const price = e.price ? ' · מ-'+Math.round(e.price)+(e.currency==='ILS'||!e.currency?' ₪':' '+esc(e.currency)) : '';
+  return '<a class="lv-c" target="_blank" rel="noopener" href="'+esc(e.link||'https://superca.ly')+'"><div class="lv-i"'+(e.image?' style="background-image:url(\''+esc(e.image)+'\')"':'')+'><div class="lv-d"><b>'+day+'</b>'+esc(mon)+'</div></div>'
+    +'<div class="lv-b"><h3>'+esc(e.name)+'</h3><small>'+esc(wd)+(e.time?' · '+esc(e.time):'')+'</small><small>'+esc(e.venue)+(e.venue&&e.city?' · ':'')+esc(e.city)+esc(price)+'</small><span class="lv-go">לכרטיסים ›</span></div></a>';
+}
+function lvRender(){
+  const main = document.getElementById('main'); if(!LV){ main.innerHTML = '<p class="empty">טוען מופעים…</p>'; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const lim = LVF.when==='week' ? 7 : LVF.when==='month' ? 31 : 0;
+  const q = LVF.q.trim().toLowerCase();
+  const list = LV.filter(e => (!LVF.cat || e.cats.includes(LVF.cat)) && (!LVF.city || e.city===LVF.city) && (!q || (e.name+' '+e.venue+' '+e.city).toLowerCase().includes(q))
+    && (!lim || (lvDate(e.date)-today)/864e5 < lim));
+  const cities = [...new Set(LV.map(e=>e.city).filter(Boolean))].sort((a,b)=>LV.filter(e=>e.city===b).length-LV.filter(e=>e.city===a).length);
+  const chip = (k,l,on) => '<button data-k="'+k+'" class="'+(on?'on':'')+'">'+l+'</button>';
+  main.innerHTML = '<div class="sec-h" style="--c:'+col(LIVE)+'"><b>Live Shows</b><span style="color:rgba(255,255,255,.9);font-size:13px">'+list.length.toLocaleString()+' מופעים קרובים בישראל</span></div>'
+    +'<div class="lv-bar">'+chip('cat:','הכל',!LVF.cat)+Object.entries(LV_CATS).filter(([k])=>LV.some(e=>e.cats.includes(k))).map(([k,l])=>chip('cat:'+k,l,LVF.cat===k)).join('')
+    +'<select id="lvcity"><option value="">כל הערים</option>'+cities.slice(0,40).map(c=>'<option'+(LVF.city===c?' selected':'')+'>'+esc(c)+'</option>').join('')+'</select>'
+    +chip('when:all','הכל',LVF.when==='all')+chip('when:week','השבוע',LVF.when==='week')+chip('when:month','החודש',LVF.when==='month')
+    +'<input id="lvq" placeholder="חיפוש אמן, מקום…" value="'+esc(LVF.q)+'"></div>'
+    +(list.length?'<div class="lv-grid">'+list.slice(0,LVF.n).map(lvCard).join('')+'</div>':'<p class="empty">אין מופעים שמתאימים לסינון.</p>')
+    +(list.length>LVF.n?'<button class="lv-more" id="lvmore">הצג עוד</button>':'')
+    +'<div class="lv-src">המופעים מ-<a href="https://superca.ly" target="_blank" rel="noopener">Supercaly</a></div>';
+  main.querySelectorAll('.lv-bar button').forEach(b=>b.onclick=()=>{ const [k,v]=b.dataset.k.split(':'); LVF[k]=v; LVF.n=48; lvRender(); });
+  const c=document.getElementById('lvcity'); if(c) c.onchange=()=>{ LVF.city=c.value; LVF.n=48; lvRender(); };
+  const qi=document.getElementById('lvq'); if(qi) qi.oninput=()=>{ LVF.q=qi.value; LVF.n=48; const p=qi.selectionStart; lvRender(); const n=document.getElementById('lvq'); n.focus(); n.setSelectionRange(p,p); };
+  const m=document.getElementById('lvmore'); if(m) m.onclick=()=>{ LVF.n+=48; lvRender(); };
+}
+function lvShow(){
+  if(FEED && FEED.io){ FEED.io.disconnect(); FEED=null; }
+  lvRender();
+  if(!LV) fetch('/api/vidsum/live').then(r=>r.json()).then(j=>{ LV=j.items||[]; if(FILTER===LIVE) lvRender(); }).catch(()=>{ LV=[]; if(FILTER===LIVE) lvRender(); });
+}
 function nav(){
   const n=document.getElementById('nav');
-  n.innerHTML=['all',...DATA.topics].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?'ראשי':esc(t))+'</button>').join('');
+  n.innerHTML=['all',...DATA.topics,LIVE].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?'ראשי':esc(t))+'</button>').join('');
   n.querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f; nav(); render(); history.replaceState(null,'', FILTER==='all'?location.pathname:'#'+encodeURIComponent(FILTER));});
 }
 document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -539,7 +597,7 @@ function showSourcesHint(){
   },200);
 }
 fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
-  DATA=j; const h=decodeURIComponent(location.hash.slice(1)); if(j.topics.includes(h)) FILTER=h;
+  DATA=j; const h=decodeURIComponent(location.hash.slice(1)); if(j.topics.includes(h) || h===LIVE) FILTER=h;
   const ul=document.querySelector('.utility-links');
   if(ul && j.me){ const a=document.createElement('a'); a.href='/vidsum/sources'; a.textContent = 'שלום '+j.me.name+(j.personal?' · תצוגה מותאמת':''); a.style.fontWeight='700'; ul.appendChild(a); }
   document.getElementById('cta').hidden = !!j.me;

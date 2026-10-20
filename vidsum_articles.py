@@ -189,7 +189,8 @@ def _unique_slug(title, vid):
 
 
 # ----------------------------------------------------------------- gemini ---
-TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "רכילות", "בריאות"]
+TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות"]
+LIFESTYLE_HINT = "לייפסטייל = relationships, psychology and wellbeing, parenting, food, beauty and fashion, personal growth, daily living"
 SCHEMA = {
     "type": "OBJECT",
     "properties": {
@@ -391,7 +392,7 @@ def backfill_topics(limit=12, redo=False):
             continue
         txt = a["title"] + "\n" + (a.get("standfirst") or "") + "\n" + "\n".join(a.get("key_points") or []) + "\n" + \
             " ".join(b.get("text", "") for b in a["blocks"] if b.get("type") == "p")[:1200]
-        prompt = ("Choose the news sections for this Hebrew podcast article. Allowed sections: " + json.dumps(TOPICS, ensure_ascii=False)
+        prompt = ("Choose the news sections for this Hebrew podcast article. Allowed sections: " + json.dumps(TOPICS, ensure_ascii=False) + " (" + LIFESTYLE_HINT + ")"
                   + ". primary = the section the episode is mostly ABOUT (judge the subject, not the vocabulary: a conversation about a TV "
                   "show's history is תרבות even if it mentions money; stock-market analysis is כלכלה). secondary = ONE other section only if the "
                   'episode substantially covers it, otherwise null. Reply with only JSON: {"primary": "..", "secondary": ".." or null}\n\n' + txt[:3500])
@@ -1051,15 +1052,15 @@ def render_article(a):
 
 # ------------------------------------------------ generated cover art (no usable YouTube thumbnail) ---
 _COVER_ACC = {"כלכלה": "#e0a43a", "פוליטיקה": "#6fbf5a", "טכנולוגיה": "#ff6b4a", "ספורט": "#ff9a3c",
-              "תרבות": "#b07be0", "רכילות": "#f07ab0", "בריאות": "#3fcfb4"}
+              "תרבות": "#b07be0", "לייפסטייל": "#f07ab0", "בריאות": "#3fcfb4"}
 _KEYS = [("chip", r"\bAI\b|בינה מלאכותית|GPT|סוכן|סוכנים|אלגוריתם|סייבר|הייטק|רובוט|OpenAI|אנטרופיק|צ'אט"),
          ("chart", r"מניות|בורסה|S&P|נאסד|שוק ההון|השקעות|מסחר|וול סטריט|כלכל|ריבית|אינפלציה|מטבע|קריפטו|דולר"),
          ("ball", r"כדורגל|ליגה|שחקן|קבוצ|מונדיאל|יורו|מאמן|כדורסל|ספורט|משחק"),
          ("columns", r"בחירות|ממשלה|כנסת|נתניהו|פוליטי|קואליציה|ראש הממשלה|שר |סקר|מפלגה"),
          ("heart", r"בריאות|רפוא|מחל|סוכר|תזונה|מוח|דיאטה|שינה|רופא|טיפול"),
-         ("mic", r"פודקאסט|ראיון|תרבות|מוזיק|סרט|טלוויזיה|סלבס|רכילות|אופנה|קומדי|סאטיר")]
+         ("mic", r"פודקאסט|ראיון|תרבות|מוזיק|סרט|טלוויזיה|סלבס|לייפסטייל|אופנה|קומדי|סאטיר")]
 _TOPIC_MOTIF = {"טכנולוגיה": "chip", "כלכלה": "chart", "ספורט": "ball", "פוליטיקה": "columns", "בריאות": "heart",
-                "תרבות": "mic", "רכילות": "mic"}
+                "תרבות": "mic", "לייפסטייל": "mic"}
 
 
 def _motif_name(a):
@@ -1624,6 +1625,41 @@ def add_source(req, user=None):
         _save_ch(d)
     return cid
 
+
+# ------------------------------------------------- Live Shows (upcoming Israeli events from Supercaly) ---
+LIVE_URL = "https://superca.ly/api/events?country=Israel&categories=Music,Comedy,Dance,Festival&limit=500&start_date=%s"
+_LIVE = {"t": 0.0, "items": []}
+
+
+def live_events():
+    """Upcoming Israeli shows from the Supercaly API, cached 30 min; the stale copy is served if Supercaly is down."""
+    if _LIVE["items"] and time.time() - _LIVE["t"] < 1800:
+        return _LIVE["items"]
+    try:
+        raw = json.loads(_http(LIVE_URL % time.strftime("%Y-%m-%d"), timeout=40))
+        if not isinstance(raw, list):
+            raise ValueError("unexpected reply")
+    except Exception as e:
+        log(f"vidsum live fetch failed: {str(e)[:120]}")
+        return _LIVE["items"]
+    seen, out = set(), []
+    for e in raw:
+        if not isinstance(e, dict) or not e.get("name") or not e.get("start_date"):
+            continue
+        key = (_html.unescape(e["name"]).strip().lower(), e["start_date"], (e.get("venue_name") or "").lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        img = e.get("image_url") or ""
+        cats = e.get("categories") or []
+        out.append({"id": e.get("id"), "name": _html.unescape(e["name"]).strip(), "date": e["start_date"], "time": (e.get("start_time") or "")[:5],
+                    "venue": _html.unescape(e.get("venue_name") or ""), "city": e.get("venue_city") or "", "image": img if img.startswith("https://") else "",
+                    "link": e.get("purchase_link") or "", "price": e.get("price"), "currency": e.get("price_currency") or "",
+                    "cat": cats[0] if cats else "Music", "cats": cats[:3]})
+    out.sort(key=lambda x: (x["date"], x["time"] or "99", x["name"]))
+    _LIVE["t"], _LIVE["items"] = time.time(), out
+    return out
+
 # ---------------------------------------------------------------- routing ---
 ART_PREFIX = "/vidsum/article/"
 
@@ -1720,6 +1756,9 @@ def handle_get(handler, path, qs):
                                         if c.get("owner_id") is None and c["id"] in get_vprefs(user["id"])["hiddenBase"]]
                                        if signed else []),
                        "limit": MAX_USER_SOURCES, "verticals": TOPICS, "languages": LANGS, "sources": sources_view(user)})
+        return True
+    if path == "/api/vidsum/live":
+        handler._json({"ok": True, "items": live_events(), "source": "https://superca.ly"})
         return True
     if path == "/api/vidsum/me":
         user = current_user(handler)

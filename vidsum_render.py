@@ -15,13 +15,13 @@ THEMES = {  # very mild page tint per portal category: bg, hairline, quote box, 
     "טכנולוגיה": ("#fdf1ef", "#f1cfca", "#f8dad6", "#a3231a"),  # red
     "ספורט": ("#fff4e9", "#f2d9bd", "#fde2c8", "#9a4a08"),      # orange
     "תרבות": ("#f7f1fb", "#e0d2ee", "#e8dbf4", "#5d2f87"),      # purple
-    "רכילות": ("#fdf0f6", "#f1cfdf", "#f9d9e7", "#9b2a5c"),     # pink
+    "לייפסטייל": ("#fdf0f6", "#f1cfdf", "#f9d9e7", "#9b2a5c"),     # pink
     "בריאות": ("#edf8f6", "#c9e6e0", "#d3efe9", "#17665a"),     # teal
 }
 
 SITE = os.environ.get("PAWED_SITE", "https://pawed.io")      # public address (share links, canonical, og:url)
 
-TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "רכילות", "בריאות"]
+TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות"]
 HE_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"]
 
 CSS = """
