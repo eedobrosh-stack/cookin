@@ -1,5 +1,7 @@
 // Builds assets/pawed_dishes.json (the Pawed "מבשלים" section reads it): every cookin dish with the fields the cards need.
 // Re-run after cookin syncs new dishes:  node gen_pawed_dishes.js
+// Automated: .git/hooks/pre-commit runs it (and `git add`s the JSON) whenever site/data*.js or site/dishlinks.js is staged.
+// Hook body: if staged files match ^site/(data[0-9]*\.js|dishlinks\.js)$ then `node gen_pawed_dishes.js && git add assets/pawed_dishes.json`.
 const fs = require("fs"), vm = require("vm");
 const ctx = { console, window: {} }; vm.createContext(ctx);
 const files = ["data.js", ...Array.from({ length: 10 }, (_, i) => "data" + (i + 2) + ".js")];
