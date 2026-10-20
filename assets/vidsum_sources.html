@@ -219,7 +219,7 @@
     .gsec h2 { margin:0 0 2px; font-size:20px; } .gsec .sub { color:#777; font-size:13px; margin:0 0 10px; }
     .gall { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:2px solid var(--line); font-weight:800; }
     .gall input, .grow input, .ghead input { width:18px; height:18px; flex:none; }
-    .ghead { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #eee; font-weight:800; cursor:default; }
+    .ghead { scroll-margin-top:8px; display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #eee; font-weight:800; cursor:default; }
     .gtog { width:26px; height:26px; border:1px solid #cfcfcf; background:#fff; border-radius:6px; font-size:17px; line-height:1; cursor:pointer; flex:none; }
     .ghead small { color:#888; font-weight:400; margin-inline-start:auto; font-size:12.5px; }
     .gbody { padding:2px 0 6px; } .gbody[hidden] { display:none; }
@@ -414,10 +414,12 @@ $('pk_go').onclick = async () => { $('pk_go').disabled=true; $('pk_res').innerHT
   $('pk_go').disabled=false; };
 function renderPick(){
   if(!PK.length){ $('pk_res').innerHTML='<p class="help">לא נמצאו ערוצים איכותיים לבחירה הזו. נסו שפה, מדינה או נושא אחרים.</p>'; return; }
-  const left=quotaLeft();
+  const left=quotaLeft(), oldList=$('pk_res').querySelector('.plist'), keepTop=oldList?oldList.scrollTop:0, keepPage=window.scrollY, focusId=document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.id:null;
   $('pk_res').innerHTML='<p class="help" style="margin-top:10px">נמצאו '+PK._total+' ערוצים איכותיים'+(PK._total>PK.length?' (מוצגים '+PK.length+' הגבוהים ביותר)':'')+'. אפשר לבחור עד '+left+'.</p><div class="plist">'+PK.map(p=>{ const dup=inTable(p.name), dis=dup||(!SELPK.has(p.id)&&SELPK.size>=left);
     return '<label class="pod'+(dis?' dis':'')+'"><input type="checkbox" data-id="'+esc(p.id)+'"'+(SELPK.has(p.id)?' checked':'')+(dis?' disabled':'')+'>'+podLine(p)+(dup?'<span class="tag">כבר ברשימה</span>':'')+'</label>'; }).join('')+'</div>'
     +'<div class="tools"><button class="go" id="pk_add"'+(SELPK.size?'':' disabled')+'>הוסף נבחרים ('+SELPK.size+')</button></div>';
+  const nl=$('pk_res').querySelector('.plist'); if(nl) nl.scrollTop=keepTop; window.scrollTo(0,keepPage);
+  if(focusId){ const f=[...$('pk_res').querySelectorAll('input[data-id]')].find(x=>x.dataset.id===focusId); if(f&&!f.disabled) f.focus({preventScroll:true}); }
   $('pk_res').querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{ c.checked?SELPK.add(c.dataset.id):SELPK.delete(c.dataset.id); renderPick(); });
   $('pk_add').onclick=()=>{ const ids=[...SELPK]; $('pk_add').disabled=true; $('pk_add').textContent='מוסיף…'; addCatalog(ids,()=>{ SELPK=new Set(); renderPick(); }); };
 }
@@ -442,7 +444,8 @@ function renderGroups(el, list, o){
     : '<p class="sub">'+(o.empty||'אין מקורות.')+'</p>');
   el.querySelectorAll('input[data-grp]').forEach(c=>{ const cat=c.dataset.grp.split('|')[1], it=list.filter(s=>(s.vertical||'אחר')===cat), on=it.filter(s=>SEL.has(s.id)).length; c.indeterminate = on>0 && on<it.length; });
   el.querySelectorAll('input[data-all]').forEach(c=>{ const on=list.filter(s=>SEL.has(s.id)).length; c.indeterminate = on>0 && on<list.length; });
-  el.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>{ const k=b.dataset.tog; OPEN.has(k)?OPEN.delete(k):OPEN.add(k); renderLists(); });
+  el.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>{ const k=b.dataset.tog, opening=!OPEN.has(k); opening?OPEN.add(k):OPEN.delete(k); renderLists();
+    if(opening && window.innerWidth<=640){ const nb=[...document.querySelectorAll('[data-tog]')].find(x=>x.dataset.tog===k); if(nb) nb.closest('.ghead').scrollIntoView({behavior:'smooth',block:'start'}); } });
   el.querySelectorAll('input[data-id]').forEach(c=>c.onchange=()=>{ c.checked?SEL.add(c.dataset.id):SEL.delete(c.dataset.id); DIRTY=true; renderLists(); });
   el.querySelectorAll('input[data-grp]').forEach(c=>c.onchange=()=>{ const cat=c.dataset.grp.split('|')[1]; list.filter(s=>(s.vertical||'אחר')===cat).forEach(s=>c.checked?SEL.add(s.id):SEL.delete(s.id)); DIRTY=true; renderLists(); });
   el.querySelectorAll('input[data-all]').forEach(c=>c.onchange=()=>{ list.forEach(s=>c.checked?SEL.add(s.id):SEL.delete(s.id)); DIRTY=true; renderLists(); });

@@ -622,7 +622,7 @@ function nav(){
   const live=DATA.topics.filter(t=>DATA.items.some(a=>(a.topics||[a.topic]).includes(t)));   // a section with nothing in it (e.g. all its sources switched off) disappears
   if(FILTER!=='all' && FILTER!==LIVE && FILTER!==COOK && !live.includes(FILTER)) FILTER='all';
   n.innerHTML=['all',...live,LIVE,COOK].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?'ראשי':esc(t))+'</button>').join('');
-  n.querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f; nav(); render(); history.replaceState(null,'', FILTER==='all'?location.pathname:'#'+encodeURIComponent(FILTER));});
+  n.querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f; nav(); render(); if(innerWidth<=640){ const w=document.querySelector('.nav-wrap'); if(w) w.scrollIntoView({behavior:'smooth',block:'start'}); } history.replaceState(null,'', FILTER==='all'?location.pathname:'#'+encodeURIComponent(FILTER));});
 }
 document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
