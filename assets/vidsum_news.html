@@ -319,6 +319,12 @@
     .ck-b small { color:#777; font-size:13px; } .ck-b .ck-go { margin-top:auto; color:#2f7d32; font-weight:700; font-size:14px; }
     @media (max-width:820px) { .ck-row { grid-template-columns:1fr; } }
     @media (max-width:520px) { .ck-c { grid-template-columns:1fr; } .ck-i { min-height:0; aspect-ratio:16/9; } .ck-ban h2 { font-size:22px; } }
+
+    /* images come in every shape (square podcast art, 16:9 thumbnails, posters): show the WHOLE image (contain) over a blurred copy of itself */
+    .fit { position:relative; overflow:hidden; }
+    .fit::before { content:""; position:absolute; inset:-34px; background:var(--img) center/cover no-repeat; filter:blur(26px) brightness(.82) saturate(1.1); }
+    .fit::after { content:""; position:absolute; inset:0; background:var(--img) center/contain no-repeat; }
+    .fit > * { z-index:2; }
   </style>
 </head>
 <body>
@@ -353,7 +359,7 @@ function hydrateThumbs(){
   document.querySelectorAll('[data-vid]').forEach(async el=>{
     if(el.dataset.done) return; el.dataset.done='1';
     const u = await bestThumb(el.dataset.vid, el.dataset.img);
-    el.style.backgroundImage = 'url('+u+'),'+(el.style.backgroundImage||'none');
+    el.style.setProperty('--img','url("'+u+'")'); el.classList.add('fit');
   });
 }
 const href = a => '/vidsum/article/' + encodeURIComponent(a.slug);
@@ -555,7 +561,7 @@ const lvDate = d => new Date(d+'T12:00:00');
 function lvCard(e){
   const dt = lvDate(e.date), day = dt.toLocaleDateString('he-IL',{day:'numeric'}), mon = dt.toLocaleDateString('he-IL',{month:'short'}), wd = dt.toLocaleDateString('he-IL',{weekday:'long'});
   const price = e.price ? ' · מ-'+Math.round(e.price)+(e.currency==='ILS'||!e.currency?' ₪':' '+esc(e.currency)) : '';
-  return '<a class="lv-c" target="_blank" rel="noopener" href="'+esc(e.link||'https://superca.ly')+'"><div class="lv-i"'+(e.image?' style="background-image:url(\''+esc(e.image)+'\')"':'')+'><div class="lv-d"><b>'+day+'</b>'+esc(mon)+'</div></div>'
+  return '<a class="lv-c" target="_blank" rel="noopener" href="'+esc(e.link||'https://superca.ly')+'"><div class="lv-i'+(e.image?' fit':'')+'"'+(e.image?' style="--img:url(\''+esc(e.image)+'\')"':'')+'><div class="lv-d"><b>'+day+'</b>'+esc(mon)+'</div></div>'
     +'<div class="lv-b"><h3>'+esc(e.name)+'</h3><small>'+esc(wd)+(e.time?' · '+esc(e.time):'')+'</small><small>'+esc(e.venue)+(e.venue&&e.city?' · ':'')+esc(e.city)+esc(price)+'</small><span class="lv-go">לכרטיסים ›</span></div></a>';
 }
 function lvRender(){
@@ -596,7 +602,7 @@ function ckRender(){
     +'<a class="go" target="_blank" rel="noopener" href="'+esc(CK.site)+'">לכל המתכונים ב-cookin ›</a></div>';
   main.innerHTML = '<div class="sec-h" style="--c:'+col(COOK)+'"><b>מבשלים</b><span style="color:rgba(255,255,255,.9);font-size:13px">מנות היום</span></div>'+ban(false)
     + CK.groups.map(g=>'<section class="ck-g"><h3>'+esc(g.label)+' <small>'+g.count+' מתכונים ב-cookin</small></h3><div class="ck-row">'+g.dishes.map(d=>
-      '<a class="ck-c" target="_blank" rel="noopener" href="'+esc(d.url)+'"><div class="ck-i" style="background-image:url(\''+esc(d.image)+'\')"></div><div class="ck-b"><h4>'+esc(d.name)+'</h4><small>'+esc(d.time)+(d.time&&d.serves?' · ':'')+esc(d.serves)+'</small><p>'+esc(d.intro)+'</p><span class="ck-go">למתכון המלא ב-cookin ›</span></div></a>').join('')+'</div></section>').join('')
+      '<a class="ck-c" target="_blank" rel="noopener" href="'+esc(d.url)+'"><div class="ck-i fit" style="--img:url(\''+esc(d.image)+'\')"></div><div class="ck-b"><h4>'+esc(d.name)+'</h4><small>'+esc(d.time)+(d.time&&d.serves?' · ':'')+esc(d.serves)+'</small><p>'+esc(d.intro)+'</p><span class="ck-go">למתכון המלא ב-cookin ›</span></div></a>').join('')+'</div></section>').join('')
     + ban(true);
 }
 function ckShow(){

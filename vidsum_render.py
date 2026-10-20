@@ -55,6 +55,7 @@ h1{font-size:40px;line-height:1.12;margin:0 0 14px;letter-spacing:-1px;font-weig
 .share a:hover{border-color:var(--red);color:var(--red)}
 figure{margin:0 0 24px}
 figure img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover;background:#222}
+.imgw{position:relative;overflow:hidden;aspect-ratio:16/9;background:#222}.imgw::before{content:"";position:absolute;inset:-34px;background:var(--img) center/cover no-repeat;filter:blur(26px) brightness(.82) saturate(1.1)}.imgw img{position:relative;display:block;width:100%!important;height:100%!important;aspect-ratio:auto!important;object-fit:contain!important;background:none!important}
 figcaption{font-size:12px;color:#888;padding-top:8px;font-style:italic}
 .keybox{background:rgba(255,255,255,.6);border-right:4px solid var(--red);padding:16px 20px;margin:0 0 26px}
 .keybox h4{margin:0 0 8px;font-size:14px;color:var(--red)}
@@ -130,11 +131,11 @@ CSS += ".brand-txt{display:flex;flex-direction:column;align-items:flex-start;lin
 CSS += ".auth-only,.admin-only{display:none}body.authed .auth-only,body.admin .admin-only{display:inline}.listen{display:flex;align-items:center;gap:10px;margin:-6px 0 20px;font-size:13px;color:var(--muted)}.listen-ic{display:inline-flex;transition:transform .12s}.listen-ic:hover{transform:scale(1.12)}"
 
 PAW_JS = """<script>(function(){var seq=['maxresdefault','hq720','mqdefault'];
-function fix(img){var v=img.dataset.vid,i=0,own=img.dataset.img;
+function fix(img){var v=img.dataset.vid,i=0,own=img.dataset.img;var p=img.parentNode;if(!p.classList||!p.classList.contains('imgw')){var w=document.createElement('div');w.className='imgw';p.insertBefore(w,img);w.appendChild(img);}
 function next(){if(own){var o=own;own=null;img.src=o;return;}if(i<seq.length){img.src='https://i.ytimg.com/vi/'+v+'/'+seq[i++]+'.jpg';}
 else{img.onload=img.onerror=null;img.src='/vidsum/cover/'+v+'.svg';}}
 img.onerror=next;
-img.onload=function(){if(img.naturalWidth<300&&img.src.indexOf('/vidsum/cover/')<0)next();};
+img.onload=function(){if(img.naturalWidth<300&&img.src.indexOf('/vidsum/cover/')<0){next();return;}img.parentNode.style.setProperty('--img','url("'+img.src+'")');};
 next();}
 document.querySelectorAll('img[data-vid]').forEach(fix);})();</script>"""
 PAW_JS += "<script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>"
