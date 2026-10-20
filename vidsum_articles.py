@@ -1170,10 +1170,12 @@ def _length_min(a):
 
 def news_items():
     nd = vidsum_render.nodash
-    daily_ids = {c["id"] for c in _load_ch()["channels"] if c.get("cadence") == "daily"}     # daily pods own the morning slots
+    chs = _load_ch()["channels"]
+    daily_ids = {c["id"] for c in chs if c.get("cadence") == "daily"}     # daily pods own the morning slots
+    nohead_ids = {c["id"] for c in chs if c.get("no_headline")}           # good but spammy sources: never a headline
     return [{"slug": a["slug"], "title": nd(a["title"]), "lead": nd(a.get("lead") or a.get("standfirst") or a.get("subtitle", "")),
              "topic": a.get("topic") or "תרבות", "topics": article_topics(a), "channel": a.get("channel", ""), "vid": a.get("vid"),
-             "source_id": a.get("source_id"), "image": a.get("image") or "", "kind": a.get("kind") or "yt", "daily": a.get("source_id") in daily_ids, "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
+             "source_id": a.get("source_id"), "image": a.get("image") or "", "kind": a.get("kind") or "yt", "daily": a.get("source_id") in daily_ids, "nohead": a.get("source_id") in nohead_ids, "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
              "released_time": len((a.get("published_at") or "")) >= 19, "minutes": _length_min(a)} for a in _articles()]
 
 
@@ -1556,7 +1558,7 @@ def sources_view(viewer=None):
         out.append({"id": c["id"], "name": c["name"], "language": c["language"], "url": c["url"],
                     "vertical": c["vertical"], "added": c.get("added", ""), "pending": c["id"].startswith("pending-"),
                     "daily": c.get("cadence") == "daily", "pub_days": c.get("pub_days") or [], "owner_id": owner, "owner_label": label, "mine": bool(viewer and owner and owner == viewer.get("id")),
-                    "base": owner is None, "kind": c.get("kind") or "yt", "can_edit": _can_edit_source(c, viewer)})
+                    "base": owner is None, "kind": c.get("kind") or "yt", "no_headline": bool(c.get("no_headline")), "can_edit": _can_edit_source(c, viewer)})
     return out
 
 
@@ -2023,6 +2025,8 @@ def handle_post(handler, path, req):
                             c["vertical"] = req["vertical"]
                         if (req.get("name") or "").strip():
                             c["name"] = req["name"].strip()[:120]
+                        if "no_headline" in req and user.get("admin"):
+                            c["no_headline"] = bool(req["no_headline"])
                     _save_ch(d)
             else:
                 return False

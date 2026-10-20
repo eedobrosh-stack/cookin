@@ -377,7 +377,7 @@ function morningPick(items){
   const h = ilHour(); if(h<7 || h>=11) return -1;
   const seen = new Set(), daily = [];
   for(const a of items){                                   // items are newest first: the first hit per pod is its latest episode
-    if(!a.daily) continue;
+    if(!a.daily || a.nohead) continue;
     const t = new Date((a.released||a.created).replace(' ','T')+'Z').getTime();
     if(Date.now()-t > 30*3600*1000) continue;
     const pod = podOf(a); if(seen.has(pod)) continue; seen.add(pod); daily.push(a);
@@ -387,11 +387,13 @@ function morningPick(items){
 function heroIndex(items){
   if(FILTER!=='all') return 0;
   const m = morningPick(items); if(m>=0) return m;
-  const n = Math.min(HERO_POOL, items.length); if(n < 2) return 0;
+  const n = Math.min(HERO_POOL, items.length); if(n < 2) return okHero(items, 0);
   const t0 = new Date((items[0].released||items[0].created).replace(' ','T')+'Z').getTime();
   const age = Date.now() - t0;
-  return age < HERO_SLOT_MS ? 0 : Math.floor(age/HERO_SLOT_MS) % n;
+  return okHero(items, age < HERO_SLOT_MS ? 0 : Math.floor(age/HERO_SLOT_MS) % n);
 }
+// sources flagged no_headline (good but spammy) never take the top story: move on to the next story in line
+function okHero(items, k){ for(let i=0;i<items.length;i++){ const j=(k+i)%items.length; if(!items[j].nohead) return j; } return k; }
 // One pod (the show / channel an episode comes from) appears at most once per block: the top block, each topic section,
 // each feed batch. Across the page it also prefers pods not shown yet, and only repeats one when nothing else is left.
 const byNewest = (x,y) => (y.released||'').localeCompare(x.released||'');
@@ -475,7 +477,8 @@ function render(){
   // article is never the head of two categories. Secondary-category articles follow below, newest first.
   const prim = FILTER==='all' ? [] : items.filter(a=>a.topic===FILTER), headList = FILTER==='all' ? items : prim;      // a short list just means a shorter head: never fill it with another category's article
   const used = new Set(); let h=''; const pagePods = new Set(), topPods = new Set();
-  const top = takeD(headList,1,used,topPods,pagePods)[0], subs = takeD(headList,3,used,topPods,pagePods);
+  const headOK = headList.filter(a=>!a.nohead);            // no_headline sources stay out of the top story and its three bullet links
+  const top = takeD(headOK.length?headOK:headList,1,used,topPods,pagePods)[0], subs = takeD(headOK,3,used,topPods,pagePods);
   if(top) h += hero(top, subs);
   const tiles = takeD(headList,4,used,topPods,pagePods), meds = takeD(headList,2,used,topPods,pagePods);
   if(tiles.length||meds.length) h += '<section class="mix'+((!tiles.length||!meds.length)?' solo':'')+'"><div class="mix-b">'+tiles.map(bt).join('')+'</div><div class="mix-m">'+meds.map(a=>cd(a)).join('')+'</div></section>';
