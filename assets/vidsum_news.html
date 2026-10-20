@@ -592,7 +592,7 @@ function ckRender(){
   const main = document.getElementById('main'); if(!CK){ main.innerHTML='<p class="empty">טוען מנות…</p>'; return; }
   if(!CK.ok){ main.innerHTML='<p class="empty">המנות לא זמינות כרגע.</p>'; return; }
   const day = new Date(CK.day+'T12:00:00').toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'});
-  const ban = (extra) => '<div class="ck-ban"><div><h2>'+(extra?'עוד '+CK.total+' מתכונים מחכים לכם':'מנות היום מהמטבח של המשפחה')+'</h2><p>'+(extra?'כל המתכונים, החיפוש לפי מצרכים, ההחלפות וסרטוני ההכנה':esc(day)+' · 2 מנות מכל סוג, אחרות בכל יום')+' ב-cookin.jarcud.com</p></div>'
+  const ban = (extra) => '<div class="ck-ban"><div><h2>'+(extra?'עוד '+CK.total+' מתכונים מחכים לכם':'מנות היום מהמטבח של המשפחה')+'</h2><p>'+(extra?'כל המתכונים, חיפוש לפי מה שיש לכם במקרר, תחליפים למצרכים שחסרים וסרטוני הכנה':esc(day)+' · 2 מנות מכל סוג, אחרות בכל יום')+' ב-cookin.jarcud.com</p></div>'
     +'<a class="go" target="_blank" rel="noopener" href="'+esc(CK.site)+'">לכל המתכונים ב-cookin ›</a></div>';
   main.innerHTML = '<div class="sec-h" style="--c:'+col(COOK)+'"><b>מבשלים</b><span style="color:rgba(255,255,255,.9);font-size:13px">מנות היום</span></div>'+ban(false)
     + CK.groups.map(g=>'<section class="ck-g"><h3>'+esc(g.label)+' <small>'+g.count+' מתכונים ב-cookin</small></h3><div class="ck-row">'+g.dishes.map(d=>
