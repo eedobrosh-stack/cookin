@@ -2126,6 +2126,18 @@ def handle_post(handler, path, req):
             _write_article(a)
             handler._json({"ok": True, "links": lk})
         return True
+    if path == "/api/vidsum/admin/users/reset-own":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "not found"}, 404)
+            return True
+        uid = str(req.get("user_id") or "")
+        own = {c["id"] for c in _load_ch()["channels"] if c.get("owner_id") == uid}
+        p = get_vprefs(uid)
+        fixed = [i for i in p["hiddenBase"] if i in own]
+        set_vprefs(uid, {"hiddenBase": [i for i in p["hiddenBase"] if i not in own]})
+        handler._json({"ok": True, "switched_on": len(fixed)})
+        return True
     if path == "/api/vidsum/article/topic":
         user = current_user(handler)
         if not (user and user.get("admin")):
