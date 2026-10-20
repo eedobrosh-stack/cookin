@@ -213,38 +213,48 @@
     .plist { border:1px solid var(--line); border-radius:8px; margin-top:12px; max-height:520px; overflow:auto; }
     .plist .pod { cursor:default; } .plist .pod input { width:18px; height:18px; flex:none; } .plist .pod.dis { opacity:.5; }
     .tools { display:flex; align-items:center; gap:12px; margin-top:10px; flex-wrap:wrap; }
+
+    /* grouped source lists */
+    .gsec { background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px 18px 16px; margin:0 0 20px; }
+    .gsec h2 { margin:0 0 2px; font-size:20px; } .gsec .sub { color:#777; font-size:13px; margin:0 0 10px; }
+    .gall { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:2px solid var(--line); font-weight:800; }
+    .gall input, .grow input, .ghead input { width:18px; height:18px; flex:none; }
+    .ghead { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #eee; font-weight:800; cursor:default; }
+    .gtog { width:26px; height:26px; border:1px solid #cfcfcf; background:#fff; border-radius:6px; font-size:17px; line-height:1; cursor:pointer; flex:none; }
+    .ghead small { color:#888; font-weight:400; margin-inline-start:auto; font-size:12.5px; }
+    .gbody { padding:2px 0 6px; } .gbody[hidden] { display:none; }
+    .grow { display:flex; align-items:center; gap:10px; padding:6px 36px 6px 0; font-size:15px; }
+    .grow .l { margin-inline-start:auto; color:#777; font-size:12.5px; white-space:nowrap; } .grow .x { border:0; background:none; color:#b9141c; cursor:pointer; font-size:16px; }
+    .gsave { display:flex; align-items:center; gap:12px; margin-top:12px; } .gsave .go { background:var(--red); color:#fff; border:0; border-radius:999px; padding:10px 26px; font-weight:800; font-size:15px; cursor:pointer; } .gsave .go:disabled { opacity:.45; cursor:default; }
+    .gsave .st { font-size:13px; color:#18723a; }
+    .ucard { border-top:1px solid #eee; padding:10px 0; } .ucard:first-of-type { border-top:0; } .ucard b { font-size:15.5px; } .ucard small { color:#777; }
+    .ucard .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; } .ucard .chip { background:#f2f2f2; border-radius:999px; padding:3px 11px; font-size:13px; } .ucard .chip.off { opacity:.5; text-decoration:line-through; }
+    details#adv { margin:22px 0; } details#adv summary { cursor:pointer; font-weight:700; padding:8px 0; color:#555; }
   </style>
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a><a class="auth-only" href="#" id="addep">הוספת פרק</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a></div></div></div>
   <header class="masthead">
     <a class="brand" href="/vidsum"><img class="brand-logo" src="/vidsum/pawed-logo.png" alt=""><span class="brand-txt"><span class="brand-mark">Pawed</span><span class="brand-note">Respect Your Pods</span></span></a>
     <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
   </header>
   <main>
     <h1 class="page">מקורות</h1>
-    <p class="lead-in">פודקאסטים וערוצי יוטיוב ש-Pawed עוקב אחריהם. אפשר להוסיף גם עמוד של פודקאסט באתר חיצוני (למשל mako) או כתובת RSS. פרק חדש בכל אחד מהם מסוכם אוטומטית ומופיע בעמוד הראשי. אפשר להתחבר עם Google, להוסיף מקורות משלכם ולהתאים את מה שמוצג לכם.</p>
+    <p class="lead-in">פודקאסטים וערוצי יוטיוב ש-Pawed מסכם. הוסיפו מקורות משלכם (הם נראים רק לכם) ובחרו אילו מהמקורות של Pawed יופיעו אצלכם.</p>
 
     <div class="acct" id="acct"></div>
-    <div class="settings" id="settings" hidden>
-      <h3>ההגדרות שלי</h3>
-      <label class="chk"><input type="checkbox" id="p_base"> הצג את רשימת המקורות של Pawed</label>
-      <label class="chk"><input type="checkbox" id="p_name"> הצג את שמי ליד המקורות שהוספתי</label>
-      <div id="p_muted" class="mutedline" hidden></div>
-      <div id="p_hbase" class="mutedline" hidden></div>
-    </div>
 
 
     <section class="addp" id="addp" hidden>
       <h2>הוספת מקור</h2>
       <div class="quota" id="quota"></div>
-      <div class="tabs" id="tabs"><button data-t="ep" class="on">פרק בודד</button><button data-t="ch">ערוץ לפי שם</button><button data-t="pick">בחירה לפי העדפה</button></div>
-      <div class="pane on" id="pane-ep">
+      <div class="tabs" id="tabs"><button data-t="ch" class="on">ערוץ לפי שם</button><button data-t="pick">בחירה לפי העדפה</button><button data-t="ep">פרק בודד</button></div>
+      <div class="pane" id="pane-ep">
         <p class="help">הדביקו קישור YouTube לפרק אחד והוא יסוכם ויופיע רק אצלכם.</p>
         <div class="row"><input type="text" id="ep_url" dir="ltr" placeholder="https://www.youtube.com/watch?v=..." style="flex:1;min-width:240px"><button class="go" id="ep_go">הוספת פרק</button></div>
       </div>
-      <div class="pane" id="pane-ch">
+      <div class="pane on" id="pane-ch">
         <p class="help">הקלידו את שם הפודקאסט ובחרו מהרשימה. הכתובת, השפה והתחום ימולאו אוטומטית מהסריקה העולמית של Pawed.</p>
         <div class="row"><div class="ac"><input type="text" id="ch_q" placeholder="שם פודקאסט…" autocomplete="off"><div class="ac-list" id="ch_list" hidden></div></div></div>
         <div id="ch_picked"></div>
@@ -256,6 +266,10 @@
       </div>
       <div id="addmsg" class="help" style="margin-top:10px"></div>
     </section>
+    <section class="gsec" id="sec-base"></section>
+    <section class="gsec" id="sec-mine" hidden></section>
+    <section class="gsec" id="sec-users" hidden></section>
+    <details id="adv" hidden><summary>עריכה מתקדמת (מנהל): טבלת כל המקורות</summary>
     <div class="scroll"><table>
       <thead><tr><th>שם הפודקאסט</th><th>שפה</th><th>כתובת</th><th>תחום</th><th>נוסף על ידי</th><th></th></tr></thead>
       <tbody id="rows"><tr><td colspan="6">טוען…</td></tr></tbody>
@@ -268,6 +282,7 @@
         <td><button class="add-btn" id="n_add">הוספה</button></td>
       </tr></tfoot>
     </table></div>
+    </details>
     <div id="msg"></div>
   </main>
   <footer><div class="footer-inner"><span>Pawed · פורטל חדשות המבוסס על סיכומי וידאו</span><span>Summarized by Pawed (by Mr. Brosh)</span></div></footer>
@@ -303,26 +318,11 @@ function renderAcct(){
     $('acct').innerHTML = '<a class="gbtn" href="/auth/login?next='+encodeURIComponent('/vidsum/sources')+'"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 010-9.4l-7.9-6.1a24 24 0 000 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.5-4.9 2.4-8.2 2.4-6.3 0-11.6-4-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg> התחברו והוסיפו את הפודקאסטים שלכם</a><span class="hint"><b>התחברו ל-Pawed והתאימו את הפודים שלכם:</b> הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</span>';
   }
 }
-function renderSettings(){
-  const signed = !!D.me;
-  $('settings').hidden = !signed;
-  if(!signed) return;
-  $('p_base').checked = !D.prefs.hideBase;
-  $('p_name').checked = !D.prefs.hideName;
-  const m = D.prefs.muted.length;
-  $('p_muted').hidden = !m;
-  $('p_muted').innerHTML = m ? 'הסתרתם מקורות של '+m+' משתמשים · <a href="#" id="unmute">הצגה מחדש</a>' : '';
-  if(m) $('unmute').onclick = async e=>{ e.preventDefault(); await savePrefs({muted:[]}); };
-  const hb = (D.hidden_base||[]).length;
-  $('p_hbase').hidden = !hb;
-  $('p_hbase').innerHTML = hb ? 'הסרתם '+hb+' ערוצים של Pawed ('+D.hidden_base.map(x=>esc(x.name)).join(', ')+') · <a href="#" id="unhb">הצגה מחדש</a>' : '';
-  if(hb) $('unhb').onclick = async e=>{ e.preventDefault(); await savePrefs({hiddenBase:[]}); };
-}
 async function savePrefs(p){
   try{ const j = await api('/api/vidsum/prefs',p); D.prefs = j.prefs; await load(); msg('נשמר','ok'); }catch(e){ msg('❌ '+e.message,'err'); }
 }
 function render(){
-  renderAcct(); renderSettings();
+  renderAcct(); $('adv').hidden = !D.admin; renderLists();
   const signed = !!D.me, canAdd = signed || D.admin;
   const rows = D.sources.map(s => '<tr><td class="name" data-l="שם">'+esc(s.name)+(s.kind==='rss'?' <span class="daily" style="background:#e6edfb;color:#1d3f9a">פודקאסט RSS</span>':'')+'</td>'
     +'<td data-l="שפה">'+(s.can_edit?'<select data-id="'+esc(s.id)+'" data-f="language">'+opts(D.languages,s.language)+'</select>':esc(D.languages[s.language]||s.language))+'</td>'
@@ -345,8 +345,6 @@ function render(){
   renderAddPanel();
   $('n_owner').textContent = signed ? (D.prefs.hideName?'אנונימי':D.me.name) : 'Pawed';
 }
-$('p_base').onchange = e=>savePrefs({hideBase:!e.target.checked});
-$('p_name').onchange = e=>savePrefs({hideName:!e.target.checked});
 $('n_add').onclick = async () => {
   const url = $('n_url').value.trim(); if(!url && !$('n_name').value.trim()){ msg('יש להזין שם פודקאסט או כתובת YouTube','err'); return; }
   $('n_add').disabled = true;
@@ -414,15 +412,61 @@ function renderPick(){
   $('pk_res').querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{ c.checked?SELPK.add(c.dataset.id):SELPK.delete(c.dataset.id); renderPick(); });
   $('pk_add').onclick=()=>{ const ids=[...SELPK]; $('pk_add').disabled=true; $('pk_add').textContent='מוסיף…'; addCatalog(ids,()=>{ SELPK=new Set(); renderPick(); }); };
 }
+
+// ---------- grouped lists: Pawed selection / my sources / (admin) external users ----------
+const OPEN = new Set(); let SEL = null, DIRTY = false;
+const HID_KEY = s => s.id;
+function initSel(){
+  const p = D.prefs || {hideBase:false, hiddenBase:[]}, hid = new Set(p.hiddenBase||[]);
+  SEL = new Set(D.sources.filter(s => s.base ? (!p.hideBase && !hid.has(s.id)) : (s.mine && !hid.has(s.id))).map(s=>s.id)); DIRTY = false;
+}
+function groupBy(list){ const g = {}; list.forEach(s => (g[s.vertical||'אחר'] = g[s.vertical||'אחר'] || []).push(s)); return Object.entries(g).sort((a,b)=>b[1].length-a[1].length); }
+function renderGroups(el, list, o){
+  const checks = o.checks, allOn = list.length && list.every(s=>SEL.has(s.id)), someOn = list.some(s=>SEL.has(s.id));
+  el.innerHTML = '<h2>'+o.title+'</h2><div class="sub">'+o.sub+'</div>'
+    + (list.length ? (checks?'<label class="gall"><input type="checkbox" data-all="'+o.key+'"'+(allOn?' checked':'')+'> הכל ('+list.length+')</label>':'')
+    + groupBy(list).map(([cat,items])=>{ const k=o.key+'|'+cat, open=OPEN.has(k), on=items.filter(s=>SEL.has(s.id)).length;
+      return '<div class="grp"><div class="ghead"><button class="gtog" data-tog="'+esc(k)+'">'+(open?'−':'+')+'</button>'+(checks?'<input type="checkbox" data-grp="'+esc(k)+'"'+(on===items.length?' checked':'')+'>':'')+'<span>'+esc(cat)+'</span><small>'+(checks?on+'/':'')+items.length+'</small></div>'
+        +'<div class="gbody"'+(open?'':' hidden')+'>'+items.map(s=>'<div class="grow">'+(checks?'<input type="checkbox" data-id="'+esc(s.id)+'"'+(SEL.has(s.id)?' checked':'')+'>':'')+'<span>'+esc(s.name)+'</span><span class="l">'+esc(D.languages[s.language]||s.language)+'</span>'+(o.remove?'<button class="x" data-rm="'+esc(s.id)+'" data-name="'+esc(s.name)+'" title="מחיקה">✕</button>':'')+'</div>').join('')+'</div></div>'; }).join('')
+    + (checks?'<div class="gsave"><button class="go" data-save="'+o.key+'"'+(DIRTY?'':' disabled')+'>שמירה</button><span class="st" id="st-'+o.key+'"></span></div>':'')
+    : '<p class="sub">'+(o.empty||'אין מקורות.')+'</p>');
+  el.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>{ const k=b.dataset.tog; OPEN.has(k)?OPEN.delete(k):OPEN.add(k); renderLists(); });
+  el.querySelectorAll('input[data-id]').forEach(c=>c.onchange=()=>{ c.checked?SEL.add(c.dataset.id):SEL.delete(c.dataset.id); DIRTY=true; renderLists(); });
+  el.querySelectorAll('input[data-grp]').forEach(c=>c.onchange=()=>{ const cat=c.dataset.grp.split('|')[1]; list.filter(s=>(s.vertical||'אחר')===cat).forEach(s=>c.checked?SEL.add(s.id):SEL.delete(s.id)); DIRTY=true; renderLists(); });
+  el.querySelectorAll('input[data-all]').forEach(c=>c.onchange=()=>{ list.forEach(s=>c.checked?SEL.add(s.id):SEL.delete(s.id)); DIRTY=true; renderLists(); });
+  el.querySelectorAll('[data-save]').forEach(b=>b.onclick=saveSel);
+  el.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{ if(!confirm('למחוק את "'+b.dataset.name+'" מהמקורות שלי?')) return; try{ const j=await api('/api/vidsum/sources/remove',{id:b.dataset.rm}); D.sources=j.sources; SEL.delete(b.dataset.rm); render(); }catch(e){ msg('❌ '+e.message,'err'); } });
+}
+async function saveSel(){
+  const base = D.sources.filter(s=>s.base), mine = D.sources.filter(s=>s.mine), anyBase = base.some(s=>SEL.has(s.id));
+  const hidden = [...base.filter(s=>!SEL.has(s.id)), ...mine.filter(s=>!SEL.has(s.id))].map(s=>s.id);
+  try{ const j=await api('/api/vidsum/prefs',{hideBase:!anyBase, hiddenBase: anyBase ? hidden : mine.filter(s=>!SEL.has(s.id)).map(s=>s.id)}); D.prefs=j.prefs; DIRTY=false; renderLists();
+    ['base','mine'].forEach(k=>{ const e=$('st-'+k); if(e) e.textContent='נשמר ✓'; }); }catch(e){ msg('❌ '+e.message,'err'); }
+}
+function renderLists(){
+  const signed = !!D.me, base = D.sources.filter(s=>s.base), mine = D.sources.filter(s=>s.mine);
+  if(SEL===null) initSel();
+  renderGroups($('sec-base'), base, {key:'base', title:'הבחירה של Pawed', sub: signed&&!D.admin ? 'סמנו את הקטגוריות והערוצים שיופיעו בעמוד הראשי שלכם. "הכל" שקול ל"הצג את מקורות Pawed".' : 'המקורות ש-Pawed עוקב אחריהם.', checks: signed&&!D.admin});
+  const m=$('sec-mine'); m.hidden = !(signed&&!D.admin);
+  if(!m.hidden) renderGroups(m, mine, {key:'mine', title:'המקורות שלי', sub:'מקורות שהוספתם נראים רק לכם. סמנו מה להציג, ומחקו מה שלא צריך.', checks:true, remove:true, empty:'עוד לא הוספתם מקורות. התחילו מההוספה למעלה.'});
+}
+async function loadUsers(){
+  const s=$('sec-users'); if(!D.admin){ s.hidden=true; return; } s.hidden=false;
+  try{ const j=await (await fetch('/api/vidsum/admin/users')).json(); const L=j.users||[];
+    s.innerHTML='<h2>משתמשים חיצוניים ('+L.length+')</h2><div class="sub">מי הוסיף מקורות או שינה את בחירת Pawed שלו.</div>'+(L.length?L.map(u=>'<div class="ucard"><b>'+esc(u.name||u.email)+'</b> <small>'+esc(u.email)+(u.last_seen?' · נראה לאחרונה '+esc(u.last_seen.slice(0,10)):'')+'</small>'
+      +'<div><small>'+(u.hide_all_base?'הסתיר את כל הרשימה של Pawed':(u.hidden_base?'הסתיר '+u.hidden_base+' מתוך '+u.base_total+' ערוצי Pawed':'רואה את כל ערוצי Pawed'))+'</small></div>'
+      +'<div class="chips">'+(u.sources.length?u.sources.map(x=>'<span class="chip'+(x.off?' off':'')+'" title="'+esc(x.vertical)+'">'+esc(x.name)+' · '+esc(D.languages[x.language]||x.language)+'</span>').join(''):'<small>אין מקורות משלו</small>')+'</div></div>').join(''):'<p class="sub">עדיין אין משתמשים חיצוניים עם מקורות.</p>'); }
+  catch(e){ s.innerHTML='<p class="sub">שגיאה בטעינת המשתמשים</p>'; }
+}
 async function load(){
   D = await (await fetch('/api/vidsum/sources')).json();
   if(!$('n_lang').options.length){ $('n_lang').innerHTML = opts(D.languages,'he'); $('n_vert').innerHTML = opts(D.verticals,D.verticals[0]); }
-  render();
+  render(); loadUsers();
 }
 document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעינה</td></tr>'; });
 </script>
 <script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>
-<script src="/vidsum/addep.js"></script>
+
 </body>
 </html>

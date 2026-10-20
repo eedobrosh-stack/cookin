@@ -1256,7 +1256,8 @@ def _visible_source_ids(viewer):
     for c in _load_ch()["channels"]:
         owner = c.get("owner_id")
         if viewer and owner == viewer["id"]:
-            out.add(c["id"])
+            if c["id"] not in p["hiddenBase"]:             # a user can switch one of their own sources off without deleting it
+                out.add(c["id"])
         elif owner is None and not p["hideBase"] and c["id"] not in p["hiddenBase"]:
             out.add(c["id"])
     return out
@@ -1554,9 +1555,10 @@ def sources_view(viewer=None):
     vis = _visible_source_ids(viewer)
     out = []
     for c in _load_ch()["channels"]:
-        if vis is not None and c["id"] not in vis:
-            continue
         owner = c.get("owner_id")
+        mine_c = bool(viewer and owner and owner == viewer.get("id"))
+        if vis is not None and owner is not None and not mine_c:      # other users' sources are private; the whole Pawed roster is always listed
+            continue                                                   # (hidden ones too, so the viewer can switch them back on)
         label = "Pawed" if owner is None else ("אנונימי" if owner in hidden else (c.get("owner_name") or "משתמש"))
         out.append({"id": c["id"], "name": c["name"], "language": c["language"], "url": c["url"],
                     "vertical": c["vertical"], "added": c.get("added", ""), "pending": c["id"].startswith("pending-"),
@@ -1782,6 +1784,30 @@ def handle_get(handler, path, qs):
                                         if c.get("owner_id") is None and c["id"] in get_vprefs(user["id"])["hiddenBase"]]
                                        if signed else []),
                        "limit": MAX_USER_SOURCES, "verticals": TOPICS, "languages": LANGS, "sources": sources_view(user)})
+        return True
+    if path == "/api/vidsum/admin/users":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "not found"}, 404)
+            return True
+        chs = _load_ch()["channels"]
+        base_n = sum(1 for c in chs if c.get("owner_id") is None)
+        with multiuser.db() as c:
+            urows = {r["id"]: dict(r) for r in c.execute("SELECT id,email,name,last_seen FROM users").fetchall()}
+        with _vdb() as c:
+            prefs = {r["user_id"]: r for r in c.execute("SELECT * FROM vidsum_prefs").fetchall()}
+        out = []
+        for uid in set(urows) & ({c.get("owner_id") for c in chs if c.get("owner_id")} | set(prefs)):
+            u, p = urows[uid], get_vprefs(uid)
+            mine = [{"name": c["name"], "language": c.get("language"), "vertical": c.get("vertical"), "kind": c.get("kind") or "yt",
+                     "off": c["id"] in p["hiddenBase"], "added": c.get("added", "")} for c in chs if c.get("owner_id") == uid]
+            hid_base = [c["id"] for c in chs if c.get("owner_id") is None and c["id"] in p["hiddenBase"]]
+            if not mine and not p["hideBase"] and not hid_base:
+                continue
+            out.append({"id": uid, "name": u.get("name") or "", "email": u.get("email") or "", "last_seen": u.get("last_seen") or "",
+                        "sources": mine, "hide_all_base": p["hideBase"], "hidden_base": len(hid_base), "base_total": base_n})
+        out.sort(key=lambda x: x["last_seen"], reverse=True)
+        handler._json({"ok": True, "users": out})
         return True
     if path.startswith("/api/vidsum/catalog/"):
         user = current_user(handler)
