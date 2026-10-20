@@ -612,7 +612,9 @@ function ckShow(){
 }
 function nav(){
   const n=document.getElementById('nav');
-  n.innerHTML=['all',...DATA.topics,LIVE,COOK].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?'ראשי':esc(t))+'</button>').join('');
+  const live=DATA.topics.filter(t=>DATA.items.some(a=>(a.topics||[a.topic]).includes(t)));   // a section with nothing in it (e.g. all its sources switched off) disappears
+  if(FILTER!=='all' && FILTER!==LIVE && FILTER!==COOK && !live.includes(FILTER)) FILTER='all';
+  n.innerHTML=['all',...live,LIVE,COOK].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?'ראשי':esc(t))+'</button>').join('');
   n.querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f; nav(); render(); history.replaceState(null,'', FILTER==='all'?location.pathname:'#'+encodeURIComponent(FILTER));});
 }
 document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});

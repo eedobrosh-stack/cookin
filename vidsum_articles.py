@@ -1173,15 +1173,52 @@ def _length_min(a):
     return round(m / 60)
 
 
+def _norm_key(s):
+    return re.sub(r"[^\w]", "", s or "").lower()
+
+
+def _source_resolver(chs):
+    """article -> source id for articles written before source tracking: (1) the channel's seen-video list, (2) channel name or
+    @handle equal to / contained in the article's channel name."""
+    vid_src, names = {}, []
+    for c in chs:
+        for x in (c.get("seen") or []):
+            vid_src.setdefault(str(x), c["id"])
+        keys = {_norm_key(c.get("name"))}
+        m = re.search(r"youtube\.com/@([^/?#]+)", c.get("url") or "")
+        if m:
+            keys.add(_norm_key(m.group(1)))
+        names.append((c["id"], [k for k in keys if len(k) >= 3]))
+
+    def resolve(a):
+        if a.get("source_id"):
+            return a["source_id"]
+        if a.get("vid") and str(a["vid"]) in vid_src:
+            return vid_src[str(a["vid"])]
+        ch = _norm_key(a.get("channel"))
+        if len(ch) >= 3:
+            for cid, keys in names:
+                if any(k == ch or k in ch or ch in k for k in keys):
+                    return cid
+        return None
+    return resolve
+
+
 def news_items():
     nd = vidsum_render.nodash
     chs = _load_ch()["channels"]
     daily_ids = {c["id"] for c in chs if c.get("cadence") == "daily"}     # daily pods own the morning slots
     nohead_ids = {c["id"] for c in chs if c.get("no_headline")}           # good but spammy sources: never a headline
-    return [{"slug": a["slug"], "title": nd(a["title"]), "lead": nd(a.get("lead") or a.get("standfirst") or a.get("subtitle", "")),
-             "topic": a.get("topic") or "תרבות", "topics": article_topics(a), "channel": a.get("channel", ""), "vid": a.get("vid"),
-             "source_id": a.get("source_id"), "image": a.get("image") or "", "kind": a.get("kind") or "yt", "daily": a.get("source_id") in daily_ids, "nohead": a.get("source_id") in nohead_ids, "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
-             "released_time": len((a.get("published_at") or "")) >= 19, "minutes": _length_min(a)} for a in _articles()]
+    resolve = _source_resolver(chs)
+    out = []
+    for a in _articles():
+        sid = resolve(a)
+        out.append({"slug": a["slug"], "title": nd(a["title"]), "lead": nd(a.get("lead") or a.get("standfirst") or a.get("subtitle", "")),
+                    "topic": a.get("topic") or "תרבות", "topics": article_topics(a), "channel": a.get("channel", ""), "vid": a.get("vid"),
+                    "source_id": sid, "image": a.get("image") or "", "kind": a.get("kind") or "yt", "daily": sid in daily_ids, "nohead": sid in nohead_ids,
+                    "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
+                    "released_time": len((a.get("published_at") or "")) >= 19, "minutes": _length_min(a)})
+    return out
 
 
 # ------------------------------------------------- users: prefs + visibility ---
