@@ -2003,6 +2003,9 @@ def handle_get(handler, path, qs):
             custom = bool(pr["hideBase"] or pr["hiddenBase"])        # an article we cannot tie to a source is only shown to people on the default roster
             items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and not i.get("submitted_by") and base_ok and not custom)
                      or (uid and i.get("submitted_by") == uid)]
+        if vis is None and user and user.get("admin") and user.get("id") != "admin-token":
+            owners = {c["id"]: c.get("owner_id") for c in _load_ch()["channels"]}        # an admin's homepage is the Pawed roster, not other users' private sources
+            items = [i for i in items if not owners.get(i["source_id"]) and not i.get("submitted_by")]
         gone = removed_topics(user)
         if gone:                                         # a switched-off section loses its tab and every article filed under it
             items = [dict(i, topics=[t for t in i["topics"] if t not in gone]) for i in items if i["topic"] not in gone]
