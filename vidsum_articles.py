@@ -23,6 +23,35 @@ ART_DIR = os.path.join(multiuser.DATA_DIR, "vidsum_articles")
 JOBS_PATH = os.path.join(multiuser.DATA_DIR, "vidsum_jobs.json")
 LOCK = threading.Lock()
 WORKER = threading.Semaphore(1)          # one Gemini video job at a time
+LUNA_WORKER = threading.Semaphore(3)     # LunaRoute (DeepSeek) writes up to 3 articles at once; Gemini stays one at a time
+TOK_PATH = os.path.join(multiuser.DATA_DIR, "vidsum_tokens.jsonl")
+_TOK = threading.local()
+_TOK_LOCK = threading.Lock()
+
+
+class tok_ctx:
+    """with tok_ctx("article", vid, owner): ...  -> every LLM call inside is logged to vidsum_tokens.jsonl with this task / vid / owner."""
+    def __init__(self, task, vid=None, owner=None):
+        self.c = {"task": task, "vid": vid, "owner": owner}
+
+    def __enter__(self):
+        self.prev = getattr(_TOK, "c", None)
+        _TOK.c = self.c
+
+    def __exit__(self, *a):
+        _TOK.c = self.prev
+
+
+def _tok_log(model, tin, tout):
+    c = getattr(_TOK, "c", None) or {}
+    rec = {"t": time.strftime("%Y-%m-%d %H:%M:%S"), "model": model, "in": int(tin or 0), "out": int(tout or 0),
+           "task": c.get("task") or "other", "vid": c.get("vid"), "owner": c.get("owner")}
+    try:
+        with _TOK_LOCK, open(TOK_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
 PUBLIC_DAILY_CAP = 15                    # non-admin submissions per day (admin unlimited)
 MAX_ACTIVE = 8
 ACCENT = "#2c5f7c"
@@ -344,6 +373,8 @@ def _gemini(parts, media_low=True, schema=None, max_out=32768, vid=None):
         text = cand["content"]["parts"][0]["text"]
         data = json.loads(text)
         tokens = int((res.get("usageMetadata") or {}).get("totalTokenCount") or 0)
+        _um = res.get("usageMetadata") or {}
+        _tok_log(GEMINI_MODEL, _um.get("promptTokenCount", 0), max(0, tokens - int(_um.get("promptTokenCount") or 0)))
         global _LAST_USAGE
         _LAST_USAGE = res.get("usageMetadata") or {}
         _gem_after(tokens)
@@ -401,7 +432,8 @@ def backfill_topics(limit=12, redo=False, only=None):
                   "show's history is תרבות even if it mentions money; stock-market analysis is כלכלה). secondary = ONE other section only if the "
                   'episode substantially covers it, otherwise null. Reply with only JSON: {"primary": "..", "secondary": ".." or null}\n\n' + txt[:3500])
         try:
-            d, _, _ = _luna(prompt, max_tokens=300)
+            with tok_ctx("topics", a.get("vid")):
+                d, _, _ = _luna(prompt, max_tokens=300)
             prim = d.get("primary") if d.get("primary") in TOPICS else (a.get("topic") or "תרבות")
             sec = d.get("secondary") if d.get("secondary") in TOPICS and d.get("secondary") != prim else None
             a["topic"], a["topics"], a["topics_v"] = prim, [prim] + ([sec] if sec else []), 4
@@ -435,6 +467,7 @@ def _luna(prompt, max_tokens=24000):
         text = "".join(c.get("text", "") for c in res.get("content", []) if c.get("type") == "text")
         i, j = text.find("{"), text.rfind("}")
         usage = res.get("usage") or {}
+        _tok_log(LUNA_MODEL, usage.get("input_tokens", 0), usage.get("output_tokens", 0))
         try:
             if i < 0 or j < i:
                 raise ValueError("no JSON in reply: " + text[:120])
@@ -660,6 +693,11 @@ def _save_article(vid, d):
 
 
 def _run(vid):
+    with tok_ctx("article-gemini", vid, _job_owner(vid)):
+        return _run_inner(vid)
+
+
+def _run_inner(vid):
     """Gemini path: Google reads the YouTube URL itself (costs tokens)."""
     with WORKER:
         _set_job(vid, status="running", started=time.strftime("%Y-%m-%d %H:%M:%S"))
@@ -787,9 +825,25 @@ TR_DIR = os.path.join(multiuser.DATA_DIR, "vidsum_transcripts")
 MAX_WAITING = 800
 
 
+def _job_owner(vid):
+    """who a job is billed to: the user who submitted it, else the owner of its source (None = Pawed / admin)"""
+    j = _load_jobs().get(vid, {})
+    if j.get("owner"):
+        return j["owner"]
+    src = j.get("source")
+    if src:
+        return next((c.get("owner_id") for c in _load_ch()["channels"] if c["id"] == src), None)
+    return None
+
+
 def _run_luna(vid):
+    with tok_ctx("article", vid, _job_owner(vid)):
+        return _run_luna_inner(vid)
+
+
+def _run_luna_inner(vid):
     """LunaRoute path: the Mac relay supplied captions; DeepSeek writes the article."""
-    with WORKER:
+    with LUNA_WORKER:
         _set_job(vid, status="running", started=time.strftime("%Y-%m-%d %H:%M:%S"))
         try:
             with open(os.path.join(TR_DIR, vid + ".json"), encoding="utf-8") as f:
@@ -868,8 +922,8 @@ def relay_discovered(req):
         if not ch:
             return out
         seen = set(ch.setdefault("seen", []))
-        used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit")
-        owner_used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit"
+        used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit" and not e.get("first"))
+        owner_used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit" and not e.get("first")
                          and ch.get("owner_id") and e.get("owner") == ch.get("owner_id"))
         added = (ch.get("added") or "")[:19]
         # a new subscription takes the newest episode (from the last 30 days) right away instead of waiting for the next one
@@ -893,7 +947,7 @@ def relay_discovered(req):
             if (pub and pub < added and not ch.get("backfill") and vid != latest_vid) or (it.get("duration") or 999) < 150:
                 seen.add(vid); out["skipped"] += 1               # older than the subscription, or a Short
                 continue
-            if used >= WATCH_DAILY_CAP or (ch.get("owner_id") and owner_used >= USER_DAILY_VIDEOS):
+            if vid != latest_vid and (used >= WATCH_DAILY_CAP or (ch.get("owner_id") and owner_used >= USER_DAILY_VIDEOS)):
                 out["deferred"] += 1                              # not marked seen: picked up on a later run
                 continue
             if it.get("title") and find_duplicate(it["title"], vid, sid, ch.get("name"), pub):
@@ -902,8 +956,9 @@ def relay_discovered(req):
                 continue
             seen.add(vid)
             to_submit.append(vid)
-            used += 1
-            owner_used += 1 if ch.get("owner_id") else 0
+            if vid != latest_vid:                                  # a new source's first episode never uses up the daily cap
+                used += 1
+                owner_used += 1 if ch.get("owner_id") else 0
         ch["seen"] = sorted(seen)[-300:]
         ch["checked"] = time.strftime("%Y-%m-%d %H:%M:%S")
         ch["error"] = ""
@@ -920,7 +975,7 @@ def relay_discovered(req):
         code, payload = submit(f"https://www.youtube.com/watch?v={vid}", True, "luna", sid)
         if code == 202:                                           # genuinely new (already-known videos answer 200)
             out["submitted"] += 1
-            new_logs.append({"day": today, "kind": "submit", "vid": vid, "channel": name, "owner": owner,
+            new_logs.append({"day": today, "kind": "submit", "vid": vid, "channel": name, "owner": owner, "first": vid == latest_vid,
                              "at": time.strftime("%H:%M:%S")})
             log(f"vidsum relay discovery: {name} -> {vid} ({payload.get('status')})")
     if new_logs:
@@ -933,7 +988,9 @@ def relay_discovered(req):
 
 def relay_queue(limit=15):
     out = []
-    for v, j in sorted(_load_jobs().items(), key=lambda kv: kv[1].get("submitted", "")):
+    fresh = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time() - 24 * 3600))
+    new_src = {c["id"] for c in _load_ch()["channels"] if (c.get("added") or "") >= fresh}      # sources added in the last 24 h go first
+    for v, j in sorted(_load_jobs().items(), key=lambda kv: (0 if kv[1].get("source") in new_src else 1, kv[1].get("submitted", ""))):
         if j.get("status") != "needs_transcript":
             continue
         row = {"vid": v, "url": f"https://www.youtube.com/watch?v={v}", "submitted": j.get("submitted")}
@@ -1436,7 +1493,7 @@ def watch_once():
     """Look at every channel feed; summarize videos published after the channel was added."""
     d = _load_ch()
     today = time.strftime("%Y-%m-%d")
-    used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit")
+    used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit" and not e.get("first"))
     for ch in d["channels"]:
         if ch["id"].startswith("pending-") or ch.get("kind") == "rss":     # name only (not valid yet) / podcast feeds have their own loop
             continue
@@ -1463,7 +1520,7 @@ def watch_once():
             if used >= WATCH_DAILY_CAP:
                 break
             if ch.get("owner_id"):
-                owner_used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit"
+                owner_used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit" and not e.get("first")
                                  and e.get("owner") == ch["owner_id"])
                 if owner_used >= USER_DAILY_VIDEOS:
                     continue
@@ -1516,7 +1573,7 @@ def watch_rss():
     """Podcast-feed sources: queue episodes published after the source was added (the newest one right away on a new source)."""
     d = _load_ch()
     today = time.strftime("%Y-%m-%d")
-    used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit")
+    used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit" and not e.get("first"))
     for ch in d["channels"]:
         if ch.get("kind") != "rss":
             continue
@@ -1546,15 +1603,17 @@ def watch_rss():
                 if (pub and pub < ch["added"][:19] and not ch.get("backfill")) or (it["duration"] or 999) < 150:
                     seen.add(eid)
                     continue
-            if used >= WATCH_DAILY_CAP:
+            is_first = bool(first)                                   # a new source's first episode never uses up the daily caps
+            if not is_first and used >= WATCH_DAILY_CAP:
                 break
-            if ch.get("owner_id") and sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit"
-                                          and e.get("owner") == ch["owner_id"]) >= USER_DAILY_VIDEOS:
+            if not is_first and ch.get("owner_id") and sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit"
+                                                           and not e.get("first") and e.get("owner") == ch["owner_id"]) >= USER_DAILY_VIDEOS:
                 continue
             if _submit_rss(ch, it):
                 seen.add(eid)
-                used += 1
-                d["log"].append({"day": today, "kind": "submit", "vid": eid, "channel": ch["name"], "owner": ch.get("owner_id"),
+                if not is_first:
+                    used += 1
+                d["log"].append({"day": today, "kind": "submit", "vid": eid, "channel": ch["name"], "owner": ch.get("owner_id"), "first": is_first,
                                  "at": time.strftime("%H:%M:%S")})
                 log(f"vidsum rss: {ch['name']} -> {it['title'][:60]} ({eid})")
         ch["seen"] = sorted(seen)[-400:]
@@ -1838,6 +1897,34 @@ def handle_get(handler, path, qs):
                                         if c.get("owner_id") is None and c["id"] in get_vprefs(user["id"])["hiddenBase"]]
                                        if signed else []),
                        "limit": MAX_USER_SOURCES, "verticals": TOPICS, "languages": LANGS, "sources": sources_view(user)})
+        return True
+    if path == "/api/vidsum/admin/tokens":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "not found"}, 404)
+            return True
+        days = max(1, min(60, int((qs.get("days") or ["7"])[0])))
+        cut = time.strftime("%Y-%m-%d", time.localtime(time.time() - (days - 1) * 86400))
+        rows = []
+        try:
+            with open(TOK_PATH, encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        r = json.loads(line)
+                    except ValueError:
+                        continue
+                    if r["t"][:10] >= cut:
+                        rows.append(r)
+        except OSError:
+            pass
+        with multiuser.db() as c:
+            names = {r["id"]: (r["name"] or r["email"]) for r in c.execute("SELECT id,name,email FROM users").fetchall()}
+        agg = lambda key: [dict(zip(("key", "calls", "in", "out"), (k, *v))) for k, v in sorted(
+            ((k, [sum(1 for r in rows if key(r) == k), sum(r["in"] for r in rows if key(r) == k), sum(r["out"] for r in rows if key(r) == k)])
+             for k in {key(r) for r in rows}), key=lambda kv: -(kv[1][1] + kv[1][2]))]
+        handler._json({"ok": True, "days": days, "since": cut, "calls": len(rows), "total_in": sum(r["in"] for r in rows), "total_out": sum(r["out"] for r in rows),
+                       "by_task": agg(lambda r: r["task"] + " · " + r["model"]), "by_day": agg(lambda r: r["t"][:10]),
+                       "by_user": agg(lambda r: names.get(r["owner"], "Pawed (admin)") if r["owner"] else "Pawed (admin)")})
         return True
     if path == "/api/vidsum/admin/users":
         user = current_user(handler)

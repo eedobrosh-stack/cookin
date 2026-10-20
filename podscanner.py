@@ -370,7 +370,8 @@ def stage_classify(d, cap=600):
     for i in range(0, len(todo), 12):
         batch = todo[i:i + 12]
         try:
-            res = _classify_batch(batch)
+            with va.tok_ctx("ps-classify"):
+                res = _classify_batch(batch)
         except Exception as e:
             log(f"classify batch failed: {str(e)[:160]}")
             continue
@@ -411,7 +412,8 @@ def run_judge(cap=150, min_score=0):
                           "promo or one-note gimmick shows score low; a well known professional show with a clear host scores higher than an obscure one. "
                           'Reply with only JSON: {"<id>": {"fit": 1-10, "why": "max 12 words in English"}, ...}\n\n' + json.dumps(items, ensure_ascii=False))
                 try:
-                    res, _, _ = va._luna(prompt, max_tokens=3000)
+                    with va.tok_ctx("ps-judge"):
+                        res, _, _ = va._luna(prompt, max_tokens=3000)
                 except Exception as e:
                     log(f"judge batch failed: {str(e)[:160]}")
                     continue

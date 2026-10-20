@@ -459,6 +459,9 @@ async function loadUsers(){
       +'<div><small>'+(u.hide_all_base?'הסתיר את כל הרשימה של Pawed':(u.hidden_base?'הסתיר '+u.hidden_base+' מתוך '+u.base_total+' ערוצי Pawed':'רואה את כל ערוצי Pawed'))+'</small></div>'
       +'<div class="chips">'+(u.sources.length?u.sources.map(x=>'<span class="chip'+(x.off?' off':'')+'" title="'+esc(x.vertical)+'">'+esc(x.name)+' · '+esc(D.languages[x.language]||x.language)+'</span>').join(''):'<small>אין מקורות משלו</small>')+'</div></div>').join(''):'<p class="sub">עדיין אין משתמשים חיצוניים עם מקורות.</p>'); }
   catch(e){ s.innerHTML='<p class="sub">שגיאה בטעינת המשתמשים</p>'; }
+  try{ const t=await (await fetch('/api/vidsum/admin/tokens?days=7')).json(); if(!t.ok) return; const K=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?Math.round(n/1e3)+'K':String(n);
+    const tbl=(rows,h)=>'<table style="width:100%;font-size:13.5px;margin:6px 0 14px"><thead><tr><th style="text-align:right">'+h+'</th><th>קריאות</th><th>קלט</th><th>פלט</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.key)+'</td><td>'+r.calls+'</td><td>'+K(r.in)+'</td><td>'+K(r.out)+'</td></tr>').join('')+'</tbody></table>';
+    s.insertAdjacentHTML('beforeend','<h2 style="margin-top:22px">שימוש בטוקנים (7 ימים)</h2><div class="sub">'+t.calls+' קריאות · קלט '+K(t.total_in)+' · פלט '+K(t.total_out)+' · מאז '+esc(t.since)+'</div>'+tbl(t.by_task,'משימה · מודל')+tbl(t.by_user,'משתמש')+tbl(t.by_day,'יום')); }catch(e){}
 }
 async function load(){
   D = await (await fetch('/api/vidsum/sources')).json();
