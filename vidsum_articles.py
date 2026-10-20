@@ -190,7 +190,8 @@ def _unique_slug(title, vid):
 
 # ----------------------------------------------------------------- gemini ---
 TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות"]
-LIFESTYLE_HINT = "לייפסטייל = relationships, psychology and wellbeing, parenting, food, beauty and fashion, personal growth, daily living"
+LIFESTYLE_HINT = ("לייפסטייל = ONLY advice and everyday-living subjects: relationships, psychology and wellbeing tips, parenting, food, beauty and fashion, personal growth. "
+                  "A news event, incident, security, political or economic story is NEVER לייפסטייל, even when it is told as a personal testimony or a lessons-learned story")
 SCHEMA = {
     "type": "OBJECT",
     "properties": {
@@ -359,6 +360,7 @@ LUNA_URL = "https://gw.lunaroute.com"
 LUNA_MODEL = os.environ.get("VIDSUM_LUNA_MODEL", "deepseek-4.1-flash")
 SCHEMA_HINT = """{"title": str, "standfirst": str, "topic": one of %s, "topics": [primary, optional secondary: from the same list], "lead": str, "key_points": [str],
  "blocks": [{"type": "h2"|"p"|"quote"|"list", "text": str, "ts": "m:ss or h:mm:ss", "speaker": str (quotes only), "items": [str] (list only)}]}""" % (json.dumps(TOPICS, ensure_ascii=False))
+SCHEMA_HINT += "\n" + LIFESTYLE_HINT
 
 
 def _clean_topics(topics, primary):
@@ -381,14 +383,16 @@ def _write_article(a):
     os.replace(tmp, os.path.join(ART_DIR, a["slug"] + ".json"))
 
 
-def backfill_topics(limit=12, redo=False):
+def backfill_topics(limit=12, redo=False, only=None):
     """Existing articles: ask the model (text-only) for ONE primary section (what the episode is mostly about) and at most one
     secondary. redo=True re-judges articles classified under the older rules too (marker topics_v == 3)."""
     done = 0
     for a in _articles():
         if done >= limit:
             break
-        if not a.get("blocks") or (a.get("topics_v") == 3 if redo else a.get("topics")):
+        if not a.get("blocks") or (a.get("topics_v") == 4 if redo else a.get("topics")):
+            continue
+        if only and only not in article_topics(a):          # re-judge just the articles currently filed under one section
             continue
         txt = a["title"] + "\n" + (a.get("standfirst") or "") + "\n" + "\n".join(a.get("key_points") or []) + "\n" + \
             " ".join(b.get("text", "") for b in a["blocks"] if b.get("type") == "p")[:1200]
@@ -400,7 +404,7 @@ def backfill_topics(limit=12, redo=False):
             d, _, _ = _luna(prompt, max_tokens=300)
             prim = d.get("primary") if d.get("primary") in TOPICS else (a.get("topic") or "תרבות")
             sec = d.get("secondary") if d.get("secondary") in TOPICS and d.get("secondary") != prim else None
-            a["topic"], a["topics"], a["topics_v"] = prim, [prim] + ([sec] if sec else []), 3
+            a["topic"], a["topics"], a["topics_v"] = prim, [prim] + ([sec] if sec else []), 4
             _write_article(a)
             log(f"vidsum topics {a['slug']} -> {a['topics']}")
             done += 1
@@ -2039,14 +2043,29 @@ def handle_post(handler, path, req):
             _write_article(a)
             handler._json({"ok": True, "links": lk})
         return True
+    if path == "/api/vidsum/article/topic":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+            return True
+        slug, prim = str(req.get("slug") or ""), req.get("topic")
+        a = next((x for x in _articles() if x.get("slug") == slug), None)
+        if not a or prim not in TOPICS:
+            handler._json({"ok": False, "error": "unknown article or topic"}, 400)
+            return True
+        sec = req.get("secondary") if req.get("secondary") in TOPICS and req.get("secondary") != prim else None
+        a["topic"], a["topics"], a["topics_v"] = prim, [prim] + ([sec] if sec else []), 4
+        _write_article(a)
+        handler._json({"ok": True, "topics": a["topics"]})
+        return True
     if path == "/api/vidsum/topics/backfill":
         user = current_user(handler)
         if not (user and user.get("admin")):
             handler._json({"error": "forbidden"}, 403)
         else:
             redo = bool(req.get("redo"))
-            n = backfill_topics(int(req.get("limit") or 12), redo)
-            handler._json({"ok": True, "done": n, "remaining": sum(1 for a in _articles() if a.get("blocks") and (a.get("topics_v") != 3 if redo else not a.get("topics")))})
+            n = backfill_topics(int(req.get("limit") or 12), redo, req.get("only") or None)
+            handler._json({"ok": True, "done": n, "remaining": sum(1 for a in _articles() if a.get("blocks") and (a.get("topics_v") != 4 if redo else not a.get("topics")))})
         return True
     if path == "/api/vidsum/article/release":
         user = current_user(handler)
