@@ -303,6 +303,22 @@
     .lv-src { color:#888; font-size:12px; margin-top:8px; } .lv-src a { color:inherit; }
     @media (max-width:900px) { .lv-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media (max-width:560px) { .lv-grid { grid-template-columns:1fr; gap:12px; } .lv-c { flex-direction:row; } .lv-i { width:112px; aspect-ratio:1; flex:none; } .lv-d { display:none; } }
+
+    /* מבשלים: dishes of the day from cookin.jarcud.com */
+    .ck-ban { display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; background:linear-gradient(120deg,#1f5f25,#3f9a45); color:#fff; border-radius:8px; padding:20px 24px; margin:6px 0 22px; }
+    .ck-ban h2 { margin:0 0 4px; font-size:26px; letter-spacing:-.5px; } .ck-ban p { margin:0; opacity:.92; font-size:15px; }
+    .ck-ban a.go { background:#fff; color:#1f5f25; font-weight:800; font-size:17px; padding:12px 22px; border-radius:28px; white-space:nowrap; }
+    .ck-ban a.go:hover { background:#ffe27a; }
+    .ck-g { margin:0 0 26px; } .ck-g h3 { margin:0 0 10px; font-size:21px; color:#2f7d32; display:flex; align-items:center; gap:10px; }
+    .ck-g h3 small { color:#888; font-size:13px; font-weight:400; } .ck-g h3::after { content:""; flex:1; height:1px; background:#cfe3d0; }
+    .ck-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+    .ck-c { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); color:inherit; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#fff; }
+    .ck-c:hover h4 { text-decoration:underline; }
+    .ck-i { min-height:170px; background:#e8efe8 center/cover; } .ck-b { padding:13px 15px; display:flex; flex-direction:column; gap:5px; }
+    .ck-b h4 { margin:0; font-size:19px; line-height:1.2; font-weight:800; } .ck-b p { margin:0; color:#555; font-size:14px; line-height:1.4; }
+    .ck-b small { color:#777; font-size:13px; } .ck-b .ck-go { margin-top:auto; color:#2f7d32; font-weight:700; font-size:14px; }
+    @media (max-width:820px) { .ck-row { grid-template-columns:1fr; } }
+    @media (max-width:520px) { .ck-c { grid-template-columns:1fr; } .ck-i { min-height:0; aspect-ratio:16/9; } .ck-ban h2 { font-size:22px; } }
   </style>
 </head>
 <body>
@@ -355,7 +371,7 @@ const rel = a => when(a.released||a.created, a.released_time);
 const meta = a => [a.channel, a.minutes? 'סיכום '+a.minutes+' דק׳':'', rel(a)].filter(Boolean).map(esc).join(' · ');
 let DATA = null, FILTER = 'all';
 
-const COL = {'פוליטיקה':'#b3171f','כלכלה':'#1b3f94','טכנולוגיה':'#0f2a5c','תרבות':'#6a2fa3','ספורט':'#1a7a3a','בריאות':'#0e7a6e','לייפסטייל':'#b0276a','Live Shows':'#c2410c'};
+const COL = {'פוליטיקה':'#b3171f','כלכלה':'#1b3f94','טכנולוגיה':'#0f2a5c','תרבות':'#6a2fa3','ספורט':'#1a7a3a','בריאות':'#0e7a6e','לייפסטייל':'#b0276a','הופעות חיות':'#c2410c','מבשלים':'#2f7d32'};
 const col = t => COL[t]||'#333';
 const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" data-img="'+esc(a.image||'')+'" style="background-image:'+tone(a)+'"></div>';
 const when2 = a => esc(rel(a));
@@ -490,6 +506,7 @@ setInterval(()=>{
 
 function render(){
   if(FILTER===LIVE){ lvShow(); return; }
+  if(FILTER===COOK){ ckShow(); return; }
   const all = DATA.items, main = document.getElementById('main');
   const sorted = FILTER==='all' ? all : all.filter(a=>inT(a,FILTER));
   if(!sorted.length){ main.innerHTML='<p class="empty">אין עדיין סיכומים במדור הזה — הם יופיעו כאן אוטומטית.</p>'; return; }
@@ -531,7 +548,7 @@ function render(){
 }
 
 // ---- Live Shows (upcoming Israeli events from Supercaly) ----
-const LIVE = 'Live Shows';
+const LIVE = 'הופעות חיות', COOK = 'מבשלים';
 let LV = null, LVF = {cat:'', city:'', q:'', when:'all', n:48};
 const LV_CATS = {Music:'מוזיקה', Comedy:'סטנדאפ וקומדיה', Dance:'מחול', Festival:'פסטיבלים', Art:'אמנות'};
 const lvDate = d => new Date(d+'T12:00:00');
@@ -550,7 +567,7 @@ function lvRender(){
     && (!lim || (lvDate(e.date)-today)/864e5 < lim));
   const cities = [...new Set(LV.map(e=>e.city).filter(Boolean))].sort((a,b)=>LV.filter(e=>e.city===b).length-LV.filter(e=>e.city===a).length);
   const chip = (k,l,on) => '<button data-k="'+k+'" class="'+(on?'on':'')+'">'+l+'</button>';
-  main.innerHTML = '<div class="sec-h" style="--c:'+col(LIVE)+'"><b>Live Shows</b><span style="color:rgba(255,255,255,.9);font-size:13px">'+list.length.toLocaleString()+' מופעים קרובים בישראל</span></div>'
+  main.innerHTML = '<div class="sec-h" style="--c:'+col(LIVE)+'"><b>הופעות חיות</b><span style="color:rgba(255,255,255,.9);font-size:13px">'+list.length.toLocaleString()+' מופעים קרובים בישראל</span></div>'
     +'<div class="lv-bar">'+chip('cat:','הכל',!LVF.cat)+Object.entries(LV_CATS).filter(([k])=>LV.some(e=>e.cats.includes(k))).map(([k,l])=>chip('cat:'+k,l,LVF.cat===k)).join('')
     +'<select id="lvcity"><option value="">כל הערים</option>'+cities.slice(0,40).map(c=>'<option'+(LVF.city===c?' selected':'')+'>'+esc(c)+'</option>').join('')+'</select>'
     +chip('when:all','הכל',LVF.when==='all')+chip('when:week','השבוע',LVF.when==='week')+chip('when:month','החודש',LVF.when==='month')
@@ -568,9 +585,28 @@ function lvShow(){
   lvRender();
   if(!LV) fetch('/api/vidsum/live').then(r=>r.json()).then(j=>{ LV=j.items||[]; if(FILTER===LIVE) lvRender(); }).catch(()=>{ LV=[]; if(FILTER===LIVE) lvRender(); });
 }
+
+// ---- מבשלים: 2 dishes of the day per group, all from cookin.jarcud.com ----
+let CK = null;
+function ckRender(){
+  const main = document.getElementById('main'); if(!CK){ main.innerHTML='<p class="empty">טוען מנות…</p>'; return; }
+  if(!CK.ok){ main.innerHTML='<p class="empty">המנות לא זמינות כרגע.</p>'; return; }
+  const day = new Date(CK.day+'T12:00:00').toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'});
+  const ban = (extra) => '<div class="ck-ban"><div><h2>'+(extra?'עוד '+CK.total+' מתכונים מחכים לכם':'מנות היום מהמטבח של המשפחה')+'</h2><p>'+(extra?'כל המתכונים, החיפוש לפי מצרכים, ההחלפות וסרטוני ההכנה':esc(day)+' · 2 מנות מכל סוג, אחרות בכל יום')+' ב-cookin.jarcud.com</p></div>'
+    +'<a class="go" target="_blank" rel="noopener" href="'+esc(CK.site)+'">לכל המתכונים ב-cookin ›</a></div>';
+  main.innerHTML = '<div class="sec-h" style="--c:'+col(COOK)+'"><b>מבשלים</b><span style="color:rgba(255,255,255,.9);font-size:13px">מנות היום</span></div>'+ban(false)
+    + CK.groups.map(g=>'<section class="ck-g"><h3>'+esc(g.label)+' <small>'+g.count+' מתכונים ב-cookin</small></h3><div class="ck-row">'+g.dishes.map(d=>
+      '<a class="ck-c" target="_blank" rel="noopener" href="'+esc(d.url)+'"><div class="ck-i" style="background-image:url(\''+esc(d.image)+'\')"></div><div class="ck-b"><h4>'+esc(d.name)+'</h4><small>'+esc(d.time)+(d.time&&d.serves?' · ':'')+esc(d.serves)+'</small><p>'+esc(d.intro)+'</p><span class="ck-go">למתכון המלא ב-cookin ›</span></div></a>').join('')+'</div></section>').join('')
+    + ban(true);
+}
+function ckShow(){
+  if(FEED && FEED.io){ FEED.io.disconnect(); FEED=null; }
+  ckRender();
+  if(!CK) fetch('/api/vidsum/cooking').then(r=>r.json()).then(j=>{ CK=j; if(FILTER===COOK) ckRender(); }).catch(()=>{ CK={ok:false}; if(FILTER===COOK) ckRender(); });
+}
 function nav(){
   const n=document.getElementById('nav');
-  n.innerHTML=['all',...DATA.topics,LIVE].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?'ראשי':esc(t))+'</button>').join('');
+  n.innerHTML=['all',...DATA.topics,LIVE,COOK].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?'ראשי':esc(t))+'</button>').join('');
   n.querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f; nav(); render(); history.replaceState(null,'', FILTER==='all'?location.pathname:'#'+encodeURIComponent(FILTER));});
 }
 document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -597,7 +633,7 @@ function showSourcesHint(){
   },200);
 }
 fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
-  DATA=j; const h=decodeURIComponent(location.hash.slice(1)); if(j.topics.includes(h) || h===LIVE) FILTER=h;
+  DATA=j; const h=decodeURIComponent(location.hash.slice(1)); if(j.topics.includes(h) || h===LIVE || h===COOK || h==='Live Shows') FILTER = h==='Live Shows' ? LIVE : h;
   const ul=document.querySelector('.utility-links');
   if(ul && j.me){ const a=document.createElement('a'); a.href='/vidsum/sources'; a.textContent = 'שלום '+j.me.name+(j.personal?' · תצוגה מותאמת':''); a.style.fontWeight='700'; ul.appendChild(a); }
   document.getElementById('cta').hidden = !!j.me;

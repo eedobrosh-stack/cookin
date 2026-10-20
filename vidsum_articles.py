@@ -1660,6 +1660,30 @@ def live_events():
     _LIVE["t"], _LIVE["items"] = time.time(), out
     return out
 
+
+# ------------------------------------------------- מבשלים: dishes of the day from the cookin site ---
+DISHES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "pawed_dishes.json")
+DISH_GROUPS = [("beef", "בקר"), ("chicken", "עוף"), ("fish", "דגים"), ("veg", "צמחוני")]
+
+
+def cooking_today():
+    """2 dishes per group (beef / chicken / fish / vegetarian), a different pair every Israeli calendar day (stable within the day)."""
+    import hashlib
+    try:
+        from zoneinfo import ZoneInfo
+        day = datetime.datetime.now(ZoneInfo("Asia/Jerusalem")).strftime("%Y-%m-%d")
+    except Exception:
+        day = time.strftime("%Y-%m-%d")
+    with open(DISHES_PATH, encoding="utf-8") as f:
+        d = json.load(f)
+    groups = []
+    for key, label in DISH_GROUPS:
+        pool = [x for x in d["dishes"] if x["group"] == key]
+        pool.sort(key=lambda x: hashlib.md5((day + x["id"]).encode()).hexdigest())
+        groups.append({"key": key, "label": label, "dishes": [dict(x, image="https://cookin.jarcud.com/images/" + x["image"]) for x in pool[:2]],
+                       "count": len(pool)})
+    return {"ok": True, "day": day, "total": d["total"], "groups": groups, "site": "https://cookin.jarcud.com"}
+
 # ---------------------------------------------------------------- routing ---
 ART_PREFIX = "/vidsum/article/"
 
@@ -1756,6 +1780,13 @@ def handle_get(handler, path, qs):
                                         if c.get("owner_id") is None and c["id"] in get_vprefs(user["id"])["hiddenBase"]]
                                        if signed else []),
                        "limit": MAX_USER_SOURCES, "verticals": TOPICS, "languages": LANGS, "sources": sources_view(user)})
+        return True
+    if path == "/api/vidsum/cooking":
+        try:
+            handler._json(cooking_today())
+        except Exception as e:
+            log(f"vidsum cooking failed: {str(e)[:120]}")
+            handler._json({"ok": False, "error": "dishes unavailable"}, 500)
         return True
     if path == "/api/vidsum/live":
         handler._json({"ok": True, "items": live_events(), "source": "https://superca.ly"})
