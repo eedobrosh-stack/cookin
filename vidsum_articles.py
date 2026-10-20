@@ -687,6 +687,13 @@ def _save_article(vid, d):
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(art, f, ensure_ascii=False, indent=1)
     os.replace(tmp, os.path.join(ART_DIR, slug + ".json"))
+    if src_id:
+        with LOCK:
+            dch = _load_ch()
+            sc = next((x for x in dch["channels"] if x["id"] == src_id), None)
+            if sc and sc.pop("vertical_auto", False):                  # a source added without a section takes the one its first article got
+                sc["vertical"] = art.get("topic") if art.get("topic") in TOPICS else sc.get("vertical")
+                _save_ch(dch)
     _set_job(vid, status="done", slug=slug, title=d["title"], error="",
              detail=f"{d.get('method', '')} · {d.get('tokens', 0):,} tokens", channel=d.get("channel") or "")
     log(f"vidsum {vid} DONE slug={slug} tokens={d.get('tokens')} via {d.get('method')}")
@@ -1696,6 +1703,7 @@ def add_source(req, user=None):
     name = str(req.get("name") or "").strip()
     lang = req.get("language") if req.get("language") in LANGS else "he"
     vert = req.get("vertical") if req.get("vertical") in TOPICS else "תרבות"
+    v_auto = req.get("vertical") not in TOPICS            # no section chosen: it follows the first article's section once one is written
     admin = bool(user and user.get("admin"))
     owner_id = None if admin else user["id"]
     owner_name = None if admin else (user.get("name") or (user.get("email") or "").split("@")[0] or "משתמש")
@@ -1716,7 +1724,7 @@ def add_source(req, user=None):
             if any(c["name"].strip() == name and c.get("owner_id") == owner_id for c in d["channels"]):
                 raise ValueError("this podcast is already in the table")
             cid = "pending-" + uuid.uuid4().hex[:8]
-            d["channels"].append({"id": cid, "name": name[:120], "url": "", "language": lang, "vertical": vert,
+            d["channels"].append({"id": cid, "name": name[:120], "url": "", "language": lang, "vertical": vert, "vertical_auto": v_auto,
                                   "added": time.strftime("%Y-%m-%d %H:%M:%S"), "owner_id": owner_id, "owner_name": owner_name})
             _save_ch(d)
         return cid
@@ -1729,7 +1737,7 @@ def add_source(req, user=None):
                 raise ValueError("this source is already in the table")
             d["channels"].append({"id": cid, "kind": "rss", "feed_url": info["feed_url"], "image": info["image"],
                                   "name": (name or info["name"])[:120], "url": url[:300], "language": req.get("language") if req.get("language") in LANGS else info["language"],
-                                  "vertical": vert, "added": time.strftime("%Y-%m-%d %H:%M:%S"), "take_latest": True,
+                                  "vertical": vert, "vertical_auto": v_auto, "added": time.strftime("%Y-%m-%d %H:%M:%S"), "take_latest": True,
                                   "owner_id": owner_id, "owner_name": owner_name})
             _save_ch(d)
         return cid
@@ -1739,7 +1747,7 @@ def add_source(req, user=None):
         if any(c["id"] == cid for c in d["channels"]):
             raise ValueError("this source is already in the table")
         d["channels"].append({"id": cid, "name": (name or found)[:120], "url": url[:300],
-                              "language": lang, "vertical": vert, "added": time.strftime("%Y-%m-%d %H:%M:%S"),
+                              "language": lang, "vertical": vert, "vertical_auto": v_auto, "added": time.strftime("%Y-%m-%d %H:%M:%S"),
                               "owner_id": owner_id, "owner_name": owner_name, "take_latest": True,
                               "backfill": bool(req.get("backfill")) and admin})
         _save_ch(d)
@@ -2349,6 +2357,7 @@ def handle_post(handler, path, req):
                             c["language"] = req["language"]
                         if req.get("vertical") in TOPICS:
                             c["vertical"] = req["vertical"]
+                            c.pop("vertical_auto", None)
                         if (req.get("name") or "").strip():
                             c["name"] = req["name"].strip()[:120]
                         if "no_headline" in req and user.get("admin"):

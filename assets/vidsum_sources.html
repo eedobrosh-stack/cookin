@@ -479,7 +479,7 @@ async function loadUsers(){
 }
 async function load(){
   D = await (await fetch('/api/vidsum/sources')).json();
-  if(!$('n_lang').options.length){ $('n_lang').innerHTML = opts(D.languages,'he'); $('n_vert').innerHTML = opts(D.verticals,D.verticals[0]); }
+  if(!$('n_lang').options.length){ $('n_lang').innerHTML = opts(D.languages,'he'); $('n_vert').innerHTML = '<option value="">אוטומטי (לפי התוכן)</option>'+opts(D.verticals,''); }
   render(); loadUsers();
 }
 document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
