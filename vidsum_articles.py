@@ -1221,6 +1221,23 @@ def news_items():
     return out
 
 
+
+def removed_topics(viewer):
+    """Sections a signed-in user has switched off: every Pawed-roster source of that section is off and none of their own sources
+    in that section is on. Picking even one source (roster or their own) in a section brings the section back."""
+    if not viewer or viewer.get("id") == "admin-token" or viewer.get("admin"):
+        return set()
+    p = get_vprefs(viewer["id"])
+    base, own_on = {}, set()
+    for c in _load_ch()["channels"]:
+        v = c.get("vertical")
+        if c.get("owner_id") is None:
+            base.setdefault(v, []).append(c["id"])
+        elif c.get("owner_id") == viewer["id"] and c["id"] not in p["hiddenBase"]:
+            own_on.add(v)
+    return {v for v, ids in base.items() if v in TOPICS and v not in own_on and all(p["hideBase"] or i in p["hiddenBase"] for i in ids)}
+
+
 # ------------------------------------------------- users: prefs + visibility ---
 MAX_USER_SOURCES = 10
 USER_DAILY_VIDEOS = 8
@@ -1888,7 +1905,10 @@ def handle_get(handler, path, qs):
             base_ok = not get_vprefs(uid)["hideBase"] if uid else True
             items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and not i.get("submitted_by") and base_ok)
                      or (uid and i.get("submitted_by") == uid)]
-        handler._json({"ok": True, "topics": TOPICS, "items": items, "personal": personal,
+        gone = removed_topics(user)
+        if gone:                                         # a switched-off section loses its tab and every article filed under it
+            items = [dict(i, topics=[t for t in i["topics"] if t not in gone]) for i in items if i["topic"] not in gone]
+        handler._json({"ok": True, "topics": [t for t in TOPICS if t not in gone], "items": items, "personal": personal,
                        "me": ({"name": user.get("name") or user.get("email")} if user and user.get("id") != "admin-token" else None)})
         return True
     if path == "/api/vidsum/channels":
