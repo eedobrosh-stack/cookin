@@ -383,12 +383,12 @@ def _write_article(a):
 
 def backfill_topics(limit=12, redo=False):
     """Existing articles: ask the model (text-only) for ONE primary section (what the episode is mostly about) and at most one
-    secondary. redo=True re-judges articles classified under the older rules too (marker topics_v == 2)."""
+    secondary. redo=True re-judges articles classified under the older rules too (marker topics_v == 3)."""
     done = 0
     for a in _articles():
         if done >= limit:
             break
-        if not a.get("blocks") or (a.get("topics_v") == 2 if redo else a.get("topics")):
+        if not a.get("blocks") or (a.get("topics_v") == 3 if redo else a.get("topics")):
             continue
         txt = a["title"] + "\n" + (a.get("standfirst") or "") + "\n" + "\n".join(a.get("key_points") or []) + "\n" + \
             " ".join(b.get("text", "") for b in a["blocks"] if b.get("type") == "p")[:1200]
@@ -400,7 +400,7 @@ def backfill_topics(limit=12, redo=False):
             d, _, _ = _luna(prompt, max_tokens=300)
             prim = d.get("primary") if d.get("primary") in TOPICS else (a.get("topic") or "תרבות")
             sec = d.get("secondary") if d.get("secondary") in TOPICS and d.get("secondary") != prim else None
-            a["topic"], a["topics"], a["topics_v"] = prim, [prim] + ([sec] if sec else []), 2
+            a["topic"], a["topics"], a["topics_v"] = prim, [prim] + ([sec] if sec else []), 3
             _write_article(a)
             log(f"vidsum topics {a['slug']} -> {a['topics']}")
             done += 1
@@ -2028,7 +2028,7 @@ def handle_post(handler, path, req):
         else:
             redo = bool(req.get("redo"))
             n = backfill_topics(int(req.get("limit") or 12), redo)
-            handler._json({"ok": True, "done": n, "remaining": sum(1 for a in _articles() if a.get("blocks") and (a.get("topics_v") != 2 if redo else not a.get("topics")))})
+            handler._json({"ok": True, "done": n, "remaining": sum(1 for a in _articles() if a.get("blocks") and (a.get("topics_v") != 3 if redo else not a.get("topics")))})
         return True
     if path == "/api/vidsum/article/release":
         user = current_user(handler)
