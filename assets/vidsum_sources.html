@@ -431,6 +431,8 @@ function renderGroups(el, list, o){
         +'<div class="gbody"'+(open?'':' hidden')+'>'+items.map(s=>'<div class="grow">'+(checks?'<input type="checkbox" data-id="'+esc(s.id)+'"'+(SEL.has(s.id)?' checked':'')+'>':'')+'<span>'+esc(s.name)+'</span><span class="l">'+esc(D.languages[s.language]||s.language)+'</span>'+(o.remove?'<button class="x" data-rm="'+esc(s.id)+'" data-name="'+esc(s.name)+'" title="מחיקה">✕</button>':'')+'</div>').join('')+'</div></div>'; }).join('')
     + (checks?'<div class="gsave"><button class="go" data-save="'+o.key+'"'+(DIRTY?'':' disabled')+'>שמירה</button><span class="st" id="st-'+o.key+'"></span></div>':'')
     : '<p class="sub">'+(o.empty||'אין מקורות.')+'</p>');
+  el.querySelectorAll('input[data-grp]').forEach(c=>{ const cat=c.dataset.grp.split('|')[1], it=list.filter(s=>(s.vertical||'אחר')===cat), on=it.filter(s=>SEL.has(s.id)).length; c.indeterminate = on>0 && on<it.length; });
+  el.querySelectorAll('input[data-all]').forEach(c=>{ const on=list.filter(s=>SEL.has(s.id)).length; c.indeterminate = on>0 && on<list.length; });
   el.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>{ const k=b.dataset.tog; OPEN.has(k)?OPEN.delete(k):OPEN.add(k); renderLists(); });
   el.querySelectorAll('input[data-id]').forEach(c=>c.onchange=()=>{ c.checked?SEL.add(c.dataset.id):SEL.delete(c.dataset.id); DIRTY=true; renderLists(); });
   el.querySelectorAll('input[data-grp]').forEach(c=>c.onchange=()=>{ const cat=c.dataset.grp.split('|')[1]; list.filter(s=>(s.vertical||'אחר')===cat).forEach(s=>c.checked?SEL.add(s.id):SEL.delete(s.id)); DIRTY=true; renderLists(); });

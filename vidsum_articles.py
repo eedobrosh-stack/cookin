@@ -1255,7 +1255,7 @@ def _source_resolver(chs):
         ch = _norm_key(a.get("channel"))
         if len(ch) >= 3:
             for cid, keys in names:
-                if any(k == ch or k in ch or ch in k for k in keys):
+                if any(k == ch or (min(len(k), len(ch)) >= 5 and (k in ch or ch in k)) for k in keys):
                     return cid
         return None
     return resolve
@@ -1665,11 +1665,14 @@ def _serve(handler, path):
 
 def sources_view(viewer=None):
     hidden = _hidden_names()
+    real_names = {_norm_key(c["name"]) for c in _load_ch()["channels"] if not c["id"].startswith("pending-")}
     vis = _visible_source_ids(viewer)
     out = []
     for c in _load_ch()["channels"]:
         owner = c.get("owner_id")
         mine_c = bool(viewer and owner and owner == viewer.get("id"))
+        if c["id"].startswith("pending-") and not (viewer and viewer.get("admin")) and _norm_key(c["name"]) in real_names:
+            continue                                                   # a name-only placeholder next to the real source of the same name
         if vis is not None and owner is not None and not mine_c:      # other users' sources are private; the whole Pawed roster is always listed
             continue                                                   # (hidden ones too, so the viewer can switch them back on)
         label = "Pawed" if owner is None else ("אנונימי" if owner in hidden else (c.get("owner_name") or "משתמש"))
@@ -1984,13 +1987,21 @@ def handle_get(handler, path, qs):
         return True
     if path == "/api/vidsum/news":
         user = current_user(handler)
+        as_id = (qs.get("as") or [""])[0]
+        if as_id and user and user.get("admin"):                      # admin preview: the homepage exactly as that user gets it
+            with multiuser.db() as c:
+                r = c.execute("SELECT id,email,name FROM users WHERE id=?", (as_id,)).fetchone()
+            if r:
+                user = {"id": r["id"], "email": r["email"], "name": r["name"], "admin": False}
         items = news_items()
         vis = _visible_source_ids(user)
         personal = vis is not None and bool(user)
         if vis is not None:                              # guests and signed-in users: private sources and one-off episodes stay private
             uid = user["id"] if user else None
-            base_ok = not get_vprefs(uid)["hideBase"] if uid else True
-            items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and not i.get("submitted_by") and base_ok)
+            pr = get_vprefs(uid) if uid else {"hideBase": False, "hiddenBase": []}
+            base_ok = not pr["hideBase"]
+            custom = bool(pr["hideBase"] or pr["hiddenBase"])        # an article we cannot tie to a source is only shown to people on the default roster
+            items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and not i.get("submitted_by") and base_ok and not custom)
                      or (uid and i.get("submitted_by") == uid)]
         gone = removed_topics(user)
         if gone:                                         # a switched-off section loses its tab and every article filed under it

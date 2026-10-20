@@ -558,14 +558,20 @@ def _catalog():
     if m != _CAT["mtime"]:
         with LOCK:
             d = _load()
-        pods = []
+        seen_n = {}
         for p in d["pods"].values():
             if p.get("missing") or not p.get("feed") or not p.get("name"):
                 continue
             row = _row(p)
             row["topic"] = _TOPIC_FIX.get(row["topic"], row["topic"])
             row["_n"] = _nname(p["name"])
-            pods.append(row)
+            # the same show can be charted under several Apple ids (re-listed feeds): keep one, the best scored / most recently active
+            key = row["_n"]
+            old_r = seen_n.get(key)
+            if old_r is not None and (old_r["score"], -(old_r["days_since"] or 9999)) >= (row["score"], -(row["days_since"] or 9999)):
+                continue
+            seen_n[key] = row
+        pods = list(seen_n.values())
         _CAT["mtime"], _CAT["pods"] = m, pods
     return _CAT["pods"]
 
@@ -580,7 +586,7 @@ def catalog_suggest(q, limit=8):
     if len(k) < 2:
         return []
     hits = [r for r in _catalog() if k in r["_n"]]
-    hits.sort(key=lambda r: (not r["_n"].startswith(k), -r["score"]))
+    hits.sort(key=lambda r: (r["days_since"] if r["days_since"] is not None else 9999, not r["_n"].startswith(k), -r["score"]))   # latest episode first
     return [_pub(r) for r in hits[:limit]]
 
 
