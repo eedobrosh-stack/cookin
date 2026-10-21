@@ -333,6 +333,10 @@
     .brand-wordmark { height:88px; width:auto; display:block; }
     @media (max-width:640px) { .masthead { grid-template-columns:1fr; min-height:0; padding-block:8px; } .masthead .brand { grid-column:1; } .masthead .masthead-actions { grid-column:1; grid-row:2; justify-self:center; margin-top:4px; } .brand-wordmark { height:56px; } }
 
+
+    /* no holes: a lone banner tile, or an odd last card in a two-column block, spans the full width */
+    .mix.solo .mix-b > :only-child, .mix.solo .mix-m > :only-child { grid-column:1 / -1; }
+    .mix.solo .mix-b > :last-child:nth-child(odd), .mix.solo .mix-m > :last-child:nth-child(odd) { grid-column:1 / -1; }
   </style>
 </head>
 <body>
@@ -446,14 +450,20 @@ function okHero(items, k){ for(let i=0;i<items.length;i++){ const j=(k+i)%items.
 // each feed batch. Across the page it also prefers pods not shown yet, and only repeats one when nothing else is left.
 const byNewest = (x,y) => (y.released||'').localeCompare(x.released||'');
 const podOf = a => (a.channel||a.source_id||'').trim();
+const tsOf = a => Date.parse(String(a.released||a.created||'').replace(' ','T').replace(/Z?$/,'Z')) || 0;
 function takeD(list, n, used, blockPods, pagePods){
-  const out = [];
-  const pass = (needFreshOnPage) => { for(const a of list){
-      if(out.length>=n) break; if(used.has(a.slug)) continue;
-      const pod = podOf(a); if(blockPods.has(pod)) continue;
-      if(needFreshOnPage && pagePods.has(pod)) continue;
-      used.add(a.slug); blockPods.add(pod); pagePods.add(pod); out.push(a); } };
-  pass(true); if(out.length<n) pass(false);
+  // one pod once per block and pods not yet on the page first, but NEVER at the price of freshness (a pod whose newest story is
+  // months old must not jump the queue) and never at the price of an empty slot: when the preferences run out the block is filled
+  // with the next newest stories, whatever pod they come from.
+  const out = [], newest = list.length ? tsOf(list[0]) : 0, recent = a => tsOf(a) >= newest - 21*864e5;
+  const passes = [a=>!blockPods.has(podOf(a)) && !pagePods.has(podOf(a)) && recent(a), a=>!blockPods.has(podOf(a)) && recent(a),
+                  a=>recent(a), a=>!blockPods.has(podOf(a)), a=>true];
+  for(const ok of passes){
+    for(const a of list){
+      if(out.length>=n) break; if(used.has(a.slug) || !ok(a)) continue;
+      used.add(a.slug); blockPods.add(podOf(a)); pagePods.add(podOf(a)); out.push(a); }
+    if(out.length>=n) break;
+  }
   return out;
 }
 const take = (list, n, used) => { const out=[]; for(const a of list){ if(out.length>=n) break; if(!used.has(a.slug)){ used.add(a.slug); out.push(a); } } return out; };
@@ -533,7 +543,7 @@ function render(){
   const headOK = headList.filter(a=>!a.nohead);            // no_headline sources stay out of the top story and its three bullet links
   const top = takeD(headOK.length?headOK:headList,1,used,topPods,pagePods)[0], subs = takeD(headOK,3,used,topPods,pagePods);
   if(top) h += hero(top, subs);
-  const tiles = takeD(headList,4,used,topPods,pagePods), meds = takeD(headList,2,used,topPods,pagePods);
+  const mixPods = new Set(), tiles = takeD(headList,4,used,mixPods,pagePods), meds = takeD(headList,2,used,mixPods,pagePods);
   if(tiles.length||meds.length) h += '<section class="mix'+((!tiles.length||!meds.length)?' solo':'')+'"><div class="mix-b">'+tiles.map(bt).join('')+'</div><div class="mix-m">'+meds.map(a=>cd(a)).join('')+'</div></section>';
   const rest = items.filter(a=>!used.has(a.slug));
   if(FILTER==='all'){
@@ -546,11 +556,11 @@ function render(){
       h += '<section class="sec">'+bar(x.t, true)+pattern(kind, L)+'</section>';
     });
   } else {
-    const pool = rest.slice();
+    let pool = rest.slice(); const usedC = new Set();
     for(let k=0; pool.length; k++){
-      const kind=k%3, n=kind===1?7:6, L=[], pods=new Set();
-      for(const a of pool.slice()){ if(L.length>=n) break; const pod=podOf(a); if(pods.has(pod)) continue; pods.add(pod); L.push(a); pool.splice(pool.indexOf(a),1); }
-      if(!L.length) L.push(pool.shift());
+      const kind=k%3, n=kind===1?7:6, L = takeD(pool, n, usedC, new Set(), new Set());
+      if(!L.length) break;
+      pool = pool.filter(a=>!usedC.has(a.slug));
       L.sort(byNewest);
       h += '<section class="sec">'+(k===0?bar(FILTER,false):'')+pattern(kind, L)+'</section>';
     }
