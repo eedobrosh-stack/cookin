@@ -184,10 +184,39 @@ def _run(vid, job):
         STATE.clear(); STATE.update(res)
 
 
+def audit():
+    """Podcast episodes whose stored (Whisper) transcript is mostly NOT in the language the job says: wrong-language transcription."""
+    rows = []
+    arts = {a.get("vid"): a for a in va._articles()}
+    for vid, j in va._load_jobs().items():
+        if j.get("kind") != "rss":
+            continue
+        p = os.path.join(va.TR_DIR, vid + ".json")
+        if not os.path.exists(p):
+            continue
+        try:
+            with open(p, encoding="utf-8") as f:
+                tr = json.load(f).get("transcript") or ""
+        except (OSError, ValueError):
+            continue
+        letters = [c for c in tr if c.isalpha()]
+        if not letters:
+            continue
+        he = sum(1 for c in letters if "\u0590" <= c <= "\u05ff") / len(letters)
+        rows.append({"vid": vid, "title": (j.get("title") or "")[:60], "channel": (j.get("channel") or "")[:30], "job_language": j.get("language"),
+                     "source": j.get("source"), "hebrew_ratio": round(he, 2), "status": j.get("status"), "has_article": vid in arts,
+                     "duration": j.get("duration"), "method": (arts.get(vid) or {}).get("method")})
+    rows.sort(key=lambda r: r["hebrew_ratio"])
+    return rows
+
+
 def handle_get(handler, qs):
     user = va.current_user(handler)
     if not (user and user.get("admin")):
         handler._json({"error": "not found"}, 404)
+        return True
+    if (qs.get("audit") or [""])[0]:
+        handler._json({"ok": True, "rows": audit()})
         return True
     if (qs.get("run") or [""])[0]:
         if STATE.get("status") == "running":
