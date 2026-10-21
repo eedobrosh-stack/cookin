@@ -766,7 +766,7 @@ def fallback_sweep():
         threading.Thread(target=_run, args=(vid,), daemon=True).start()
 
 
-RETRY_FIRST_MIN = 20          # first automatic retry 20 min after a failure, then doubling
+RETRY_FIRST_MIN = 10          # first automatic retry 10 min after a failure, then doubling
 RETRY_MAX_MIN = 360           # ...but never wait longer than 6 hours: failed videos are always being tried again
 
 
@@ -934,13 +934,13 @@ def relay_discovered(req):
                          and ch.get("owner_id") and e.get("owner") == ch.get("owner_id"))
         added = (ch.get("added") or "")[:19]
         # a new subscription takes the newest episode (from the last 30 days) right away instead of waiting for the next one
-        latest_vid = None
+        latest_set = set()                                   # the newest N episodes (N = take_latest, default 3 for a new source)
         if ch.get("take_latest"):
             cut = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time() - 30 * 86400))
             fresh = [i for i in req.get("items") or [] if re.fullmatch(r"[\w-]{11}", str(i.get("vid") or "")) and str(i.get("vid")) not in seen
                      and (i.get("duration") or 999) >= 150 and (i.get("published") or "").replace("T", " ").replace("Z", "")[:19] >= cut]
-            if fresh:
-                latest_vid = max(fresh, key=lambda i: i.get("published", ""))["vid"]
+            fresh.sort(key=lambda i: i.get("published", ""), reverse=True)
+            latest_set = {str(i["vid"]) for i in fresh[:max(1, int(ch["take_latest"]))]}
             if req.get("items"):
                 ch.pop("take_latest", None)
         for it in sorted(req.get("items") or [], key=lambda i: i.get("published", "")):
@@ -948,13 +948,13 @@ def relay_discovered(req):
             if not re.fullmatch(r"[\w-]{11}", vid) or vid in seen:
                 continue
             pub = (it.get("published") or "").replace("T", " ").replace("Z", "")[:19]
-            if latest_vid and vid != latest_vid and pub < added:
+            if latest_set and vid not in latest_set and pub < added:
                 seen.add(vid); out["skipped"] += 1               # older than the newest one taken when subscribing
                 continue
-            if (pub and pub < added and not ch.get("backfill") and vid != latest_vid) or (it.get("duration") or 999) < 150:
+            if (pub and pub < added and not ch.get("backfill") and vid not in latest_set) or (it.get("duration") or 999) < 150:
                 seen.add(vid); out["skipped"] += 1               # older than the subscription, or a Short
                 continue
-            if vid != latest_vid and (used >= WATCH_DAILY_CAP or (ch.get("owner_id") and owner_used >= USER_DAILY_VIDEOS)):
+            if vid not in latest_set and (used >= WATCH_DAILY_CAP or (ch.get("owner_id") and owner_used >= USER_DAILY_VIDEOS)):
                 out["deferred"] += 1                              # not marked seen: picked up on a later run
                 continue
             if it.get("title") and find_duplicate(it["title"], vid, sid, ch.get("name"), pub):
@@ -963,7 +963,7 @@ def relay_discovered(req):
                 continue
             seen.add(vid)
             to_submit.append(vid)
-            if vid != latest_vid:                                  # a new source's first episode never uses up the daily cap
+            if vid not in latest_set:                              # a new source's first episodes never use up the daily cap
                 used += 1
                 owner_used += 1 if ch.get("owner_id") else 0
         ch["seen"] = sorted(seen)[-300:]
@@ -982,7 +982,7 @@ def relay_discovered(req):
         code, payload = submit(f"https://www.youtube.com/watch?v={vid}", True, "luna", sid)
         if code == 202:                                           # genuinely new (already-known videos answer 200)
             out["submitted"] += 1
-            new_logs.append({"day": today, "kind": "submit", "vid": vid, "channel": name, "owner": owner, "first": vid == latest_vid,
+            new_logs.append({"day": today, "kind": "submit", "vid": vid, "channel": name, "owner": owner, "first": vid in latest_set,
                              "at": time.strftime("%H:%M:%S")})
             log(f"vidsum relay discovery: {name} -> {vid} ({payload.get('status')})")
     if new_logs:
@@ -999,6 +999,8 @@ def relay_queue(limit=15):
     new_src = {c["id"] for c in _load_ch()["channels"] if (c.get("added") or "") >= fresh}      # sources added in the last 24 h go first
     for v, j in sorted(_load_jobs().items(), key=lambda kv: (0 if kv[1].get("source") in new_src else 1, kv[1].get("submitted", ""))):
         if j.get("status") != "needs_transcript":
+            continue
+        if j.get("srv_claim") and time.time() - j["srv_claim"] < 240:              # the server is fetching this one itself
             continue
         row = {"vid": v, "url": f"https://www.youtube.com/watch?v={v}", "submitted": j.get("submitted")}
         if j.get("kind") == "rss":                  # podcast episode: the Mac downloads the audio and transcribes it (Whisper)
@@ -1593,12 +1595,13 @@ def watch_rss():
         ch["checked"] = time.strftime("%Y-%m-%d %H:%M:%S")
         seen = set(ch.setdefault("seen", []))
         items = feed["items"]
-        if ch.pop("take_latest", False) and items:           # new subscription: the latest episode (if recent) plus nothing older
+        n_latest = int(ch.pop("take_latest", 0) or 0)
+        if n_latest and items:                               # new subscription: the latest N episodes (if recent), nothing older
             fresh = [i for i in items if i["published_at"] and i["published_at"] >= time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 30 * 86400))]
+            first = fresh[:n_latest]
             for i in items:
-                if not fresh or i is not fresh[0]:
+                if not any(i is f for f in first):
                     seen.add(vidsum_feeds.episode_id(i))
-            first = fresh[:1]
         else:
             first = []
         for it in reversed(items) if not first else first:   # oldest first
@@ -1647,12 +1650,96 @@ def _watch_loop():
         time.sleep(WATCH_EVERY_S)
 
 
+
+# ------------------------------------------- server-side YouTube (optional: YOUTUBE_API_KEY + SUPADATA_API_KEY) ---
+import ytserver
+
+
+def yt_api_watch():
+    """Discovery without the Mac: list each YouTube source's latest videos via the Data API and apply the same rules as the relay."""
+    if not ytserver.api_enabled():
+        return
+    for ch in _load_ch()["channels"]:
+        if ch.get("kind") == "rss" or ch["id"].startswith("pending-") or not re.fullmatch(r"(UC|PL|UU|OL|FL)[\w-]{10,}", ch["id"]):
+            continue
+        try:
+            items = ytserver.list_videos(ch["id"], 10)
+        except Exception as e:
+            log(f"vidsum yt-api list failed for {ch['name']}: {str(e)[:120]}")
+            continue
+        if items:
+            relay_discovered({"source_id": ch["id"], "items": items})
+
+
+def server_captions_once(limit=6):
+    """Fetch captions for waiting YouTube jobs through the caption service (up to 3 at a time); anything it cannot do stays for the Mac."""
+    if not ytserver.captions_enabled():
+        return 0
+    todo = []
+    with LOCK:
+        jobs = _load_jobs()
+        for v, j in sorted(jobs.items(), key=lambda kv: kv[1].get("submitted", "")):
+            if j.get("status") == "needs_transcript" and j.get("kind") != "rss" and time.time() >= j.get("srv_next", 0) \
+                    and not (j.get("srv_claim") and time.time() - j["srv_claim"] < 240):
+                j["srv_claim"] = time.time()
+                todo.append(v)
+                if len(todo) >= limit:
+                    break
+        _save_jobs(jobs)
+
+    def one(vid):
+        try:
+            _event(vid, "fetching", "caption service", _load_jobs().get(vid, {}))
+            c = ytserver.captions(vid)
+            relay_transcript({"vid": vid, **c})
+        except ytserver.NoCaptions as e:
+            _set_job(vid, status="no_captions", error=str(e)[:200], srv_claim=0)
+        except ytserver.RateLimited:
+            _set_job(vid, srv_claim=0, srv_next=time.time() + 120)
+        except RuntimeError as e:
+            if str(e).startswith("too short"):
+                _set_job(vid, status="no_captions", error=str(e)[:200], srv_claim=0)
+            else:
+                log(f"vidsum server captions {vid}: {str(e)[:160]}")
+                _set_job(vid, srv_claim=0, srv_next=time.time() + 300)       # leave it to the Mac meanwhile
+        except Exception as e:
+            log(f"vidsum server captions {vid} error: {str(e)[:160]}")
+            _set_job(vid, srv_claim=0, srv_next=time.time() + 300)
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(3) as ex:
+        list(ex.map(one, todo))
+    return len(todo)
+
+
+def _yt_api_loop():
+    time.sleep(150)
+    while True:
+        try:
+            yt_api_watch()
+        except Exception as e:
+            log(f"vidsum yt-api watcher error: {str(e)[:200]}")
+        time.sleep(10 * 60)
+
+
+def _server_captions_loop():
+    time.sleep(60)
+    while True:
+        try:
+            server_captions_once()
+        except Exception as e:
+            log(f"vidsum server captions loop error: {str(e)[:200]}")
+        time.sleep(30)
+
+
 def start_background():
     resume_stuck()
     threading.Thread(target=backfill, daemon=True).start()
     threading.Thread(target=_watch_loop, daemon=True).start()
     threading.Thread(target=_rss_loop, daemon=True).start()
     threading.Thread(target=_fallback_loop, daemon=True).start()
+    threading.Thread(target=_yt_api_loop, daemon=True).start()
+    threading.Thread(target=_server_captions_loop, daemon=True).start()
 
 
 _ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
@@ -1737,7 +1824,7 @@ def add_source(req, user=None):
                 raise ValueError("this source is already in the table")
             d["channels"].append({"id": cid, "kind": "rss", "feed_url": info["feed_url"], "image": info["image"],
                                   "name": (name or info["name"])[:120], "url": url[:300], "language": req.get("language") if req.get("language") in LANGS else info["language"],
-                                  "vertical": vert, "vertical_auto": v_auto, "added": time.strftime("%Y-%m-%d %H:%M:%S"), "take_latest": True,
+                                  "vertical": vert, "vertical_auto": v_auto, "added": time.strftime("%Y-%m-%d %H:%M:%S"), "take_latest": 1,   # podcasts: 1 until transcription is server-side (Whisper on the Mac is serial)
                                   "owner_id": owner_id, "owner_name": owner_name})
             _save_ch(d)
         return cid
@@ -1748,7 +1835,7 @@ def add_source(req, user=None):
             raise ValueError("this source is already in the table")
         d["channels"].append({"id": cid, "name": (name or found)[:120], "url": url[:300],
                               "language": lang, "vertical": vert, "vertical_auto": v_auto, "added": time.strftime("%Y-%m-%d %H:%M:%S"),
-                              "owner_id": owner_id, "owner_name": owner_name, "take_latest": True,
+                              "owner_id": owner_id, "owner_name": owner_name, "take_latest": 3,
                               "backfill": bool(req.get("backfill")) and admin})
         _save_ch(d)
     return cid
