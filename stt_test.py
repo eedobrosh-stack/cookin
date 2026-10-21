@@ -233,13 +233,37 @@ def handle_get(handler, qs):
     if not (user and user.get("admin")):
         handler._json({"error": "not found"}, 404)
         return True
+    rq = (qs.get("requeue") or [""])[0]
+    if rq:                                                         # rebuild a podcast job (audio link, title, source...) from its feed and queue it again
+        import vidsum_feeds
+        for ch in va._load_ch()["channels"]:
+            if ch.get("kind") != "rss":
+                continue
+            try:
+                items = vidsum_feeds.parse_feed(vidsum_feeds.fetch(ch["feed_url"]))["items"]
+            except Exception:
+                continue
+            it = next((i for i in items if vidsum_feeds.episode_id(i) == rq), None)
+            if it:
+                ok = va._submit_rss(ch, it)
+                handler._json({"ok": bool(ok), "requeued": rq, "source": ch["name"], "title": it["title"][:80], "language": ch.get("language")})
+                return True
+        handler._json({"ok": False, "error": "episode not found in any podcast feed"})
+        return True
     redo = (qs.get("redo") or [""])[0]
     if redo:                                                       # throw away an article built from a bad transcript and let the pipeline redo it
         job = va._load_jobs().get(redo)
         if not job or job.get("kind") != "rss":
             handler._json({"ok": False, "error": "unknown podcast job"})
             return True
-        deleted = va.delete_article("", redo)
+        deleted = 0
+        for a in va._articles():                                  # remove the article but KEEP the job (it holds the audio link, title, source)
+            if a.get("vid") == redo:
+                try:
+                    os.remove(os.path.join(va.ART_DIR, a["slug"] + ".json"))
+                    deleted += 1
+                except OSError:
+                    pass
         try:
             os.remove(os.path.join(va.TR_DIR, redo + ".json"))
         except OSError:

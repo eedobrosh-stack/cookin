@@ -1777,7 +1777,7 @@ def server_captions_once(limit=6):
     with LOCK:
         jobs = _load_jobs()
         for v, j in sorted(jobs.items(), key=lambda kv: kv[1].get("submitted", "")):
-            if j.get("status") == "needs_transcript" and j.get("kind") != "rss" and time.time() >= j.get("srv_next", 0) \
+            if j.get("status") == "needs_transcript" and j.get("kind") != "rss" and not re.fullmatch(r"r[0-9a-f]{10}", v) and time.time() >= j.get("srv_next", 0) \
                     and not (j.get("srv_claim") and time.time() - j["srv_claim"] < 240):
                 j["srv_claim"] = time.time()
                 todo.append(v)
