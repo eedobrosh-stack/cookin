@@ -848,6 +848,38 @@ def _run_luna(vid):
         return _run_luna_inner(vid)
 
 
+GEMINI_TEXT_DAILY_CAP = int(os.environ.get("VIDSUM_GEMINI_TEXT_DAILY_CAP", "30"))   # LunaRoute-outage fallbacks per day (text only, cheap)
+
+
+def _provider_down(e):
+    """LunaRoute itself is unavailable (5xx / rate limit after its own retries, or the connection failed): not a problem with the article"""
+    return bool(re.match(r"luna (429|5\d\d)", str(e))) or isinstance(e, (urllib.error.URLError, TimeoutError, ConnectionError))
+
+
+def _gemini_text_today():
+    today = time.strftime("%Y-%m-%d")
+    return sum(1 for j in _load_jobs().values() if (j.get("gemini_text") or "").startswith(today))
+
+
+def _write_text(vid, prompt):
+    """LunaRoute first; if the provider is down, Gemini writes the same article from the same transcript (capped per day).
+    -> (data, tokens, finish, method_override)"""
+    try:
+        d, t, f = _luna(prompt)
+        return d, t, f, None
+    except Exception as e:
+        if not _provider_down(e) or not (secret("GEMINI_API_KEY") or "").strip():
+            raise
+        if _gemini_text_today() >= GEMINI_TEXT_DAILY_CAP:
+            log(f"vidsum {vid}: LunaRoute down but the Gemini text cap ({GEMINI_TEXT_DAILY_CAP}/day) is used up")
+            raise
+        log(f"vidsum {vid}: LunaRoute unavailable ({str(e)[:80]}), writing with Gemini text instead")
+        _set_job(vid, gemini_text=time.strftime("%Y-%m-%d %H:%M:%S"))
+        _event(vid, "fallback", "LunaRoute unavailable: Gemini writes the article", _load_jobs().get(vid, {}))
+        d, t, f = _gemini([{"text": prompt}], media_low=False, vid=vid)
+        return d, t, f, "gemini-text"
+
+
 def _run_luna_inner(vid):
     """LunaRoute path: the Mac relay supplied captions; DeepSeek writes the article."""
     with LUNA_WORKER:
@@ -865,12 +897,12 @@ def _run_luna_inner(vid):
                 prompt = _text_prompt(title, channel, dur, tr["transcript"], retry)
                 if tr.get("description"):
                     prompt += "\n\nVIDEO DESCRIPTION (use for names and context):\n" + tr["description"][:2500]
-                data, tokens, fin = _luna(prompt)
+                data, tokens, fin, used = _write_text(vid, prompt)
                 if _ts_ok(data, dur):
                     break
                 log(f"vidsum {vid} luna bad timestamps (dur={dur}); {'retrying' if not retry else 'accepting'}")
             _save_article(vid, _finalize(data, dur, {"channel": channel, "src_title": title, "tokens": tokens,
-                                                     "method": "luna-whisper" if rss_extra else "luna-captions", "finish": fin, "published": pub,
+                                                     "method": used or ("luna-whisper" if rss_extra else "luna-captions"), "finish": fin, "published": pub,
                                                      "published_at": tr.get("published_at"), **rss_extra}))
         except Exception as e:
             log(f"vidsum {vid} luna FAILED: {str(e)[:400]}")
