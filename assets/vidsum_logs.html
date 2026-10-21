@@ -183,6 +183,14 @@
     .masthead .masthead-actions { grid-column:3; grid-row:1; justify-self:end; }
     .brand-wordmark { height:88px; width:auto; display:block; }
     @media (max-width:640px) { .masthead { grid-template-columns:1fr; min-height:0; padding-block:8px; } .masthead .brand { grid-column:1; } .masthead .masthead-actions { grid-column:1; grid-row:2; justify-self:center; margin-top:4px; } .brand-wordmark { height:56px; } }
+
+    .qbox { background:#fff; border:1px solid var(--line); border-radius:8px; margin:0 0 16px; padding:10px 14px 12px; }
+    .qbox h2 { margin:0 0 2px; font-size:17px; } .qbox .qsub { color:#777; font-size:12.5px; margin-bottom:8px; }
+    .qbox table { width:100%; border-collapse:collapse; font-size:13.5px; } .qbox th { text-align:right; color:#888; font-weight:600; font-size:12px; padding:4px 8px; border-bottom:1px solid var(--line); }
+    .qbox td { padding:6px 8px; border-bottom:1px solid #f0f0f0; vertical-align:top; } .qbox td small { display:block; color:#888; }
+    .qbox .pos { color:#999; width:28px; } .qbox .pill { display:inline-block; border-radius:10px; padding:1px 9px; font-size:12px; background:#eee; white-space:nowrap; }
+    .qbox .pill.run { background:#efe3fb; color:#6a2fa3; } .qbox .pill.wait { background:#e6eefc; color:#1556d6; } .qbox .pill.retry { background:#fdecec; color:#b9141c; }
+    .qbox details summary { cursor:pointer; color:#555; font-size:13px; margin-top:6px; }
   </style>
 </head>
 <body>
@@ -199,6 +207,7 @@
     <div class="tiles" id="tiles"></div>
     <div class="bar"><div class="chips" id="chips"></div><span id="stamp"></span></div>
     <div id="scan" class="scan"></div>
+    <section class="qbox" id="qbox"></section>
     <div class="scroll"><table>
       <thead><tr><th>שעה</th><th>שלב</th><th>סרטון</th><th>פרטים</th></tr></thead>
       <tbody id="rows"><tr><td colspan="4">טוען…</td></tr></tbody>
@@ -213,6 +222,22 @@ const GROUP = {all:null, ok:['done'], fail:['failed','no_captions'], active:['qu
 const TILES = [['done','פורסמו','#2fbf71'],['running','בכתיבה עכשיו','#8a4fd0'],['queued','כתוביות התקבלו, ממתינות לכתיבה','#1556d6'],['needs_transcript','ממתינות לכתוביות','#999'],['no_captions','אין כתוביות','#d33'],['failed','נכשלו','#d33']];
 let FILTER='all', DATA=null;
 function when(s){ const d=new Date(s.replace(' ','T')+'Z'); return d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · '+d.toLocaleDateString('he-IL',{day:'numeric',month:'numeric'}); }
+
+const QSTAT = {running:['כותב עכשיו','run'], queued:['ממתין לכתיבה','wait'], needs_transcript:['ממתין לכתוביות','wait'], no_captions:['אין כתוביות, ינסה שוב','retry'], failed:['נכשל, ינסה שוב','retry']};
+function renderQueue(){
+  const Q = DATA.queue || [], total = DATA.queue_total || 0;
+  if(!total){ $('qbox').innerHTML = '<h2>התור: מה ממתין</h2><div class="qsub">אין כרגע משימות ממתינות. הכל מעודכן.</div>'; return; }
+  const row = r => { const st = QSTAT[r.status]||[r.status,''];
+    const label = r.status==='needs_transcript' && r.podcast ? 'ממתין לתמלול (Whisper)' : st[0];
+    const extra = r.status==='no_captions'||r.status==='failed' ? (r.retry_in_min!=null ? 'ניסיון הבא בעוד ~'+r.retry_in_min+' דק׳' : '')+(r.error?'<small>'+esc(r.error)+'</small>':'') : '';
+    return '<tr><td class="pos">'+r.pos+'</td><td><a href="'+(r.podcast?'#':'https://www.youtube.com/watch?v='+esc(r.vid))+'" '+(r.podcast?'':'target="_blank" rel="noopener"')+'>'+esc(r.title||r.vid)+'</a>'
+      +(r.source?'<small>'+esc(r.source)+' · '+(r.podcast?'פודקאסט':'יוטיוב')+'</small>':'')+'</td>'
+      +'<td><span class="pill '+st[1]+'">'+esc(label)+'</span>'+(extra?'<small>'+extra+'</small>':'')+'</td><td>'+esc(r.handler)+'</td><td>'+r.waiting_min+' דק׳</td></tr>'; };
+  const head = Q.slice(0,12), rest = Q.slice(12);
+  const tbl = rows => '<table><thead><tr><th>#</th><th>פרק</th><th>מצב</th><th>מי מטפל</th><th>ממתין</th></tr></thead><tbody>'+rows.map(row).join('')+'</tbody></table>';
+  $('qbox').innerHTML = '<h2>התור: מה ממתין ('+total+')</h2><div class="qsub">לפי הסדר שבו יטופלו: כתיבה, אחר כך כתוביות (מקורות חדשים קודם), ובסוף ניסיונות חוזרים.</div>'
+    + tbl(head) + (rest.length ? '<details><summary>עוד '+(total-head.length)+' בתור</summary>'+tbl(rest)+'</details>' : '');
+}
 function render(){
   if(!DATA) return;
   const sm = DATA.summary;
@@ -233,6 +258,7 @@ function render(){
     + '<b>הממסר (Mac):</b> '+ago(R.tick_at)+(R.waiting?' · '+R.waiting+' בהמתנה':'')
     + ' &nbsp;·&nbsp; <b>סריקת מקורות:</b> '+ago(R.discover_at)+(R.discover?' ('+R.discover.reachable+'/'+R.discover.sources+' מקורות, '+R.discover.found+' חדשים)':'')
     + ' &nbsp;·&nbsp; <b>פודקאסטים (RSS):</b> '+ago(R.rss_checked_at);
+  renderQueue();
   $('stamp').innerHTML = '<span class="live2">●</span> עודכן '+new Date().toLocaleTimeString('he-IL')+' · '+DATA.total+' משימות במערכת';
 }
 async function tick(){ try{ DATA = await (await fetch('/api/vidsum/logs?limit=400')).json(); render(); }catch(e){ $('stamp').textContent='שגיאת רענון'; } }

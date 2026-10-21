@@ -1043,6 +1043,49 @@ def relay_queue(limit=15):
     return out[:limit]
 
 
+def queue_view(limit=80):
+    """What is waiting, in the order it will be handled, for the log page."""
+    now = time.time()
+    chs = {c["id"]: c for c in _load_ch()["channels"]}
+    srv_caps = ytserver.captions_enabled()
+    rank = {"running": 0, "queued": 1, "needs_transcript": 2, "no_captions": 3, "failed": 3}
+    rows = []
+    for vid, j in _load_jobs().items():
+        st = j.get("status")
+        if st not in rank:
+            continue
+        podcast = j.get("kind") == "rss"
+        try:
+            sub = calendar.timegm(time.strptime(j.get("submitted", ""), "%Y-%m-%d %H:%M:%S"))
+        except ValueError:
+            sub = now
+        row = {"vid": vid, "status": st, "podcast": podcast, "title": j.get("title") or "", "submitted": j.get("submitted"),
+               "waiting_min": max(0, int((now - sub) / 60)), "source": (chs.get(j.get("source")) or {}).get("name") or j.get("channel") or "",
+               "attempts": int(j.get("attempts", 0)), "error": (j.get("error") or "")[:100]}
+        if st == "running":
+            row["handler"] = "server: writing"
+        elif st == "queued":
+            row["handler"] = "server: writing"
+        elif st == "needs_transcript":
+            row["handler"] = "Mac: Whisper" if podcast else ("server: caption service" if srv_caps else "Mac: captions")
+        else:
+            try:
+                failed_at = calendar.timegm(time.strptime(j.get("updated", ""), "%Y-%m-%d %H:%M:%S"))
+            except ValueError:
+                failed_at = now
+            delay = min(RETRY_MAX_MIN, RETRY_FIRST_MIN * (2 ** row["attempts"])) * 60
+            row["retry_in_min"] = max(0, int((failed_at + delay - now) / 60) + 1)
+            row["handler"] = "automatic retry"
+        row["_k"] = (rank[st], 0 if (chs.get(j.get("source")) or {}).get("added", "") >= time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(now - 86400)) else 1,
+                     j.get("submitted", ""))
+        rows.append(row)
+    rows.sort(key=lambda r: r["_k"])
+    for i, r in enumerate(rows, 1):
+        r["pos"] = i
+        r.pop("_k", None)
+    return rows[:limit], len(rows)
+
+
 def relay_transcript(req):
     vid = str(req.get("vid") or "")
     if not re.fullmatch(r"[\w-]{11}", vid) or len(req.get("transcript") or "") < 200:
@@ -2045,8 +2088,10 @@ def handle_get(handler, path, qs):
         cnt = {}
         for j in jobs.values():
             cnt[j.get("status", "?")] = cnt.get(j.get("status", "?"), 0) + 1
+        qrows, qtotal = queue_view()
         handler._json({"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "summary": cnt, "total": len(jobs),
-                       "events": _recent_events(int((qs.get("limit") or ["300"])[0])), "relay": relay_status_get()})
+                       "events": _recent_events(int((qs.get("limit") or ["300"])[0])), "relay": relay_status_get(),
+                       "queue": qrows, "queue_total": qtotal})
         return True
     if path == "/api/vidsum/sources":
         user = current_user(handler)
