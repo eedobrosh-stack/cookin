@@ -1679,7 +1679,10 @@ def discover_now(source_id):
                 items = ytserver.list_videos(source_id, 10)
                 if items:
                     relay_discovered({"source_id": source_id, "items": items})
-                    server_captions_once()
+                    for _ in range(12):                                     # a minute or two of quick passes for the rate-limited stragglers
+                        if not server_captions_once():
+                            break
+                        time.sleep(10)
         except Exception as e:
             log(f"vidsum discover_now {source_id}: {str(e)[:160]}")
     threading.Thread(target=work, daemon=True).start()
@@ -1708,8 +1711,8 @@ def server_captions_once(limit=6):
             relay_transcript({"vid": vid, **c})
         except ytserver.NoCaptions as e:
             _set_job(vid, status="no_captions", error=str(e)[:200], srv_claim=0)
-        except ytserver.RateLimited:
-            _set_job(vid, srv_claim=0, srv_next=time.time() + 120)
+        except ytserver.RateLimited as e:                                   # the service allows only a few requests per second: try again shortly
+            _set_job(vid, srv_claim=0, srv_next=time.time() + e.after)
         except RuntimeError as e:
             if str(e).startswith("too short"):
                 _set_job(vid, status="no_captions", error=str(e)[:200], srv_claim=0)
@@ -1721,7 +1724,7 @@ def server_captions_once(limit=6):
             _set_job(vid, srv_claim=0, srv_next=time.time() + 300)
 
     from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor(3) as ex:
+    with ThreadPoolExecutor(2) as ex:
         list(ex.map(one, todo))
     return len(todo)
 
@@ -1740,10 +1743,11 @@ def _server_captions_loop():
     time.sleep(60)
     while True:
         try:
-            server_captions_once()
+            busy = server_captions_once()
         except Exception as e:
+            busy = 0
             log(f"vidsum server captions loop error: {str(e)[:200]}")
-        time.sleep(30)
+        time.sleep(10 if busy else 30)
 
 
 def start_background():

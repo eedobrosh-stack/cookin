@@ -19,7 +19,9 @@ class NoCaptions(RuntimeError):
 
 
 class RateLimited(RuntimeError):
-    pass
+    def __init__(self, msg="rate limited", after=10):
+        super().__init__(msg)
+        self.after = after
 
 
 def _key(name):
@@ -106,7 +108,11 @@ def _supadata(vid, lang):
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", "replace")[:300]
         if e.code == 429:
-            raise RateLimited("caption service rate limit")
+            try:
+                after = int(float(e.headers.get("Retry-After") or 0))
+            except ValueError:
+                after = 0
+            raise RateLimited("caption service rate limit", min(60, max(5, after or 10)))
         if e.code in (400, 404, 206) or "unavailable" in body.lower() or "not-found" in body.lower():
             raise NoCaptions("no captions available")
         raise RuntimeError(f"caption service {e.code}: {body}")
