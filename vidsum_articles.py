@@ -1671,6 +1671,20 @@ def yt_api_watch():
             relay_discovered({"source_id": ch["id"], "items": items})
 
 
+def discover_now(source_id):
+    """A source was just added: list its latest videos right away (Data API) instead of waiting for the next 10-minute pass."""
+    def work():
+        try:
+            if ytserver.api_enabled():
+                items = ytserver.list_videos(source_id, 10)
+                if items:
+                    relay_discovered({"source_id": source_id, "items": items})
+                    server_captions_once()
+        except Exception as e:
+            log(f"vidsum discover_now {source_id}: {str(e)[:160]}")
+    threading.Thread(target=work, daemon=True).start()
+
+
 def server_captions_once(limit=6):
     """Fetch captions for waiting YouTube jobs through the caption service (up to 3 at a time); anything it cannot do stays for the Mac."""
     if not ytserver.captions_enabled():
@@ -1838,6 +1852,7 @@ def add_source(req, user=None):
                               "owner_id": owner_id, "owner_name": owner_name, "take_latest": 3,
                               "backfill": bool(req.get("backfill")) and admin})
         _save_ch(d)
+    discover_now(cid)
     return cid
 
 
