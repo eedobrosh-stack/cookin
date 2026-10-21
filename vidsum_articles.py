@@ -1034,6 +1034,12 @@ def relay_queue(limit=15):
             continue
         if j.get("srv_claim") and time.time() - j["srv_claim"] < 240:              # the server is fetching this one itself
             continue
+        if j.get("kind") == "rss" and not j.get("gstt_next") and (secret("GEMINI_API_KEY") or "").strip():
+            try:                                                                    # a fresh podcast episode: the server's Gemini path gets 4 minutes' head start
+                if time.time() - calendar.timegm(time.strptime(j.get("submitted", ""), "%Y-%m-%d %H:%M:%S")) < 240:
+                    continue
+            except ValueError:
+                pass
         row = {"vid": v, "url": f"https://www.youtube.com/watch?v={v}", "submitted": j.get("submitted")}
         if j.get("kind") == "rss":                  # podcast episode: the Mac downloads the audio and transcribes it (Whisper)
             row.update(kind="rss", url=j.get("page") or j.get("audio"), audio=j.get("audio"), title=j.get("title"), channel=j.get("channel"),
@@ -1833,6 +1839,8 @@ def start_background():
     threading.Thread(target=_fallback_loop, daemon=True).start()
     threading.Thread(target=_yt_api_loop, daemon=True).start()
     threading.Thread(target=_server_captions_loop, daemon=True).start()
+    import podstt
+    threading.Thread(target=podstt.loop, daemon=True).start()
 
 
 _ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")

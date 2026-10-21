@@ -96,9 +96,27 @@ PROMPT = ("Transcribe this Hebrew podcast episode word for word, in Hebrew, with
           "with the elapsed time in the form [m:ss] (or [h:mm:ss] after an hour), then the speech of that stretch. Do not add speaker names or comments.")
 
 
-def _generate(file_info, key):
+def _with_retry(fn, *args, tries=3, pause=20):
+    """Gemini answers 500/503 now and then: try again before giving up"""
+    last = None
+    for i in range(tries):
+        try:
+            return fn(*args)
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code not in (429, 500, 502, 503, 504) or i == tries - 1:
+                raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            last = e
+            if i == tries - 1:
+                raise
+        time.sleep(pause * (i + 1))
+    raise last
+
+
+def _generate(file_info, key, prompt=None):
     body = {"contents": [{"role": "user", "parts": [{"file_data": {"mime_type": file_info.get("mimeType", "audio/mpeg"), "file_uri": file_info["uri"]}},
-                                                      {"text": PROMPT}]}],
+                                                      {"text": prompt or PROMPT}]}],
             "generationConfig": {"temperature": 0, "maxOutputTokens": 65536}}
     req = urllib.request.Request(f"{BASE}/v1beta/models/{multiuser.GEMINI_MODEL}:generateContent?key={key}", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"})
@@ -161,10 +179,10 @@ def _run(vid, job):
         tmp = tempfile.mkdtemp(prefix="stt_")
         path = os.path.join(tmp, "a.mp3")
         t = time.time(); size, mime = _download(job["audio"], path); res["download_s"] = round(time.time() - t, 1); res["audio_mb"] = round(size / 1e6, 1)
-        t = time.time(); info = _upload(path, mime, key); res["upload_s"] = round(time.time() - t, 1)
+        t = time.time(); info = _with_retry(_upload, path, mime, key); res["upload_s"] = round(time.time() - t, 1)
         t = time.time()
         with va.tok_ctx("stt-test", vid):
-            text, um, fin = _generate(info, key)
+            text, um, fin = _with_retry(_generate, info, key)
         res["generate_s"] = round(time.time() - t, 1)
         va._tok_log(multiuser.GEMINI_MODEL, um.get("promptTokenCount", 0), um.get("candidatesTokenCount", 0) + um.get("thoughtsTokenCount", 0))
         res.update(tokens_in=um.get("promptTokenCount"), tokens_out=um.get("candidatesTokenCount"), tokens_thoughts=um.get("thoughtsTokenCount"),
@@ -214,6 +232,21 @@ def handle_get(handler, qs):
     user = va.current_user(handler)
     if not (user and user.get("admin")):
         handler._json({"error": "not found"}, 404)
+        return True
+    redo = (qs.get("redo") or [""])[0]
+    if redo:                                                       # throw away an article built from a bad transcript and let the pipeline redo it
+        job = va._load_jobs().get(redo)
+        if not job or job.get("kind") != "rss":
+            handler._json({"ok": False, "error": "unknown podcast job"})
+            return True
+        deleted = va.delete_article("", redo)
+        try:
+            os.remove(os.path.join(va.TR_DIR, redo + ".json"))
+        except OSError:
+            pass
+        va._set_job(redo, status="needs_transcript", language=(qs.get("language") or ["he"])[0], error="", gstt_next=0, srv_claim=0, attempts=0,
+                    submitted=time.strftime("%Y-%m-%d %H:%M:%S"))
+        handler._json({"ok": True, "redo": redo, "article_deleted": deleted})
         return True
     if (qs.get("audit") or [""])[0]:
         handler._json({"ok": True, "rows": audit()})
