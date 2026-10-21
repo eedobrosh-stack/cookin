@@ -95,6 +95,12 @@ CREATE TABLE IF NOT EXISTS shopping(
   user_id TEXT PRIMARY KEY, items TEXT DEFAULT '[]', updated_at TEXT);
 CREATE TABLE IF NOT EXISTS usage(user_id TEXT, day TEXT, n INTEGER DEFAULT 0,
   PRIMARY KEY(user_id, day));
+CREATE TABLE IF NOT EXISTS ratings(
+  dish_id TEXT, user_id TEXT, rating INTEGER, updated_at TEXT, PRIMARY KEY(dish_id, user_id));
+CREATE TABLE IF NOT EXISTS comments(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, dish_id TEXT, user_id TEXT, text TEXT,
+  public INTEGER DEFAULT 0, created_at TEXT);
+CREATE INDEX IF NOT EXISTS comments_dish ON comments(dish_id);
 CREATE TABLE IF NOT EXISTS claims(
   id TEXT PRIMARY KEY, dish_id TEXT, action TEXT, email TEXT, note TEXT,
   status TEXT DEFAULT 'pending', created_at TEXT, decided_at TEXT);
@@ -496,6 +502,98 @@ def api_dish_get(handler, user, did):
     if r["visibility"] != "public" and (not user or (user["id"] != r["owner_id"] and not user.get("admin"))):
         return handler._json({"error": "forbidden"}, 403)
     return handler._json({"ok": True, "dish": _dish_public(r)})
+
+
+# ---------------------------------------------------------- ratings & comments ---
+DISH_ID_RE = re.compile(r"\d+|u[0-9a-f]{10}")
+COMMENT_MAX = 1000
+COMMENTS_PER_DAY = 30
+
+
+def _review_dish_ok(c, user, did):
+    """Base dishes (numeric ids) always exist; member dishes must be public or owned (admins: any)."""
+    if not DISH_ID_RE.fullmatch(did or ""):
+        return False
+    if did.isdigit():
+        return True
+    r = c.execute("SELECT owner_id, visibility FROM dishes WHERE id=?", (did,)).fetchone()
+    if not r:
+        return False
+    return r["visibility"] == "public" or bool(user and (user["id"] == r["owner_id"] or user.get("admin")))
+
+
+def _reviews_payload(c, user, did):
+    row = c.execute("SELECT COUNT(*) n, AVG(rating) a FROM ratings WHERE dish_id=?", (did,)).fetchone()
+    uid = user["id"] if user else None
+    mine = None
+    if uid:
+        m = c.execute("SELECT rating FROM ratings WHERE dish_id=? AND user_id=?", (did, uid)).fetchone()
+        mine = m["rating"] if m else None
+    comments = []
+    for r in c.execute(
+            "SELECT c.*, u.name AS uname, u.display_name, u.avatar FROM comments c "
+            "LEFT JOIN users u ON u.id=c.user_id WHERE c.dish_id=? AND (c.public=1 OR c.user_id=?) "
+            "ORDER BY c.id DESC LIMIT 200", (did, uid or "")):
+        comments.append({"id": r["id"], "text": r["text"], "public": bool(r["public"]),
+                         "mine": r["user_id"] == uid, "created": r["created_at"],
+                         "name": public_name(r, "uname") if r["uname"] is not None else "?",
+                         "avatar": r["avatar"] or ""})
+    return {"ok": True, "count": row["n"], "avg": round(row["a"], 2) if row["a"] else 0,
+            "mine": mine, "comments": comments, "signedIn": bool(user)}
+
+
+def api_reviews_get(handler, user, did):
+    with db() as c:
+        if not _review_dish_ok(c, user, did):
+            return handler._json({"error": "not found"}, 404)
+        return handler._json(_reviews_payload(c, user, did))
+
+
+def api_reviews_post(handler, user, did, req):
+    if not user:
+        return handler._json({"error": "login"}, 401)
+    act = (req or {}).get("action")
+    with db() as c:
+        if not _review_dish_ok(c, user, did):
+            return handler._json({"error": "not found"}, 404)
+        uid = user["id"]
+        if act == "rate":
+            try:
+                n = int(req.get("rating"))
+            except (TypeError, ValueError):
+                n = 0
+            if n == 0:
+                c.execute("DELETE FROM ratings WHERE dish_id=? AND user_id=?", (did, uid))
+            elif 1 <= n <= 5:
+                c.execute("INSERT INTO ratings(dish_id,user_id,rating,updated_at) VALUES(?,?,?,?) "
+                          "ON CONFLICT(dish_id,user_id) DO UPDATE SET rating=excluded.rating, updated_at=excluded.updated_at",
+                          (did, uid, n, now_iso()))
+            else:
+                return handler._json({"error": "bad rating"}, 400)
+        elif act == "comment":
+            text = (req.get("text") or "").strip()[:COMMENT_MAX]
+            if not text:
+                return handler._json({"error": "empty"}, 400)
+            day = now_iso()[:10]
+            if c.execute("SELECT COUNT(*) FROM comments WHERE user_id=? AND created_at>=?", (uid, day)).fetchone()[0] >= COMMENTS_PER_DAY:
+                return handler._json({"error": "limit"}, 429)
+            c.execute("INSERT INTO comments(dish_id,user_id,text,public,created_at) VALUES(?,?,?,?,?)",
+                      (did, uid, text, 1 if req.get("public") else 0, now_iso()))
+        elif act in ("delete", "visibility"):
+            try:
+                cid = int(req.get("comment_id"))
+            except (TypeError, ValueError):
+                return handler._json({"error": "bad id"}, 400)
+            r = c.execute("SELECT user_id FROM comments WHERE id=? AND dish_id=?", (cid, did)).fetchone()
+            if not r or (r["user_id"] != uid and not user.get("admin")):
+                return handler._json({"error": "forbidden"}, 403)
+            if act == "delete":
+                c.execute("DELETE FROM comments WHERE id=?", (cid,))
+            else:
+                c.execute("UPDATE comments SET public=? WHERE id=?", (1 if req.get("public") else 0, cid))
+        else:
+            return handler._json({"error": "bad action"}, 400)
+        return handler._json(_reviews_payload(c, user, did))
 
 
 URL_RE = re.compile(r"^https?://[^\s]+$")
@@ -1410,6 +1508,7 @@ def dish_page(handler, user, did, qs):
     <div class="dimg">{hero}</div>
     <div class="dmain">
       <div class="dhead">
+        <div id="rv-stars" class="rv-stars" data-dish="{did}"></div>
         <h1>{e(rec.get('name', ''))}</h1>
         <div class="dsub">{meta}</div>
         <div><span class="badge {cls}">{emoji} {e(diet)}</span><span class="badge">{e(rec.get('category', ''))}</span></div>
@@ -1423,6 +1522,7 @@ def dish_page(handler, user, did, qs):
           <h3>{t['steps']}</h3><ol class="steps">{steps}</ol>
           {f'<div class="tips"><b>{t["tips"]}</b> {e(rec["tips"])}</div>' if rec.get('tips') else ''}
           <div class="origlink">{t['orig']} <a href="{e(src)}" target="_blank" rel="noopener">{e(src.replace('https://www.', ''))}</a></div>
+          <div id="reviews" data-dish="{did}"></div>
           <div class="creator" id="creator">
             <div><b>{t['cr_title']} {e(rec.get('creator', '') or '')}</b> · <a href="{e(src)}" target="_blank" rel="noopener">{e(src.replace('https://www.', ''))}</a></div>
             {creator_block}
@@ -1433,6 +1533,7 @@ def dish_page(handler, user, did, qs):
   </div>
 </div>
 <script>{_ACT_JS}</script>
+<script src="/reviews.js"></script>
 </body>
 </html>"""
     return handler._html(body, "no-store")
@@ -1478,6 +1579,8 @@ def handle_get(handler, path, qs):
         api_me(handler, current_user(handler)); return True
     if path == "/api/shopping":
         api_shopping_get(handler, current_user(handler)); return True
+    if path.startswith("/api/reviews/"):
+        api_reviews_get(handler, current_user(handler), path.rsplit("/", 1)[1]); return True
     if path.startswith("/api/dishes/"):
         api_dish_get(handler, current_user(handler), path.rsplit("/", 1)[1]); return True
     if path == "/api/admin/queue":
@@ -1504,6 +1607,8 @@ def handle_post(handler, path, qs, read_json):
         api_dish_create(handler, current_user(handler), read_json()); return True
     if path == "/api/dishes/bulk-visibility":
         api_bulk_visibility(handler, current_user(handler), read_json()); return True
+    if path.startswith("/api/reviews/"):
+        api_reviews_post(handler, current_user(handler), path.rsplit("/", 1)[1], read_json()); return True
     if path.startswith("/api/dishes/"):
         api_dish_action(handler, current_user(handler), path.rsplit("/", 1)[1], read_json()); return True
     if path == "/api/admin/fill":
