@@ -2105,6 +2105,9 @@ def handle_get(handler, path, qs):
                                        if signed else []),
                        "limit": MAX_USER_SOURCES, "verticals": TOPICS, "languages": LANGS, "sources": sources_view(user)})
         return True
+    if path == "/api/vidsum/admin/stt-compare":
+        import stt_test
+        return stt_test.handle_get(handler, qs)
     if path == "/api/vidsum/admin/ytcheck":
         user = current_user(handler)
         if not (user and user.get("admin")):
