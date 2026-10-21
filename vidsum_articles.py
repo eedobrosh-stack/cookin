@@ -2009,6 +2009,33 @@ def handle_get(handler, path, qs):
                                        if signed else []),
                        "limit": MAX_USER_SOURCES, "verticals": TOPICS, "languages": LANGS, "sources": sources_view(user)})
         return True
+    if path == "/api/vidsum/admin/ytcheck":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "not found"}, 404)
+            return True
+        res = {"api_key": ytserver.api_enabled(), "captions_key": ytserver.captions_enabled()}
+        src = (qs.get("source") or [""])[0] or next((c["id"] for c in _load_ch()["channels"] if c.get("kind") != "rss" and c["id"][:2] in ("UC", "PL")), "")
+        if res["api_key"] and src:
+            t0 = time.time()
+            try:
+                rows = ytserver.list_videos(src, 5)
+                res["list"] = {"ok": True, "source": src, "n": len(rows), "ms": int((time.time() - t0) * 1000),
+                               "newest": [{"vid": r["vid"], "title": r["title"][:50], "published": r["published"], "duration": r["duration"]} for r in rows[:3]]}
+            except Exception as e:
+                rows = []
+                res["list"] = {"ok": False, "error": _scrub(str(e))[:240]}
+            vid = (qs.get("vid") or [""])[0] or (rows[0]["vid"] if rows else "")
+            if res["captions_key"] and vid:
+                t0 = time.time()
+                try:
+                    c = ytserver.captions(vid)
+                    res["captions"] = {"ok": True, "vid": vid, "ms": int((time.time() - t0) * 1000), "blocks": c["transcript"].count("\n") + 1,
+                                       "chars": len(c["transcript"]), "source": c["source"], "title": c["title"][:50], "sample": c["transcript"][:80]}
+                except Exception as e:
+                    res["captions"] = {"ok": False, "vid": vid, "error": _scrub(str(e))[:300], "kind": type(e).__name__}
+        handler._json({"ok": True, **res})
+        return True
     if path == "/api/vidsum/admin/tokens":
         user = current_user(handler)
         if not (user and user.get("admin")):
