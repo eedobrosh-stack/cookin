@@ -165,6 +165,29 @@ def compare(whisper_text, gemini_text, duration):
     return out
 
 
+def _run_windowed(vid, job):
+    """same comparison, but through the production path (podstt.transcribe: windows for long episodes)"""
+    import podstt
+    t0 = time.time()
+    res = {"status": "running", "vid": vid, "title": job.get("title"), "duration_s": job.get("duration"), "mode": "production path (windowed)",
+           "started": time.strftime("%Y-%m-%d %H:%M:%S")}
+    with _LOCK:
+        STATE.clear(); STATE.update(res)
+    try:
+        with open(os.path.join(va.TR_DIR, vid + ".json"), encoding="utf-8") as f:
+            whisper = json.load(f)["transcript"]
+        out = podstt.transcribe(vid, job)
+        res.update(gemini_chars=len(out["transcript"]), whisper_chars=len(whisper), gemini_head=out["transcript"][:300])
+        res["compare"] = compare(whisper, out["transcript"], job.get("duration"))
+        res["status"] = "done"
+    except Exception as e:
+        res["status"] = "failed"
+        res["error"] = va._scrub(str(e))[:400]
+    res["total_s"] = round(time.time() - t0, 1)
+    with _LOCK:
+        STATE.clear(); STATE.update(res)
+
+
 def _run(vid, job):
     t0 = time.time()
     key = (multiuser.secret("GEMINI_API_KEY") or "").strip()
@@ -287,7 +310,7 @@ def handle_get(handler, qs):
                 handler._json({"ok": False, "error": "no podcast episode with a Whisper transcript and 20-45 min duration found"})
                 return True
             vid, job = pick
-        threading.Thread(target=_run, args=(vid, job), daemon=True).start()
+        threading.Thread(target=_run_windowed if (qs.get("windowed") or [""])[0] else _run, args=(vid, job), daemon=True).start()
         handler._json({"ok": True, "started": vid, "title": job.get("title")})
         return True
     handler._json({"ok": True, **STATE})

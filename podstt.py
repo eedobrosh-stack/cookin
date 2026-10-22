@@ -10,14 +10,15 @@ import multiuser
 import stt_test as st
 import vidsum_articles as va
 
-MAX_MIN = int(os.environ.get("VIDSUM_PODCAST_MAX_MIN", "60"))              # longer episodes stay with the Mac (one Gemini answer must fit)
-DAILY_CAP = int(os.environ.get("VIDSUM_GEMINI_PODCAST_DAILY_CAP", "20"))   # episodes per day
+MAX_MIN = int(os.environ.get("VIDSUM_PODCAST_MAX_MIN", "240"))             # episodes longer than this stay with the Mac
+WINDOW_MIN = 40                                                            # one Gemini answer covers ~40 minutes of speech; longer episodes are done in windows
+DAILY_MINUTES = int(os.environ.get("VIDSUM_PODCAST_MIN_PER_DAY", "600"))   # audio minutes sent to Gemini per day (about 10 hours)
 _ONE = threading.Semaphore(1)
 
 
-def _today_count():
+def _today_minutes():
     today = time.strftime("%Y-%m-%d")
-    return sum(1 for j in va._load_jobs().values() if (j.get("gemini_stt") or "").startswith(today))
+    return sum((j.get("duration") or 2400) / 60 for j in va._load_jobs().values() if (j.get("gemini_stt") or "").startswith(today))
 
 
 def hebrew_share(s):
@@ -31,8 +32,10 @@ def episode_language(job):
     return "Hebrew" if he > 0.3 else ("English" if job.get("language") in ("en", "other") or he < 0.05 else "Hebrew")
 
 
-def _prompt(lang):
-    return (f"Transcribe this {lang} podcast episode word for word, in {lang}, with nothing summarised and nothing left out. Start a new line "
+def _prompt(lang, a=None, b=None):
+    part = (f" Transcribe ONLY the part from {_fmt(a)} to {_fmt(b)} of the recording (elapsed time from the very start of the file; start exactly "
+            f"at {_fmt(a)}, stop at {_fmt(b)}, and keep the original elapsed times in the timestamps)." if a is not None else "")
+    return (f"Transcribe this {lang} podcast episode word for word, in {lang}, with nothing summarised and nothing left out.{part} Start a new line "
             "every ~30 seconds with the elapsed time in the form [m:ss] (or [h:mm:ss] after an hour), then the speech of that stretch. "
             "No speaker names, no comments, no music or sound notes.")
 
@@ -63,15 +66,21 @@ def transcribe(vid, job):
     try:
         _size, mime = st._download(job["audio"], path)
         info = st._with_retry(st._upload, path, mime, key)
+        dur = job.get("duration") or 0
+        windows = [(None, None)] if dur <= (WINDOW_MIN + 10) * 60 else [(a, min(dur, a + WINDOW_MIN * 60)) for a in range(0, int(dur), WINDOW_MIN * 60)]
+        parts = []
         with va.tok_ctx("podcast-stt", vid, va._job_owner(vid)):
-            text, um, fin = st._with_retry(st._generate, info, key, _prompt(lang))
-        va._tok_log(multiuser.GEMINI_MODEL, um.get("promptTokenCount", 0), (um.get("candidatesTokenCount") or 0) + (um.get("thoughtsTokenCount") or 0))
-        if fin not in ("STOP", None):
-            raise RuntimeError(f"Gemini stopped early ({fin})")
-        transcript = _normalise(text)
-        dur_min = (job.get("duration") or 0) / 60
-        if len(transcript) < max(400, int(250 * dur_min)) or len(transcript.splitlines()) < 3:      # real speech runs ~500-900 characters a minute
-            raise RuntimeError("Gemini returned too little speech")
+            for a, b in windows:
+                text, um, fin = st._with_retry(st._generate, info, key, _prompt(lang, a, b))
+                va._tok_log(multiuser.GEMINI_MODEL, um.get("promptTokenCount", 0), (um.get("candidatesTokenCount") or 0) + (um.get("thoughtsTokenCount") or 0))
+                if fin not in ("STOP", None):
+                    raise RuntimeError(f"Gemini stopped early ({fin})")
+                piece = _normalise(text)
+                span_min = ((b - a) / 60) if a is not None else (dur / 60)
+                if len(piece) < max(300, int(200 * span_min)) or len(piece.splitlines()) < 2:             # real speech runs ~500-900 characters a minute
+                    raise RuntimeError(f"Gemini returned too little speech for {_fmt(a or 0)}-{_fmt(b or dur)}")
+                parts.append(piece)
+        transcript = "\n".join(parts)
         if lang == "Hebrew" and hebrew_share(transcript) < 0.5:
             raise RuntimeError("Gemini transcript is not Hebrew")
         last = st._blocks(transcript)[-1][0] if st._blocks(transcript) else 0
@@ -88,7 +97,7 @@ def transcribe(vid, job):
 
 def once():
     """Take at most one waiting podcast episode, newest-added sources first. Returns True if one was attempted."""
-    if not (multiuser.secret("GEMINI_API_KEY") or "").strip() or _today_count() >= DAILY_CAP:
+    if not (multiuser.secret("GEMINI_API_KEY") or "").strip() or _today_minutes() >= DAILY_MINUTES:
         return False
     pick = None
     with va.LOCK:

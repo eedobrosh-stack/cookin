@@ -902,7 +902,7 @@ def _run_luna_inner(vid):
                     break
                 log(f"vidsum {vid} luna bad timestamps (dur={dur}); {'retrying' if not retry else 'accepting'}")
             _save_article(vid, _finalize(data, dur, {"channel": channel, "src_title": title, "tokens": tokens,
-                                                     "method": used or ("luna-whisper" if rss_extra else "luna-captions"), "finish": fin, "published": pub,
+                                                     "method": used or ("luna-gemini-audio" if tr.get("source") == "gemini-audio" else "luna-whisper" if rss_extra else "luna-captions"), "finish": fin, "published": pub,
                                                      "published_at": tr.get("published_at"), **rss_extra}))
         except Exception as e:
             log(f"vidsum {vid} luna FAILED: {str(e)[:400]}")
