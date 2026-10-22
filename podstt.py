@@ -11,6 +11,7 @@ import stt_test as st
 import vidsum_articles as va
 
 MAX_MIN = int(os.environ.get("VIDSUM_PODCAST_MAX_MIN", "240"))             # episodes longer than this stay with the Mac
+REPEAT_MAX = 0.10                                                          # more of a window than this repeating earlier windows = Gemini re-told an old stretch
 WINDOW_MIN = 30                                                            # one Gemini answer covers ~30 minutes of speech; longer episodes are done in windows
 DAILY_MINUTES = int(os.environ.get("VIDSUM_PODCAST_MIN_PER_DAY", "600"))   # audio minutes sent to Gemini per day (about 10 hours)
 _ONE = threading.Semaphore(1)
@@ -58,7 +59,24 @@ def _fmt(sec):
 DEBUG_PARTS = []                                                           # (from, to, verdict, text) of every window answer of the last transcribe() call, for stt-compare
 
 
-def _check_window(piece, lang, a, b):
+def _shingles(text, n=6):
+    w = re.findall(r"[\w']+", re.sub(r"\[[^\]]{0,12}\]", " ", text or ""))
+    return {" ".join(w[i:i + n]) for i in range(max(0, len(w) - n + 1))}
+
+
+def _repeat_share(piece, prior):
+    """share of this window's 6-word runs that already appear in the windows accepted before it (a real conversation barely repeats
+    itself; a Gemini answer that re-tells an earlier stretch does)"""
+    mine = _shingles(piece)
+    if not mine or not prior:
+        return 0.0
+    old = set()
+    for x in prior:
+        old |= _shingles(x)
+    return len(mine & old) / len(mine)
+
+
+def _check_window(piece, lang, a, b, prior=None):
     """content check of one window's answer -> None if it looks like the right stretch, else the reason. Gemini can answer STOP with
     text from the wrong part of the file (or invented text), so the finish reason alone is not proof."""
     if a is None:
@@ -73,10 +91,14 @@ def _check_window(piece, lang, a, b):
         return f"timestamps outside the window ({inside}/{len(blocks)} inside)"
     if blocks[-1][0] < a + 0.6 * (b - a):
         return f"speech ends at {_fmt(blocks[-1][0])}, well before {_fmt(b)}"
+    rep = _repeat_share(piece, prior)
+    if rep > REPEAT_MAX:
+        return f"{int(rep * 100)}% of it repeats text already transcribed"
     return None
 
 
-def _window(info, key, lang, a, b, dur, depth=0, retried=False):
+def _window(info, key, lang, a, b, dur, depth=0, retried=False, prior=None):
+    prior = [] if prior is None else prior                                 # pieces accepted so far, in order (filled by the call that accepts them)
     """one window of the episode -> list of normalised pieces. A window that stops early (output limit, malformed or empty answer), returns too
     little speech or fails the content check is asked once more, then split in half and both halves are done separately."""
     if a is None and dur:
@@ -91,18 +113,20 @@ def _window(info, key, lang, a, b, dur, depth=0, retried=False):
     elif len(piece) < max(300, int(200 * span_min)) or len(piece.splitlines()) < 2:                  # real speech runs ~500-900 characters a minute
         bad = "too little speech"
     else:
-        bad = _check_window(piece, lang, a, b)
+        bad = _check_window(piece, lang, a, b, prior)
     DEBUG_PARTS.append((a, b, bad or "ok", piece or text))
     if not bad:
+        prior.append(piece)
         return [piece]
     where = f"{_fmt(a or 0)}-{_fmt(b or dur)}"
     if not retried:
         va.log(f"vidsum podcast stt: window {where} {bad}, retrying")
-        return _window(info, key, lang, a, b, dur, depth, True)
+        return _window(info, key, lang, a, b, dur, depth, True, prior)
     if a is not None and (b - a) > 600 and depth < 3:
         mid = (a + b) // 2
         va.log(f"vidsum podcast stt: window {where} {bad} again, splitting")
-        return _window(info, key, lang, a, mid, dur, depth + 1) + _window(info, key, lang, mid, b, dur, depth + 1)
+        return (_window(info, key, lang, a, mid, dur, depth + 1, False, prior)
+                + _window(info, key, lang, mid, b, dur, depth + 1, False, prior))
     raise RuntimeError(f"Gemini window {where}: {bad}")
 
 
@@ -121,9 +145,10 @@ def transcribe(vid, job):
         windows = [(None, None)] if dur <= (WINDOW_MIN + 10) * 60 else [(a, min(dur, a + WINDOW_MIN * 60)) for a in range(0, dur, WINDOW_MIN * 60)]
         parts = []
         del DEBUG_PARTS[:]
+        prior = []
         with va.tok_ctx("podcast-stt", vid, va._job_owner(vid)):
             for a, b in windows:
-                parts += _window(info, key, lang, a, b, dur)
+                parts += _window(info, key, lang, a, b, dur, prior=prior)
         transcript = "\n".join(parts)
         if lang == "Hebrew" and hebrew_share(transcript) < 0.5:
             raise RuntimeError("Gemini transcript is not Hebrew")
