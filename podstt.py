@@ -11,7 +11,7 @@ import stt_test as st
 import vidsum_articles as va
 
 MAX_MIN = int(os.environ.get("VIDSUM_PODCAST_MAX_MIN", "240"))             # episodes longer than this stay with the Mac
-WINDOW_MIN = 40                                                            # one Gemini answer covers ~40 minutes of speech; longer episodes are done in windows
+WINDOW_MIN = 30                                                            # one Gemini answer covers ~30 minutes of speech; longer episodes are done in windows
 DAILY_MINUTES = int(os.environ.get("VIDSUM_PODCAST_MIN_PER_DAY", "600"))   # audio minutes sent to Gemini per day (about 10 hours)
 _ONE = threading.Semaphore(1)
 
@@ -55,6 +55,26 @@ def _fmt(sec):
     return f"{h}:{r // 60:02d}:{r % 60:02d}" if h else f"{r // 60}:{r % 60:02d}"
 
 
+def _window(info, key, lang, a, b, dur, depth=0):
+    """one window of the episode -> list of normalised pieces. If Gemini runs out of output room (dense speech plus its own reasoning
+    count against the limit) the window is split in half and both halves are done separately."""
+    if a is None and dur:
+        a, b = 0, dur
+    text, um, fin = st._with_retry(st._generate, info, key, _prompt(lang, a, b))
+    va._tok_log(multiuser.GEMINI_MODEL, um.get("promptTokenCount", 0), (um.get("candidatesTokenCount") or 0) + (um.get("thoughtsTokenCount") or 0))
+    if fin == "MAX_TOKENS" and a is not None and (b - a) > 600 and depth < 3:
+        mid = (a + b) // 2
+        va.log(f"vidsum podcast stt: window {_fmt(a)}-{_fmt(b)} hit the output limit, splitting")
+        return _window(info, key, lang, a, mid, dur, depth + 1) + _window(info, key, lang, mid, b, dur, depth + 1)
+    if fin not in ("STOP", None):
+        raise RuntimeError(f"Gemini stopped early ({fin})")
+    piece = _normalise(text)
+    span_min = ((b - a) / 60) if a is not None else (dur / 60)
+    if len(piece) < max(300, int(200 * span_min)) or len(piece.splitlines()) < 2:                      # real speech runs ~500-900 characters a minute
+        raise RuntimeError(f"Gemini returned too little speech for {_fmt(a or 0)}-{_fmt(b or dur)}")
+    return [piece]
+
+
 def transcribe(vid, job):
     """-> dict for relay_transcript. Raises on any failure (the caller leaves the job to the Mac)."""
     key = (multiuser.secret("GEMINI_API_KEY") or "").strip()
@@ -66,20 +86,12 @@ def transcribe(vid, job):
     try:
         _size, mime = st._download(job["audio"], path)
         info = st._with_retry(st._upload, path, mime, key)
-        dur = job.get("duration") or 0
-        windows = [(None, None)] if dur <= (WINDOW_MIN + 10) * 60 else [(a, min(dur, a + WINDOW_MIN * 60)) for a in range(0, int(dur), WINDOW_MIN * 60)]
+        dur = int(job.get("duration") or 0)
+        windows = [(None, None)] if dur <= (WINDOW_MIN + 10) * 60 else [(a, min(dur, a + WINDOW_MIN * 60)) for a in range(0, dur, WINDOW_MIN * 60)]
         parts = []
         with va.tok_ctx("podcast-stt", vid, va._job_owner(vid)):
             for a, b in windows:
-                text, um, fin = st._with_retry(st._generate, info, key, _prompt(lang, a, b))
-                va._tok_log(multiuser.GEMINI_MODEL, um.get("promptTokenCount", 0), (um.get("candidatesTokenCount") or 0) + (um.get("thoughtsTokenCount") or 0))
-                if fin not in ("STOP", None):
-                    raise RuntimeError(f"Gemini stopped early ({fin})")
-                piece = _normalise(text)
-                span_min = ((b - a) / 60) if a is not None else (dur / 60)
-                if len(piece) < max(300, int(200 * span_min)) or len(piece.splitlines()) < 2:             # real speech runs ~500-900 characters a minute
-                    raise RuntimeError(f"Gemini returned too little speech for {_fmt(a or 0)}-{_fmt(b or dur)}")
-                parts.append(piece)
+                parts += _window(info, key, lang, a, b, dur)
         transcript = "\n".join(parts)
         if lang == "Hebrew" and hebrew_share(transcript) < 0.5:
             raise RuntimeError("Gemini transcript is not Hebrew")
