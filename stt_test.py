@@ -11,7 +11,7 @@ import vidsum_articles as va
 
 STATE = {"status": "idle"}
 _LOCK = threading.Lock()
-MAX_AUDIO_MB = 120
+MAX_AUDIO_MB = 160
 BASE = "https://generativelanguage.googleapis.com"
 
 
@@ -77,12 +77,12 @@ def _upload(path, mime, key):
                                             "Content-Type": "application/json"})
     with urllib.request.urlopen(start, timeout=60) as r:
         up_url = r.headers["x-goog-upload-url"]
+    # stream the file from disk: reading a 100 MB episode into memory (plus the request copy) blew the 512 MB instance on 2026-10-22
     with open(path, "rb") as f:
-        data = f.read()
-    fin = urllib.request.Request(up_url, data=data, headers={"X-Goog-Upload-Offset": "0", "X-Goog-Upload-Command": "upload, finalize",
-                                                              "Content-Length": str(size)})
-    with urllib.request.urlopen(fin, timeout=300) as r:
-        info = json.loads(r.read().decode())["file"]
+        fin = urllib.request.Request(up_url, data=f, headers={"X-Goog-Upload-Offset": "0", "X-Goog-Upload-Command": "upload, finalize",
+                                                               "Content-Length": str(size)})
+        with urllib.request.urlopen(fin, timeout=600) as r:
+            info = json.loads(r.read().decode())["file"]
     for _ in range(60):                                          # the file has to become ACTIVE before it can be used
         if info.get("state") == "ACTIVE":
             return info
