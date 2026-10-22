@@ -93,7 +93,7 @@ def once():
     pick = None
     with va.LOCK:
         jobs = va._load_jobs()
-        for vid, _row in [(r["vid"], r) for r in va.relay_queue(40) if r.get("kind") == "rss"]:
+        for vid, _row in [(r["vid"], r) for r in va.relay_queue(40, for_mac=False) if r.get("kind") == "rss"]:
             j = jobs.get(vid) or {}
             if not j.get("audio"):
                 continue

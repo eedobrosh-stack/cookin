@@ -1025,7 +1025,7 @@ def relay_discovered(req):
     return out
 
 
-def relay_queue(limit=15):
+def relay_queue(limit=15, for_mac=True):
     out = []
     fresh = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time() - 24 * 3600))
     new_src = {c["id"] for c in _load_ch()["channels"] if (c.get("added") or "") >= fresh}      # sources added in the last 24 h go first
@@ -1034,7 +1034,7 @@ def relay_queue(limit=15):
             continue
         if j.get("srv_claim") and time.time() - j["srv_claim"] < 240:              # the server is fetching this one itself
             continue
-        if j.get("kind") == "rss" and not j.get("gstt_next") and (secret("GEMINI_API_KEY") or "").strip():
+        if for_mac and j.get("kind") == "rss" and not j.get("gstt_next") and (secret("GEMINI_API_KEY") or "").strip():
             try:                                                                    # a fresh podcast episode: the server's Gemini path gets 4 minutes' head start
                 if time.time() - calendar.timegm(time.strptime(j.get("submitted", ""), "%Y-%m-%d %H:%M:%S")) < 240:
                     continue
