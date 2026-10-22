@@ -55,16 +55,19 @@ def _fmt(sec):
     return f"{h}:{r // 60:02d}:{r % 60:02d}" if h else f"{r // 60}:{r % 60:02d}"
 
 
-def _window(info, key, lang, a, b, dur, depth=0):
+def _window(info, key, lang, a, b, dur, depth=0, retried=False):
     """one window of the episode -> list of normalised pieces. If Gemini runs out of output room (dense speech plus its own reasoning
     count against the limit) the window is split in half and both halves are done separately."""
     if a is None and dur:
         a, b = 0, dur
     text, um, fin = st._with_retry(st._generate, info, key, _prompt(lang, a, b))
     va._tok_log(multiuser.GEMINI_MODEL, um.get("promptTokenCount", 0), (um.get("candidatesTokenCount") or 0) + (um.get("thoughtsTokenCount") or 0))
-    if fin == "MAX_TOKENS" and a is not None and (b - a) > 600 and depth < 3:
+    if fin == "MALFORMED_RESPONSE" and not retried:                       # a one-off bad answer: ask the same window again before splitting
+        va.log(f"vidsum podcast stt: window {_fmt(a or 0)}-{_fmt(b or dur)} malformed response, retrying")
+        return _window(info, key, lang, a, b, dur, depth, True)
+    if fin not in ("STOP", None) and a is not None and (b - a) > 600 and depth < 3:
         mid = (a + b) // 2
-        va.log(f"vidsum podcast stt: window {_fmt(a)}-{_fmt(b)} hit the output limit, splitting")
+        va.log(f"vidsum podcast stt: window {_fmt(a)}-{_fmt(b)} stopped early ({fin}), splitting")
         return _window(info, key, lang, a, mid, dur, depth + 1) + _window(info, key, lang, mid, b, dur, depth + 1)
     if fin not in ("STOP", None):
         raise RuntimeError(f"Gemini stopped early ({fin})")
