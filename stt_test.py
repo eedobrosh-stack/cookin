@@ -180,6 +180,11 @@ def _run_windowed(vid, job):
         with open(os.path.join(va.TR_DIR, vid + ".json"), encoding="utf-8") as f:
             whisper = json.load(f)["transcript"]
         out = podstt.transcribe(vid, job)
+        try:                                                       # keep the Gemini text so ?show= can compare any stretch afterwards
+            with open(os.path.join(va.TR_DIR, vid + ".gemini-test.txt"), "w", encoding="utf-8") as f:
+                f.write(out["transcript"])
+        except OSError:
+            pass
         res.update(gemini_chars=len(out["transcript"]), whisper_chars=len(whisper), gemini_head=out["transcript"][:300])
         res["compare"] = compare(whisper, out["transcript"], job.get("duration"))
         res["status"] = "done"
@@ -258,6 +263,19 @@ def handle_get(handler, qs):
     user = va.current_user(handler)
     if not (user and user.get("admin")):
         handler._json({"error": "not found"}, 404)
+        return True
+    show = (qs.get("show") or [""])[0]
+    if show:                                                       # ?show=<vid>&from=<s>&to=<s>: Whisper and Gemini blocks of one stretch side by side
+        lo, hi = int((qs.get("from") or ["0"])[0]), int((qs.get("to") or ["60"])[0])
+        try:
+            with open(os.path.join(va.TR_DIR, show + ".json"), encoding="utf-8") as f:
+                w = _blocks(json.load(f)["transcript"])
+            with open(os.path.join(va.TR_DIR, show + ".gemini-test.txt"), encoding="utf-8") as f:
+                g = _blocks(f.read())
+        except (OSError, ValueError, KeyError):
+            handler._json({"ok": False, "error": "no stored test transcript for this vid (run the windowed test first)"})
+            return True
+        handler._json({"ok": True, "whisper": [[t, x] for t, x in w if lo <= t <= hi], "gemini": [[t, x] for t, x in g if lo <= t <= hi]})
         return True
     rq = (qs.get("requeue") or [""])[0]
     if rq:                                                         # rebuild a podcast job (audio link, title, source...) from its feed and queue it again
