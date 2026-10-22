@@ -961,9 +961,8 @@ def relay_discovered(req):
         if not ch:
             return out
         seen = set(ch.setdefault("seen", []))
-        used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit" and not e.get("first"))
-        owner_used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit" and not e.get("first")
-                         and ch.get("owner_id") and e.get("owner") == ch.get("owner_id"))
+        used = _used_today(d, today)
+        owner_used = _used_today(d, today, ch.get("owner_id")) if ch.get("owner_id") else 0
         added = (ch.get("added") or "")[:19]
         # a new subscription takes the newest episode (from the last 30 days) right away instead of waiting for the next one
         latest_set = set()                                   # the newest N episodes (N = take_latest, default 3 for a new source)
@@ -988,6 +987,7 @@ def relay_discovered(req):
                 continue
             if vid not in latest_set and (used >= WATCH_DAILY_CAP or (ch.get("owner_id") and owner_used >= USER_DAILY_VIDEOS)):
                 out["deferred"] += 1                              # not marked seen: picked up on a later run
+                log(f"vidsum discovery: {ch['name']} -> {vid} deferred (daily cap {used}/{WATCH_DAILY_CAP})")
                 continue
             if it.get("title") and find_duplicate(it["title"], vid, sid, ch.get("name"), pub):
                 seen.add(vid); out["skipped"] += 1               # same episode re-uploaded under a new video id
@@ -1470,7 +1470,13 @@ def _can_edit_source(c, user):
 
 # ------------------------------------------------------- channel watcher ---
 CH_PATH = os.path.join(multiuser.DATA_DIR, "vidsum_channels.json")
-WATCH_DAILY_CAP = 30
+WATCH_DAILY_CAP = 120
+
+
+def _used_today(d, today, owner=None):
+    """Distinct episodes the watchers submitted today (not log lines: a repeated line must not eat the daily cap)."""
+    return len({e.get("vid") for e in d["log"] if e.get("day") == today and e.get("kind") == "submit" and not e.get("first")
+                and (owner is None or e.get("owner") == owner)})
 WATCH_EVERY_S = 3 * 3600
 _UA = {"User-Agent": "Mozilla/5.0 (jarcud-vidsum)", "Accept-Language": "en"}
 
@@ -1583,7 +1589,7 @@ def watch_once():
     """Look at every channel feed; summarize videos published after the channel was added."""
     d = _load_ch()
     today = time.strftime("%Y-%m-%d")
-    used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit" and not e.get("first"))
+    used = _used_today(d, today)
     for ch in d["channels"]:
         if ch["id"].startswith("pending-") or ch.get("kind") == "rss":     # name only (not valid yet) / podcast feeds have their own loop
             continue
@@ -1610,8 +1616,7 @@ def watch_once():
             if used >= WATCH_DAILY_CAP:
                 break
             if ch.get("owner_id"):
-                owner_used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit" and not e.get("first")
-                                 and e.get("owner") == ch["owner_id"])
+                owner_used = _used_today(d, today, ch["owner_id"])
                 if owner_used >= USER_DAILY_VIDEOS:
                     continue
             if _is_short(vid):
@@ -1663,7 +1668,7 @@ def watch_rss():
     """Podcast-feed sources: queue episodes published after the source was added (the newest one right away on a new source)."""
     d = _load_ch()
     today = time.strftime("%Y-%m-%d")
-    used = sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit" and not e.get("first"))
+    used = _used_today(d, today)
     for ch in d["channels"]:
         if ch.get("kind") != "rss":
             continue
@@ -1697,16 +1702,16 @@ def watch_rss():
             is_first = bool(first)                                   # a new source's first episode never uses up the daily caps
             if not is_first and used >= WATCH_DAILY_CAP:
                 break
-            if not is_first and ch.get("owner_id") and sum(1 for e in d["log"] if e.get("day") == today and e.get("kind") == "submit"
-                                                           and not e.get("first") and e.get("owner") == ch["owner_id"]) >= USER_DAILY_VIDEOS:
+            if not is_first and ch.get("owner_id") and _used_today(d, today, ch["owner_id"]) >= USER_DAILY_VIDEOS:
                 continue
             if _submit_rss(ch, it):
                 seen.add(eid)
                 if not is_first:
                     used += 1
-                d["log"].append({"day": today, "kind": "submit", "vid": eid, "channel": ch["name"], "owner": ch.get("owner_id"), "first": is_first,
-                                 "at": time.strftime("%H:%M:%S")})
-                log(f"vidsum rss: {ch['name']} -> {it['title'][:60]} ({eid})")
+                if not any(e.get("vid") == eid and e.get("day") == today for e in d["log"]):
+                    d["log"].append({"day": today, "kind": "submit", "vid": eid, "channel": ch["name"], "owner": ch.get("owner_id"), "first": is_first,
+                                     "at": time.strftime("%H:%M:%S")})
+                    log(f"vidsum rss: {ch['name']} -> {it['title'][:60]} ({eid})")
         ch["seen"] = sorted(seen)[-400:]
     _save_ch(d)
 
@@ -1740,6 +1745,7 @@ def yt_api_watch():
     """Discovery without the Mac: list each YouTube source's latest videos via the Data API and apply the same rules as the relay."""
     if not ytserver.api_enabled():
         return
+    n, tot = 0, {"submitted": 0, "skipped": 0, "deferred": 0}
     for ch in _load_ch()["channels"]:
         if ch.get("kind") == "rss" or ch["id"].startswith("pending-") or not re.fullmatch(r"(UC|PL|UU|OL|FL)[\w-]{10,}", ch["id"]):
             continue
@@ -1749,7 +1755,11 @@ def yt_api_watch():
             log(f"vidsum yt-api list failed for {ch['name']}: {str(e)[:120]}")
             continue
         if items:
-            relay_discovered({"source_id": ch["id"], "items": items})
+            r = relay_discovered({"source_id": ch["id"], "items": items})
+            for k in tot:
+                tot[k] += r.get(k, 0)
+        n += 1
+    log(f"vidsum yt-api pass: {n} sources, submitted {tot['submitted']}, skipped {tot['skipped']}, deferred {tot['deferred']}")
 
 
 def discover_now(source_id):
