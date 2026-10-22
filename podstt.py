@@ -55,27 +55,55 @@ def _fmt(sec):
     return f"{h}:{r // 60:02d}:{r % 60:02d}" if h else f"{r // 60}:{r % 60:02d}"
 
 
+DEBUG_PARTS = []                                                           # (from, to, verdict, text) of every window answer of the last transcribe() call, for stt-compare
+
+
+def _check_window(piece, lang, a, b):
+    """content check of one window's answer -> None if it looks like the right stretch, else the reason. Gemini can answer STOP with
+    text from the wrong part of the file (or invented text), so the finish reason alone is not proof."""
+    if a is None:
+        return None
+    blocks = st._blocks(piece)
+    if not blocks:
+        return "no timestamped blocks"
+    if lang == "Hebrew" and hebrew_share(piece) < 0.5:
+        return "not Hebrew"
+    inside = sum(1 for sec, _t in blocks if a - 60 <= sec <= b + 60)
+    if inside < 0.8 * len(blocks):
+        return f"timestamps outside the window ({inside}/{len(blocks)} inside)"
+    if blocks[-1][0] < a + 0.6 * (b - a):
+        return f"speech ends at {_fmt(blocks[-1][0])}, well before {_fmt(b)}"
+    return None
+
+
 def _window(info, key, lang, a, b, dur, depth=0, retried=False):
-    """one window of the episode -> list of normalised pieces. If Gemini runs out of output room (dense speech plus its own reasoning
-    count against the limit) the window is split in half and both halves are done separately."""
+    """one window of the episode -> list of normalised pieces. A window that stops early (output limit, malformed or empty answer), returns too
+    little speech or fails the content check is asked once more, then split in half and both halves are done separately."""
     if a is None and dur:
         a, b = 0, dur
     text, um, fin = st._with_retry(st._generate, info, key, _prompt(lang, a, b))
     va._tok_log(multiuser.GEMINI_MODEL, um.get("promptTokenCount", 0), (um.get("candidatesTokenCount") or 0) + (um.get("thoughtsTokenCount") or 0))
-    if (fin == "MALFORMED_RESPONSE" or str(fin).startswith("NO_CANDIDATES")) and not retried:                       # a one-off bad answer: ask the same window again before splitting
-        va.log(f"vidsum podcast stt: window {_fmt(a or 0)}-{_fmt(b or dur)} malformed response, retrying")
-        return _window(info, key, lang, a, b, dur, depth, True)
-    if fin not in ("STOP", None) and a is not None and (b - a) > 600 and depth < 3:
-        mid = (a + b) // 2
-        va.log(f"vidsum podcast stt: window {_fmt(a)}-{_fmt(b)} stopped early ({fin}), splitting")
-        return _window(info, key, lang, a, mid, dur, depth + 1) + _window(info, key, lang, mid, b, dur, depth + 1)
-    if fin not in ("STOP", None):
-        raise RuntimeError(f"Gemini stopped early ({fin})")
     piece = _normalise(text)
     span_min = ((b - a) / 60) if a is not None else (dur / 60)
-    if len(piece) < max(300, int(200 * span_min)) or len(piece.splitlines()) < 2:                      # real speech runs ~500-900 characters a minute
-        raise RuntimeError(f"Gemini returned too little speech for {_fmt(a or 0)}-{_fmt(b or dur)}")
-    return [piece]
+    bad = None
+    if fin not in ("STOP", None):
+        bad = f"stopped early ({fin})"
+    elif len(piece) < max(300, int(200 * span_min)) or len(piece.splitlines()) < 2:                  # real speech runs ~500-900 characters a minute
+        bad = "too little speech"
+    else:
+        bad = _check_window(piece, lang, a, b)
+    DEBUG_PARTS.append((a, b, bad or "ok", piece or text))
+    if not bad:
+        return [piece]
+    where = f"{_fmt(a or 0)}-{_fmt(b or dur)}"
+    if not retried:
+        va.log(f"vidsum podcast stt: window {where} {bad}, retrying")
+        return _window(info, key, lang, a, b, dur, depth, True)
+    if a is not None and (b - a) > 600 and depth < 3:
+        mid = (a + b) // 2
+        va.log(f"vidsum podcast stt: window {where} {bad} again, splitting")
+        return _window(info, key, lang, a, mid, dur, depth + 1) + _window(info, key, lang, mid, b, dur, depth + 1)
+    raise RuntimeError(f"Gemini window {where}: {bad}")
 
 
 def transcribe(vid, job):
@@ -92,6 +120,7 @@ def transcribe(vid, job):
         dur = int(job.get("duration") or 0)
         windows = [(None, None)] if dur <= (WINDOW_MIN + 10) * 60 else [(a, min(dur, a + WINDOW_MIN * 60)) for a in range(0, dur, WINDOW_MIN * 60)]
         parts = []
+        del DEBUG_PARTS[:]
         with va.tok_ctx("podcast-stt", vid, va._job_owner(vid)):
             for a, b in windows:
                 parts += _window(info, key, lang, a, b, dur)

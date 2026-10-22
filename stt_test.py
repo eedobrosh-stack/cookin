@@ -179,7 +179,14 @@ def _run_windowed(vid, job):
     try:
         with open(os.path.join(va.TR_DIR, vid + ".json"), encoding="utf-8") as f:
             whisper = json.load(f)["transcript"]
-        out = podstt.transcribe(vid, job)
+        try:
+            out = podstt.transcribe(vid, job)
+        finally:                                                   # keep what Gemini said, rejected windows included, even when the run fails
+            try:
+                with open(os.path.join(va.TR_DIR, vid + ".gemini-windows.txt"), "w", encoding="utf-8") as f:
+                    f.write("\n".join(f"[{podstt._fmt(a or 0)}] ##WINDOW {podstt._fmt(a or 0)}-{podstt._fmt(b or 0)} {v}\n{t}" for a, b, v, t in podstt.DEBUG_PARTS))
+            except OSError:
+                pass
         try:                                                       # keep the Gemini text so ?show= can compare any stretch afterwards
             with open(os.path.join(va.TR_DIR, vid + ".gemini-test.txt"), "w", encoding="utf-8") as f:
                 f.write(out["transcript"])
@@ -270,7 +277,10 @@ def handle_get(handler, qs):
         try:
             with open(os.path.join(va.TR_DIR, show + ".json"), encoding="utf-8") as f:
                 w = _blocks(json.load(f)["transcript"])
-            with open(os.path.join(va.TR_DIR, show + ".gemini-test.txt"), encoding="utf-8") as f:
+            gp = os.path.join(va.TR_DIR, show + ".gemini-test.txt")
+            if not os.path.exists(gp):                              # the run failed: show every window answer, rejected ones labelled
+                gp = os.path.join(va.TR_DIR, show + ".gemini-windows.txt")
+            with open(gp, encoding="utf-8") as f:
                 g = _blocks(f.read())
         except (OSError, ValueError, KeyError):
             handler._json({"ok": False, "error": "no stored test transcript for this vid (run the windowed test first)"})
