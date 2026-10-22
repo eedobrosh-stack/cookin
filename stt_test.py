@@ -122,6 +122,9 @@ def _generate(file_info, key, prompt=None):
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=600) as r:
         res = json.loads(r.read().decode())
+    if not res.get("candidates"):                                          # blocked / empty answer: report it as a finish reason so callers retry or split
+        pf = res.get("promptFeedback") or {}
+        return "", res.get("usageMetadata") or {}, "NO_CANDIDATES" + (f":{pf['blockReason']}" if pf.get("blockReason") else "")
     cand = res["candidates"][0]
     text = "".join(p.get("text", "") for p in cand.get("content", {}).get("parts", []))
     um = res.get("usageMetadata") or {}

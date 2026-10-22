@@ -62,7 +62,7 @@ def _window(info, key, lang, a, b, dur, depth=0, retried=False):
         a, b = 0, dur
     text, um, fin = st._with_retry(st._generate, info, key, _prompt(lang, a, b))
     va._tok_log(multiuser.GEMINI_MODEL, um.get("promptTokenCount", 0), (um.get("candidatesTokenCount") or 0) + (um.get("thoughtsTokenCount") or 0))
-    if fin == "MALFORMED_RESPONSE" and not retried:                       # a one-off bad answer: ask the same window again before splitting
+    if (fin == "MALFORMED_RESPONSE" or str(fin).startswith("NO_CANDIDATES")) and not retried:                       # a one-off bad answer: ask the same window again before splitting
         va.log(f"vidsum podcast stt: window {_fmt(a or 0)}-{_fmt(b or dur)} malformed response, retrying")
         return _window(info, key, lang, a, b, dur, depth, True)
     if fin not in ("STOP", None) and a is not None and (b - a) > 600 and depth < 3:
