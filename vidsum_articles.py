@@ -488,6 +488,27 @@ def _text_prompt(title, channel, dur, transcript, retry=False):
             "\n\nTRANSCRIPT (each line starts with its timestamp in brackets):\n" + transcript)
 
 
+def _hebrew_share(text):
+    letters = [c for c in (text or "") if c.isalpha()]
+    return sum(1 for c in letters if "\u0590" <= c <= "\u05ff") / len(letters) if letters else 1.0
+
+
+def _text_prompt_en(title, channel, dur, transcript, retry=False):
+    """The same news-article brief, written in ENGLISH straight from a non-Hebrew transcript (never translated back from Hebrew)."""
+    p = _prompt(title, channel, dur, retry).replace("the attached YouTube video", "the video whose transcript is below")
+    for a, b in (("into a Hebrew NEWS ARTICLE", "into an English NEWS ARTICLE"), ("Write like an Israeli news site feature", "Write like a quality English-language news feature"),
+                 ("a sharp, specific Hebrew headline", "a sharp, specific English headline"),
+                 ('4-5 short Hebrew sentences ("עיקרי הדברים")', "4-5 short English sentences (the key points)"), ("Hebrew words in total", "English words in total"),
+                 ('("לדבריו", "לטענתו")', '("he said", "according to her", "he claimed")'), ('"אלון אולמן, על מנהיגות"', '"Alon Ullman, on leadership"'),
+                 ("Return only JSON matching the schema.", "")):
+        p = p.replace(a, b)
+    return (p + "\nWrite everything in English (names in their original English spelling). The topic and topics values must be copied EXACTLY, in Hebrew, from the allowed section list. "
+            "The transcript is automatic speech recognition and contains word errors: infer the intended words from context and fix obvious mistakes "
+            "(names, numbers), never copy garbled text.\n"
+            "Return ONLY one valid JSON object, no markdown. Never use the ASCII double-quote character inside a string value (use single quotes instead), so the JSON stays valid. Shape:\n" + SCHEMA_HINT
+            + "\n\nTRANSCRIPT (each line starts with its timestamp in brackets):\n" + transcript)
+
+
 def _oembed(vid):
     try:
         with urllib.request.urlopen("https://www.youtube.com/oembed?format=json&url=" +
@@ -892,6 +913,30 @@ def _run_luna_inner(vid):
             job = _load_jobs().get(vid, {})
             rss_extra = ({"kind": "rss", "url": job.get("page") or job.get("audio"), "audio": job.get("audio"), "image": job.get("image") or ""}
                          if job.get("kind") == "rss" else {})
+            foreign = _hebrew_share((tr.get("transcript") or "")[:30000]) < 0.3        # an English (or other non-Hebrew) episode
+            if foreign:
+                try:                                            # write it in English first, then translate THAT to Hebrew: the English never goes through Hebrew
+                    import vidsum_translate
+                    edata = None
+                    for retry in (False, True):
+                        prompt = _text_prompt_en(title, channel, dur, tr["transcript"], retry)
+                        if tr.get("description"):
+                            prompt += "\n\nVIDEO DESCRIPTION (use for names and context):\n" + tr["description"][:2500]
+                        edata, tokens, fin, used = _write_text(vid, prompt)
+                        if _ts_ok(edata, dur):
+                            break
+                        log(f"vidsum {vid} luna bad timestamps (dur={dur}); {'retrying' if not retry else 'accepting'}")
+                    en_art = _finalize(edata, dur, {"channel": channel, "src_title": title, "tokens": tokens,
+                                                    "method": (used or ("luna-gemini-audio" if tr.get("source") == "gemini-audio" else "luna-whisper" if rss_extra else "luna-captions")) + "+en-first",
+                                                    "finish": fin, "published": pub, "published_at": tr.get("published_at"), **rss_extra})
+                    he = vidsum_translate.to_hebrew(en_art)
+                    art = dict(en_art, **he)
+                    art["en"] = {"title": en_art["title"], "standfirst": en_art["standfirst"], "lead": en_art["lead"], "key_points": en_art["key_points"],
+                                 "blocks": en_art["blocks"], "original": True, "at": time.strftime("%Y-%m-%d %H:%M:%S"), "model": LUNA_MODEL}
+                    _save_article(vid, art)
+                    return
+                except Exception as e:
+                    log(f"vidsum {vid} English-first failed ({str(e)[:200]}), writing the Hebrew article directly")
             data = fin = None
             for retry in (False, True):
                 prompt = _text_prompt(title, channel, dur, tr["transcript"], retry)

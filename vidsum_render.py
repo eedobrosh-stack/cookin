@@ -231,6 +231,9 @@ def _overlay_en(a):
     for k in ("title", "standfirst", "lead", "key_points"):
         if en.get(k):
             b[k] = en[k]
+    if en.get("original") and en.get("blocks"):         # written in English from the original episode: its own blocks and timestamps
+        b["blocks"] = en["blocks"]
+        return b, True
     blocks = []
     for x, y in zip(a.get("blocks") or [], en.get("blocks") or []):
         z = dict(x)
