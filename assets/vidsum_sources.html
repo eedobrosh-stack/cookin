@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8">
+  <script>(function(){var m=document.cookie.match(/(?:^|;\s*)pawed_lang=(he|en)/),l=m?m[1]:"he";window.LANG=l;var d=document.documentElement;d.lang=l;d.dir=l==="en"?"ltr":"rtl";})();</script>
   <meta name="theme-color" content="#e3222b">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>מקורות | Pawed</title>
@@ -103,6 +104,15 @@
     .card:hover h3, .side-item:hover h2, .lead:hover h1, .topic-row:hover h3 { text-decoration:underline; }
 
     table { width:100%; border-collapse:collapse; background:#fff; }
+    .utility-inner { justify-content:flex-start; } .utility-links { margin-inline-start:auto; }
+    .langsw { display:inline-flex; gap:6px; order:-1; margin-inline-start:6px; }
+    .langsw a { font-size:18px; line-height:1; opacity:.45; cursor:pointer; filter:grayscale(.4); }
+    .langsw a.on { opacity:1; filter:none; } .langsw a:hover { opacity:1; }
+    html[dir=ltr] .langsw { order:99; }
+    html[dir=ltr] .brand-note { border-right:0; border-left:1px solid #ccc; padding-right:0; padding-left:12px; }
+    html[dir=ltr] th { text-align:left; }
+    html[dir=ltr] .signin { border-right:0; border-left:4px solid var(--red); }
+    html[dir=ltr] body { direction:ltr; }
     th { text-align:right; font-size:12px; color:#777; font-weight:700; padding:10px 12px; border-bottom:2px solid var(--ink); white-space:nowrap; }
     td { padding:11px 12px; border-bottom:1px solid var(--line); font-size:15px; vertical-align:middle; }
     td.url a { color:#1556d6; text-decoration:underline; text-underline-offset:2px; word-break:break-all; direction:ltr; display:inline-block; }
@@ -241,7 +251,7 @@
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a></div><span class="langsw"><a data-l="en" title="English">🇺🇸</a><a data-l="he" title="עברית">🇮🇱</a></span></div></div>
   <header class="masthead">
     <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
     <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
@@ -482,10 +492,79 @@ async function load(){
   if(!$('n_lang').options.length){ $('n_lang').innerHTML = opts(D.languages,'he'); $('n_vert').innerHTML = '<option value="">אוטומטי (לפי התוכן)</option>'+opts(D.verticals,''); }
   render(); loadUsers();
 }
-document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+document.getElementById('today').textContent = new Date().toLocaleDateString(window.LANG==='en'?'en-US':'he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעינה</td></tr>'; });
 </script>
 <script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>
 
+<script>
+// ---- English edition: translate the page text (static and dynamic) from a Hebrew -> English table; LANG comes from the pawed_lang cookie ----
+(function(){
+  const EN = window.LANG==='en';
+  const sw = document.querySelector('.langsw');
+  if(sw){ sw.querySelectorAll('a').forEach(a=>{ a.classList.toggle('on', a.dataset.l===(EN?'en':'he'));
+    a.onclick=e=>{ e.preventDefault(); const l=a.dataset.l; if(l===(EN?'en':'he')) return; document.cookie='pawed_lang='+l+';path=/;max-age=31536000;samesite=lax';
+      const done=()=>location.reload(); try{ fetch('/api/vidsum/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(done,done); }catch(x){ done(); } }; }); }
+  fetch('/api/vidsum/lang').then(r=>r.json()).then(j=>{ if(j.lang && j.lang!==(EN?'en':'he')){ document.cookie='pawed_lang='+j.lang+';path=/;max-age=31536000;samesite=lax'; location.reload(); } }).catch(()=>{});
+  if(!EN) return;
+  const TR = {
+    'מקורות | Pawed':'Resources | Pawed','חדשות מתוך סיכומי וידאו ופודקאסטים':'News from video and podcast summaries','● מתעדכן אוטומטית':'● Updating automatically',
+    'כל הסיכומים':'All summaries','מקורות':'Resources','יומן':'Log','← חזרה לעמוד הראשי':'← Back to the home page',
+    'פודקאסטים וערוצי יוטיוב ש-Pawed מסכם. הוסיפו מקורות משלכם (הם נראים רק לכם) ובחרו אילו מהמקורות של Pawed יופיעו אצלכם.':'Podcasts and YouTube channels that Pawed summarises. Add your own resources (only you can see them) and choose which of Pawed\'s resources appear for you.',
+    'הוספת מקור':'Add a resource','ערוץ לפי שם':'Channel by name','בחירה לפי העדפה':'Pick by preference','פרק בודד':'Single episode',
+    'הדביקו קישור YouTube לפרק אחד והוא יסוכם ויופיע רק אצלכם.':'Paste a YouTube link to one episode and it will be summarised and shown only to you.',
+    'הוספת פרק':'Add episode','שם פודקאסט…':'Podcast name…',
+    'הקלידו את שם הפודקאסט ובחרו מהרשימה. הכתובת, השפה והתחום ימולאו אוטומטית מהסריקה העולמית של Pawed.':'Type the podcast name and pick it from the list. The address, language and topic are filled in automatically from Pawed\'s worldwide scan.',
+    'בחרו שפה, מדינה ונושא ותקבלו רשימת ערוצים איכותיים בלבד: יותר מ-50 פרקים, פרק אחרון לפני פחות מ-45 יום ודירוג גבוה (לפי מקומות בצ׳ארטים).':'Choose a language, country and topic to get quality channels only: more than 50 episodes, a latest episode under 45 days old and a high chart ranking.',
+    'הצג ערוצים':'Show channels','עריכה מתקדמת (מנהל): טבלת כל המקורות':'Advanced editing (admin): table of all resources',
+    'שם הפודקאסט':'Podcast name','שפה':'Language','כתובת':'Address','תחום':'Topic','נוסף על ידי':'Added by','טוען…':'Loading…','שם':'Name',
+    'שם (אופציונלי). אתר שחוסם קריאה? הזינו כאן את שם התוכנית':'Name (optional). Site blocks reading? Enter the show name here',
+    'YouTube, עמוד פודקאסט (למשל mako) או RSS · ריק = חיפוש לפי השם ב-Apple Podcasts':'YouTube, a podcast page (e.g. mako) or RSS · empty = search by name on Apple Podcasts',
+    'הוספה':'Add','Pawed · פורטל חדשות המבוסס על סיכומי וידאו':'Pawed · a news portal built on video and podcast summaries',
+    'שגיאה':'Error','נשמר':'Saved','יציאה':'Sign out','מחובר כמנהל':'Signed in as admin','פודקאסט RSS':'RSS podcast','ממתין לכתובת':'Waiting for an address',
+    'ממתין לכתובת YouTube':'Waiting for a YouTube address','שמירה':'Save','אני':'Me','הסרה':'Remove','הסתר':'Hide','הסר את הערוץ מהתצוגה שלי':'Remove the channel from my view',
+    'הסתר את כל המקורות של המשתמש הזה':"Hide all of this user's resources",'אנונימי':'Anonymous','יש להזין כתובת YouTube':'Enter a YouTube address',
+    'יש להזין שם פודקאסט או כתובת YouTube':'Enter a podcast name or a YouTube address','המקור הוסר':'Resource removed','המקור נוסף':'Resource added',
+    'השם נוסף, יופעל כשתצורף כתובת YouTube':'The name was added, it will start once a YouTube address is attached','הדביקו קישור YouTube':'Paste a YouTube link',
+    'שולח…':'Sending…','זה לא קישור YouTube':'This is not a YouTube link','הפרק כבר קיים ב-Pawed':'This episode already exists in Pawed',
+    '✓ נוסף לתור. הכתבה תופיע באתר בשעות הקרובות.':'✓ Added to the queue. The story will appear on the site in the next few hours.','שגיאת רשת':'Network error',
+    'לא נמצא בסריקה. נסו שם אחר.':'Not found in the scan. Try another name.','כבר ברשימה':'Already in the list','הוסף למקורות':'Add to resources',
+    'מחפש…':'Searching…','שגיאה בטעינה':'Failed to load','לא נמצאו ערוצים איכותיים לבחירה הזו. נסו שפה, מדינה או נושא אחרים.':'No quality channels found for this choice. Try another language, country or topic.',
+    'מוסיף…':'Adding…','כל המדינות':'All countries','כל הנושאים':'All topics','אוטומטי (לפי התוכן)':'Automatic (from the content)','אחר':'Other','אין מקורות.':'No resources.',
+    'הבחירה של Pawed':"Pawed's selection",'סמנו את הקטגוריות והערוצים שיופיעו בעמוד הראשי שלכם. "הכל" שקול ל"הצג את מקורות Pawed".':'Tick the categories and channels that should appear on your home page. "All" is the same as "show Pawed\'s resources".',
+    'המקורות ש-Pawed עוקב אחריהם.':'The resources Pawed follows.','המקורות שלי':'My resources','מקורות שהוספתם נראים רק לכם. סמנו מה להציג, ומחקו מה שלא צריך.':'Resources you add are visible only to you. Tick what to show and delete what you do not need.',
+    'עוד לא הוספתם מקורות. התחילו מההוספה למעלה.':'You have not added any resources yet. Start with the form above.','נשמר ✓ הבחירה תחול בעמוד הראשי':'Saved ✓ the choice will apply on the home page',
+    'מי הוסיף מקורות או שינה את בחירת Pawed שלו.':'Who added resources or changed their Pawed selection.','אין מקורות משלו':'No resources of their own','הסתיר את כל הרשימה של Pawed':"Hid Pawed's whole list",
+    'רואה את כל ערוצי Pawed':"Sees all of Pawed's channels",'עדיין אין משתמשים חיצוניים עם מקורות.':'No external users with resources yet.','שגיאה בטעינת המשתמשים':'Failed to load the users',
+    'שימוש בטוקנים (7 ימים)':'Token usage (7 days)','קריאות':'Calls','קלט':'Input','פלט':'Output','משימה · מודל':'Task · model','משתמש':'User','יום':'Day','מנהל':'Admin','היום':'Today',
+    'התחברו והוסיפו את הפודקאסטים שלכם':'Sign in and add your podcasts','התחברו ל-Pawed והתאימו את הפודים שלכם:':'Sign in to Pawed and tailor your pods:','הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕':'Add a channel by name or YouTube link, and remove existing ones with ✕',
+    'עברית':'Hebrew','פוליטיקה':'Politics','טכנולוגיה':'Technology','כלכלה':'Economy','ספורט':'Sports','תרבות':'Culture','לייפסטייל':'Lifestyle','בריאות':'Health'
+  };
+  const PAT = [
+    [/^שלום (.*)$/, 'Hello $1'], [/^נותרו לכם (\d+) מתוך (\d+) מקורות\. מקורות שתוסיפו נראים רק לכם\.$/, 'You have $1 of $2 resources left. Resources you add are visible only to you.'],
+    [/^מקורות שתוסיפו יוצגו לכולם$/, 'Resources you add are shown to everyone'], [/^לפני (\d+) ימים$/, '$1 days ago'], [/^(\d+) פרקים$/, '$1 episodes'], [/^פרק אחרון (.*)$/, 'Latest episode $1'],
+    [/^· ?כל יום$/, '· every day'], [/^הכל \((\d+)\)$/, 'All ($1)'], [/^הוסף נבחרים \((\d+)\)$/, 'Add selected ($1)'],
+    [/^נוספו (\d+) מקורות\. התוכן החדש שלהם יופיע באתר בשעות הקרובות\.$/, 'Added $1 resources. Their new content will appear on the site in the next few hours.'],
+    [/^✓ נוספו (\d+) מקורות\. התוכן החדש שלהם יופיע באתר בשעות הקרובות\.$/, '✓ Added $1 resources. Their new content will appear on the site in the next few hours.'], [/^❌ לא נוספו: (.*)$/, '❌ Not added: $1'],
+    [/^נמצאו (\d+) ערוצים איכותיים(?: \(מוצגים (\d+) הגבוהים ביותר\))?\. אפשר לבחור עד (\d+)\.$/, 'Found $1 quality channels (showing the top $2). You can pick up to $3.'],
+    [/^אין מקורות להצגה(?: \(ההגדרות שלכם מסתירות (\d+)\))?\.$/, 'No resources to show (your settings hide $1).'], [/^משתמשים חיצוניים \((\d+)\)$/, 'External users ($1)'],
+    [/^הסתיר (\d+) מתוך (\d+) ערוצי Pawed$/, 'Hid $1 of $2 Pawed channels'], [/^(.*) · נראה לאחרונה (.*)$/, '$1 · last seen $2'],
+    [/^להסיר את "(.*)" מהמקורות\?$/, 'Remove "$1" from the resources?'], [/^למחוק את "(.*)" מהמקורות שלי\?$/, 'Delete "$1" from my resources?'], [/^(\d+) קריאות · קלט (.*) · פלט (.*) · מאז (.*)$/, '$1 calls · input $2 · output $3 · since $4']
+  ];
+  const tr1 = core => { let r = TR[core]; if(r!==undefined) return r; for(const [re,rep] of PAT) if(re.test(core)) return core.replace(re,rep); return undefined; };
+  const trText = s => { const m = s.match(/^(\s*)([\s\S]*?)(\s*)$/); if(!m[2] || !/[֐-׿]/.test(m[2])) return s; const r = tr1(m[2]); return r===undefined ? s : m[1]+r+m[3]; };
+  const ATTR = ['placeholder','title','aria-label','data-l'];
+  function walk(n){
+    if(n.nodeType===3){ const r=trText(n.nodeValue); if(r!==n.nodeValue) n.nodeValue=r; return; }
+    if(n.nodeType!==1 || /^(SCRIPT|STYLE)$/.test(n.tagName)) return;
+    ATTR.forEach(a=>{ if(n.hasAttribute(a)){ const v=n.getAttribute(a), r=trText(v); if(r!==v) n.setAttribute(a,r); } });
+    n.childNodes.forEach(walk);
+  }
+  let busy=false; const run=()=>{ busy=true; try{ walk(document.body); document.title=trText(document.title); }finally{ busy=false; } };
+  new MutationObserver(()=>{ if(!busy) setTimeout(run,0); }).observe(document.body,{childList:true,subtree:true,characterData:true});
+  const oc=window.confirm; window.confirm=m=>oc.call(window, trText(String(m)));
+  run();
+})();
+</script>
 </body>
 </html>

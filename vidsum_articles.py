@@ -1195,9 +1195,9 @@ import vidsum_feeds
 DISCLAIMER = "הדברים המובאים הם של המרואיינים ולא נבדקו. הכתבה נערכה אוטומטית מתוך תמלול של השיחה."
 
 
-def render_article(a):
+def render_article(a, lang="he"):
     if a.get("blocks"):
-        return vidsum_render.render(a, news_items(), base="", disclaimer=a.get("disclaimer") or DISCLAIMER)
+        return vidsum_render.render(a, news_items(), base="", disclaimer=a.get("disclaimer") or DISCLAIMER, lang=lang)
     return article_html(a)
 
 
@@ -1271,14 +1271,17 @@ def _motif_svg(m, acc):
             f'<line x1="640" y1="430" x2="640" y2="520" stroke="{w}" stroke-width="12"/><rect x="570" y="520" width="140" height="16" rx="8" fill="{w}"/>' + spark)
 
 
-def cover_svg(a):
-    acc = _COVER_ACC.get(a.get("topic"), "#e0a43a")
+def cover_svg(a, lang="he"):
+    motif = _motif_name(a)                          # chosen from the Hebrew topic, before the label is translated
+    if lang == "en":
+        a = dict(a, topic=vidsum_render.EN_TOPICS.get(a.get("topic"), a.get("topic", "")), _acc_topic=a.get("topic"))
+    acc = _COVER_ACC.get(a.get("_acc_topic") or a.get("topic"), "#e0a43a")
     seed = sum(ord(c) for c in a.get("vid", "x"))
     dots = "".join(f'<circle cx="{(seed * (i + 3) * 37) % 1280}" cy="{(seed * (i + 5) * 53) % 720}" r="{3 + (seed * (i + 1)) % 5}" fill="#fff" opacity=".14"/>' for i in range(26))
     e = _html.escape
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">'
             f'<defs><radialGradient id="g" cx="50%" cy="46%" r="75%"><stop offset="0" stop-color="{acc}" stop-opacity=".55"/><stop offset=".62" stop-color="#1b1722"/><stop offset="1" stop-color="#0e0c12"/></radialGradient></defs>'
-            f'<rect width="1280" height="720" fill="url(#g)"/>{dots}{_motif_svg(_motif_name(a), acc)}'
+            f'<rect width="1280" height="720" fill="url(#g)"/>{dots}{_motif_svg(motif, acc)}'
             f'<rect x="56" y="48" rx="22" ry="22" width="{40 + 24 * len(a.get("topic", ""))}" height="48" fill="{acc}"/>'
             f'<text x="{56 + (40 + 24 * len(a.get("topic", ""))) / 2}" y="82" text-anchor="middle" font-family="Arial" font-weight="800" font-size="30" fill="#17120a">{e(a.get("topic", ""))}</text>'
             f'<text x="1224" y="676" text-anchor="end" font-family="Arial" font-weight="700" font-size="34" fill="#fff" fill-opacity=".72">{e((a.get("channel") or "").strip()[:42])}</text></svg>')
@@ -1362,6 +1365,7 @@ def news_items():
     for a in _articles():
         sid = resolve(a)
         out.append({"slug": a["slug"], "title": nd(a["title"]), "lead": nd(a.get("lead") or a.get("standfirst") or a.get("subtitle", "")),
+                    "title_en": nd(((a.get("en") or {}).get("title")) or ""), "lead_en": nd(((a.get("en") or {}).get("lead") or (a.get("en") or {}).get("standfirst")) or ""),
                     "topic": a.get("topic") or "תרבות", "topics": article_topics(a), "channel": a.get("channel", ""), "vid": a.get("vid"),
                     "source_id": sid, "image": a.get("image") or "", "kind": a.get("kind") or "yt", "daily": sid in daily_ids, "nohead": sid in nohead_ids,
                     "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
@@ -1395,10 +1399,11 @@ def _vdb():
     c = multiuser.db()
     c.execute("CREATE TABLE IF NOT EXISTS vidsum_prefs(user_id TEXT PRIMARY KEY, hide_base INTEGER DEFAULT 0, "
               "hide_name INTEGER DEFAULT 0, muted TEXT DEFAULT '[]')")
-    try:
-        c.execute("ALTER TABLE vidsum_prefs ADD COLUMN hidden_base TEXT DEFAULT '[]'")
-    except Exception:
-        pass                                      # column already there
+    for ddl in ("ALTER TABLE vidsum_prefs ADD COLUMN hidden_base TEXT DEFAULT '[]'", "ALTER TABLE vidsum_prefs ADD COLUMN lang TEXT DEFAULT ''"):
+        try:
+            c.execute(ddl)
+        except Exception:
+            pass                                  # column already there
     return c
 
 
@@ -1406,7 +1411,7 @@ def get_vprefs(uid):
     with _vdb() as c:
         r = c.execute("SELECT * FROM vidsum_prefs WHERE user_id=?", (uid,)).fetchone()
     if not r:
-        return {"hideBase": False, "hideName": False, "muted": [], "hiddenBase": []}
+        return {"hideBase": False, "hideName": False, "muted": [], "hiddenBase": [], "lang": ""}
     try:
         muted = json.loads(r["muted"] or "[]")
     except ValueError:
@@ -1415,7 +1420,11 @@ def get_vprefs(uid):
         hidden_base = json.loads(r["hidden_base"] or "[]")
     except (ValueError, IndexError, KeyError):
         hidden_base = []
-    return {"hideBase": bool(r["hide_base"]), "hideName": bool(r["hide_name"]), "muted": muted, "hiddenBase": hidden_base}
+    try:
+        lang = r["lang"] or ""
+    except (IndexError, KeyError):
+        lang = ""
+    return {"hideBase": bool(r["hide_base"]), "hideName": bool(r["hide_name"]), "muted": muted, "hiddenBase": hidden_base, "lang": lang}
 
 
 def set_vprefs(uid, req):
@@ -1428,12 +1437,31 @@ def set_vprefs(uid, req):
         p["muted"] = [str(x)[:40] for x in req["muted"]][:200]
     if isinstance(req.get("hiddenBase"), list):
         p["hiddenBase"] = [str(x)[:80] for x in req["hiddenBase"]][:300]
+    if req.get("lang") in ("he", "en"):
+        p["lang"] = req["lang"]
     with _vdb() as c:
-        c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted,hidden_base) VALUES(?,?,?,?,?) "
+        c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted,hidden_base,lang) VALUES(?,?,?,?,?,?) "
                   "ON CONFLICT(user_id) DO UPDATE SET hide_base=excluded.hide_base, hide_name=excluded.hide_name, muted=excluded.muted, "
-                  "hidden_base=excluded.hidden_base",
-                  (uid, int(p["hideBase"]), int(p["hideName"]), json.dumps(p["muted"]), json.dumps(p["hiddenBase"])))
+                  "hidden_base=excluded.hidden_base, lang=excluded.lang",
+                  (uid, int(p["hideBase"]), int(p["hideName"]), json.dumps(p["muted"]), json.dumps(p["hiddenBase"]), p.get("lang") or ""))
     return p
+
+
+def request_lang(handler, qs=None):
+    """Language of this request: ?lang= first, then the signed-in user's saved choice, then the pawed_lang cookie, else Hebrew."""
+    q = ((qs or {}).get("lang") or [""])[0]
+    if q in ("he", "en"):
+        return q
+    try:
+        u = current_user(handler)
+        if u and u.get("id") != "admin-token":
+            l = get_vprefs(u["id"]).get("lang")
+            if l in ("he", "en"):
+                return l
+    except Exception:
+        pass
+    m = re.search(r"(?:^|;\s*)pawed_lang=(he|en)\b", handler.headers.get("Cookie") or "")
+    return m.group(1) if m else "he"
 
 
 def _hidden_names():
@@ -1853,6 +1881,8 @@ def start_background():
     threading.Thread(target=_server_captions_loop, daemon=True).start()
     import podstt
     threading.Thread(target=podstt.loop, daemon=True).start()
+    import vidsum_translate
+    vidsum_translate.start()
 
 
 _ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
@@ -2033,7 +2063,11 @@ def handle_get(handler, path, qs):
         if not a:
             handler._json({"error": "article not found"}, 404)
         else:
-            handler._html(render_article(a), "no-store")
+            lang = request_lang(handler, qs)
+            if lang == "en" and a.get("blocks") and not a.get("en"):
+                import vidsum_translate
+                vidsum_translate.want(a["slug"])                       # not translated yet: do this one next
+            handler._html(render_article(a, lang), "no-store")
         return True
     if path in ("/vidsum", "/vidsum/"):
         _serve(handler, NEWS_PAGE)
@@ -2047,7 +2081,7 @@ def handle_get(handler, path, qs):
     if path.startswith("/vidsum/cover/") and path.endswith(".svg"):
         vid = path[len("/vidsum/cover/"):-4]
         a = _find_by_vid(vid) if re.fullmatch(r"[\w-]{11}", vid) else None
-        body = cover_svg(a or {"vid": vid, "topic": "תרבות", "title": ""}).encode("utf-8")
+        body = cover_svg(a or {"vid": vid, "topic": "תרבות", "title": ""}, "en" if (qs.get("lang") or [""])[0] == "en" else "he").encode("utf-8")
         handler.send_response(200)
         handler.send_header("Content-Type", "image/svg+xml")
         handler.send_header("Content-Length", str(len(body)))
@@ -2112,6 +2146,9 @@ def handle_get(handler, path, qs):
         handler._json({"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "summary": cnt, "total": len(jobs),
                        "events": _recent_events(int((qs.get("limit") or ["300"])[0])), "relay": relay_status_get(),
                        "queue": qrows, "queue_total": qtotal})
+        return True
+    if path == "/api/vidsum/lang":
+        handler._json({"ok": True, "lang": request_lang(handler, qs)})
         return True
     if path == "/api/vidsum/sources":
         user = current_user(handler)
@@ -2536,6 +2573,13 @@ def handle_post(handler, path, req):
                 handler._json({"ok": True, "slug": import_article(req)})
             except Exception as e:
                 handler._json({"ok": False, "error": str(e)[:200]}, 400)
+        return True
+    if path == "/api/vidsum/lang":                       # remember the language for the signed-in user (the cookie is set by the page)
+        l = req.get("lang")
+        user = current_user(handler)
+        if l in ("he", "en") and user and user.get("id") != "admin-token":
+            set_vprefs(user["id"], {"lang": l})
+        handler._json({"ok": l in ("he", "en"), "lang": l})
         return True
     if path == "/api/vidsum/prefs":
         user = current_user(handler)

@@ -2,6 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8" />
+  <script>(function(){var m=document.cookie.match(/(?:^|;\s*)pawed_lang=(he|en)/),l=m?m[1]:"he";window.LANG=l;var d=document.documentElement;d.lang=l;d.dir=l==="en"?"ltr":"rtl";})();</script>
   <meta name="theme-color" content="#e3222b">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pawed | Respect Your Pods</title>
@@ -99,6 +100,16 @@
     .thumb.img { background-size:cover; background-position:center; background-repeat:no-repeat; }
     .thumb.img::before, .thumb.img::after, .lead-art.img::before, .lead-art.img::after { display:none; }
     .lead-art.img { background-size:cover; background-position:center; background-repeat:no-repeat; min-height:100%; }
+    /* language switch (flags) + LTR (English) overrides */
+    .utility-inner { justify-content:flex-start; } .utility-links { margin-inline-start:auto; }
+    .langsw { display:inline-flex; gap:6px; order:-1; margin-inline-start:6px; }   /* top right in both directions: first item in RTL, last in LTR */
+    html[dir=ltr] .langsw { order:99; }
+    .langsw a { font-size:18px; line-height:1; opacity:.45; cursor:pointer; filter:grayscale(.4); }
+    .langsw a.on { opacity:1; filter:none; } .langsw a:hover { opacity:1; }
+    html[dir=ltr] .brand-note { border-right:0; border-left:1px solid #ccc; padding-right:0; padding-left:12px; }
+    html[dir=ltr] .hero2-s li { padding:5px 0 5px 16px; }
+    html[dir=ltr] .hero2-s li::before { right:auto; left:2px; }
+    html[dir=ltr] body { direction:ltr; }
     .empty { color:#888; padding:40px 0; text-align:center; }
     .card:hover h3, .side-item:hover h2, .lead:hover h1, .topic-row:hover h3 { text-decoration:underline; }
 
@@ -341,14 +352,14 @@
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a><a class="admin-only" href="/podscanner">PodScanner</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live" data-i="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles" data-i="all">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources" data-i="sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a><a class="admin-only" href="/podscanner">PodScanner</a></div><span class="langsw"><a data-l="en" title="English">🇺🇸</a><a data-l="he" title="עברית">🇮🇱</a></span></div></div>
   <header class="masthead">
     <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
-    <div class="masthead-actions"><div class="cta" id="cta" hidden><a class="cta-btn" href="/auth/login?next=%2Fvidsum">התחברו והוסיפו את הפודקאסטים שלכם</a><div class="cta-sub"><b>התחברו ל-Pawed והתאימו את הפודים שלכם</b><br>הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</div></div></div>
+    <div class="masthead-actions"><div class="cta" id="cta" hidden><a class="cta-btn" href="/auth/login?next=%2Fvidsum" data-i="cta1">התחברו והוסיפו את הפודקאסטים שלכם</a><div class="cta-sub"><b data-i="cta2">התחברו ל-Pawed והתאימו את הפודים שלכם</b><br><span data-i="cta3">הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</span></div></div></div>
   </header>
-  <div class="nav-wrap"><nav class="nav" id="nav" aria-label="נושאים"></nav></div>
-  <main id="main"><p class="empty">טוען…</p></main>
-  <footer><div class="footer-inner"><span>Pawed · פורטל חדשות המבוסס על סיכומי וידאו</span><span>Summarized by Pawed (by Mr. Brosh)</span></div></footer>
+  <div class="nav-wrap"><nav class="nav" id="nav" aria-label="Topics"></nav></div>
+  <main id="main"><p class="empty" data-i="loading">טוען…</p></main>
+  <footer><div class="footer-inner"><span data-i="foot">Pawed · פורטל חדשות המבוסס על סיכומי וידאו</span><span>Summarized by Pawed (by Mr. Brosh)</span></div></footer>
 <script>
 const TONES = [
   'linear-gradient(135deg,#151515,#8c1d24 60%,#d7a100)','linear-gradient(135deg,#102844,#147b9b 55%,#65d2c7)',
@@ -363,9 +374,9 @@ function probe(url, min){ return new Promise(res=>{ const i=new Image(); i.onloa
 async function bestThumb(v, img){
   if(THUMB_CACHE[v]) return THUMB_CACHE[v];
   if(img && await probe(img, 100)) return THUMB_CACHE[v]=img;        // podcast episodes carry their own artwork
-  if(img) return THUMB_CACHE[v]='/vidsum/cover/'+v+'.svg';
+  if(img) return THUMB_CACHE[v]='/vidsum/cover/'+v+'.svg'+(EN?'?lang=en':'');
   for(const f of ['maxresdefault','hq720','mqdefault']){ const u='https://i.ytimg.com/vi/'+v+'/'+f+'.jpg'; if(await probe(u)){ return THUMB_CACHE[v]=u; } }
-  return THUMB_CACHE[v]='/vidsum/cover/'+v+'.svg';
+  return THUMB_CACHE[v]='/vidsum/cover/'+v+'.svg'+(EN?'?lang=en':'');
 }
 function hydrateThumbs(){
   document.querySelectorAll('[data-vid]').forEach(async el=>{
@@ -378,15 +389,50 @@ const href = a => '/vidsum/article/' + encodeURIComponent(a.slug);
 // true 16:9 frames only (hqdefault/sddefault carry baked-in black bars); a failed image is skipped and the next layer shows
 const bg = v => ['maxresdefault','hq720','mqdefault'].map(f=>'url(https://i.ytimg.com/vi/'+v+'/'+f+'.jpg)').join(',');
 const tone = a => TONES[[...a.vid].reduce((x,c)=>x+c.charCodeAt(0),0) % TONES.length];
+// ---- English edition: LANG comes from the pawed_lang cookie (set by the flags / the server for signed-in users) ----
+const EN = LANG==='en';
+const I18N = {
+  live:['● מתעדכן אוטומטית','● Updating automatically'], all:['כל הסיכומים','All summaries'], sources:['מקורות','Resources'],
+  cta1:['התחברו והוסיפו את הפודקאסטים שלכם','Sign in and add your podcasts'], cta2:['התחברו ל-Pawed והתאימו את הפודים שלכם','Sign in to Pawed and tailor your pods'],
+  cta3:['הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕','Add a channel by name or YouTube link, and remove existing ones with ✕'],
+  loading:['טוען…','Loading…'], foot:['Pawed · פורטל חדשות המבוסס על סיכומי וידאו','Pawed · a news portal built on video and podcast summaries'],
+  today:['היום','Today'], yday:['אתמול','Yesterday'], todayAt:['היום ב־','Today at '], summary:['סיכום ','Summary '], min:[' דק׳',' min'],
+  main:['ראשי','Home'], moreIn:['עוד ב','More in '], moreEnd:[' ›',' ›'], more2:['עוד מכל התחומים','More from every topic'], cont:['המשך הפיד','Keep reading'], lap:[' · סיבוב נוסף',' · another round'],
+  totop:['חזרה למעלה','Back to top'], emptyTopic:['אין עדיין סיכומים במדור הזה — הם יופיעו כאן אוטומטית.','No summaries in this section yet. They will appear here automatically.'],
+  live_shows:['הופעות חיות','Live Shows'], cook:['מבשלים','Cooking'], hello:['שלום ',"Hello "], personal:[' · תצוגה מותאמת',' · personalised view'], loadErr:['שגיאה בטעינה','Failed to load'],
+  hint:['הוסיפו כאן את ערוצי הפודקאסטים שלכם','Add your podcast channels here'],
+  lv_load:['טוען מופעים…','Loading shows…'], lv_n:[' מופעים קרובים בישראל',' upcoming shows in Israel'], lv_all:['הכל','All'], lv_cities:['כל הערים','All cities'],
+  lv_week:['השבוע','This week'], lv_month:['החודש','This month'], lv_q:['חיפוש אמן, מקום…','Search artist, venue…'], lv_none:['אין מופעים שמתאימים לסינון.','No shows match the filter.'],
+  lv_more:['הצג עוד','Show more'], lv_src:['המופעים מ-','Shows from '], lv_tix:['לכרטיסים ›','Tickets ›'], lv_from:[' · מ-',' · from '],
+  ck_load:['טוען מנות…','Loading dishes…'], ck_na:['המנות לא זמינות כרגע.','Dishes are not available right now.'], ck_today:['מנות היום','Dishes of the day'],
+  ck_recipes:[' מתכונים ב-cookin',' recipes on cookin'], ck_all:['לכל המתכונים ב-cookin ›','All recipes on cookin ›'],
+  ck_h1:['מנות היום מהמטבח של המשפחה',"Today's dishes from the family kitchen"], ck_more:['עוד ',''], ck_more2:[' מתכונים מחכים לכם',' more recipes are waiting for you'],
+  ck_sub1:['כל המתכונים, חיפוש לפי מה שיש לכם במקרר, תחליפים למצרכים שחסרים וסרטוני הכנה','All recipes, search by what is in your fridge, substitutes for missing ingredients and prep videos'],
+  ck_sub2:[' · 2 מנות מכל סוג, אחרות בכל יום',' · 2 dishes of each kind, different every day'], ck_on:[' ב-cookin.jarcud.com',' on cookin.jarcud.com'], ck_full:['למתכון המלא ב-cookin ›','Full recipe on cookin ›'],
+  ck_note:['','Recipes are in Hebrew'], lv_he:['','Listings are in Hebrew']
+};
+const t = k => I18N[k] ? I18N[k][EN?1:0] : k, t_ = t;
+const LOC = EN ? 'en-US' : 'he-IL';
+const TOPIC_EN = {'פוליטיקה':'Politics','טכנולוגיה':'Technology','כלכלה':'Economy','ספורט':'Sports','תרבות':'Culture','לייפסטייל':'Lifestyle','בריאות':'Health','הופעות חיות':'Live Shows','מבשלים':'Cooking'};
+const TN = x => EN ? (TOPIC_EN[x]||x) : x;     // display name of a section (the Hebrew name stays the internal key everywhere)
+const LV_CATS_EN = {Music:'Music', Comedy:'Stand-up & comedy', Dance:'Dance', Festival:'Festivals', Art:'Art'};
+function applyStatic(){ document.querySelectorAll('[data-i]').forEach(el=>{ const k=el.dataset.i; if(I18N[k]) el.textContent=t(k); });
+  const sl=document.querySelector('.langsw'); if(sl) sl.querySelectorAll('a').forEach(a=>a.classList.toggle('on', a.dataset.l===(EN?'en':'he')));
+  document.querySelector('meta[name=description]').content = EN ? 'News from video and podcast summaries' : 'חדשות מתוך סיכומי וידאו ופודקאסטים'; }
+function setLang(l){ document.cookie='pawed_lang='+l+';path=/;max-age=31536000;samesite=lax';
+  const done=()=>location.reload(); try{ fetch('/api/vidsum/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(done,done); }catch(e){ done(); } }
+document.querySelectorAll('.langsw a').forEach(a=>a.onclick=e=>{ e.preventDefault(); if(a.dataset.l!==(EN?'en':'he')) setLang(a.dataset.l); });
+// a signed-in user's saved language wins over the cookie: if the server says otherwise, adopt it once
+fetch('/api/vidsum/lang').then(r=>r.json()).then(j=>{ if(j.lang && j.lang!==(EN?'en':'he')){ document.cookie='pawed_lang='+j.lang+';path=/;max-age=31536000;samesite=lax'; location.reload(); } }).catch(()=>{});
 function when(s, hasTime){
   const d = new Date(s.replace(' ','T')+'Z'), now = new Date();   // server stores UTC
-  const hm = d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
-  if(d.toDateString()===now.toDateString()) return hasTime===false ? 'היום' : 'היום ב־'+hm;
-  const y = new Date(now-864e5); if(d.toDateString()===y.toDateString()) return 'אתמול';
-  return d.toLocaleDateString('he-IL');
+  const hm = d.toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'});
+  if(d.toDateString()===now.toDateString()) return hasTime===false ? t('today') : t('todayAt')+hm;
+  const y = new Date(now-864e5); if(d.toDateString()===y.toDateString()) return t('yday');
+  return d.toLocaleDateString(LOC);
 }
 const rel = a => when(a.released||a.created, a.released_time);
-const meta = a => [a.channel, a.minutes? 'סיכום '+a.minutes+' דק׳':'', rel(a)].filter(Boolean).map(esc).join(' · ');
+const meta = a => [a.channel, a.minutes? t('summary')+a.minutes+t('min'):'', rel(a)].filter(Boolean).map(esc).join(' · ');
 let DATA = null, FILTER = 'all';
 
 const COL = {'פוליטיקה':'#b3171f','כלכלה':'#1b3f94','טכנולוגיה':'#0f2a5c','תרבות':'#6a2fa3','ספורט':'#1a7a3a','בריאות':'#0e7a6e','לייפסטייל':'#b0276a','הופעות חיות':'#c2410c','מבשלים':'#2f7d32'};
@@ -395,7 +441,7 @@ const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" data-
 const when2 = a => esc(rel(a));
 // an article can sit in up to 3 sections (a.topics, primary first); the home page groups by the primary one
 const inT = (a,t) => (a.topics||[a.topic]).includes(t);
-const tagOf = a => '<span class="tg" style="color:'+col(a.topic)+'">'+esc(a.topic)+'</span>';
+const tagOf = a => '<span class="tg" style="color:'+col(a.topic)+'">'+esc(TN(a.topic))+'</span>';
 
 // big hero: text on one side, large image on the other, the next stories as bullet links under it (ynet style)
 function hero(a, subs){
@@ -406,7 +452,7 @@ function hero(a, subs){
 }
 // dense coloured banner tile: headline block in the topic colour + image on the side
 function bt(a){
-  return '<a class="bt" style="--c:'+col(a.topic)+'" href="'+href(a)+'"><div class="bt-t"><h3>'+esc(a.title)+'</h3><p>'+esc(a.lead)+'</p><span>'+esc(a.topic)+' · '+when2(a)+'</span></div>'+im(a,'bt-i')+'</a>';
+  return '<a class="bt" style="--c:'+col(a.topic)+'" href="'+href(a)+'"><div class="bt-t"><h3>'+esc(a.title)+'</h3><p>'+esc(a.lead)+'</p><span>'+esc(TN(a.topic))+' · '+when2(a)+'</span></div>'+im(a,'bt-i')+'</a>';
 }
 // image-over-headline card
 function cd(a, big){
@@ -415,7 +461,7 @@ function cd(a, big){
 // text row with time stamp (news list)
 function tr(a){ return '<a class="tr" href="'+href(a)+'"><h4>'+esc(a.title)+'</h4><small>'+when2(a)+' · '+esc(a.channel||'')+'</small></a>'; }
 // small card for side stacks
-function sm(a){ return '<a class="sm" href="'+href(a)+'">'+im(a)+'<h4>'+esc(a.title)+'</h4><small>'+esc(a.topic)+' · '+when2(a)+'</small></a>'; }
+function sm(a){ return '<a class="sm" href="'+href(a)+'">'+im(a)+'<h4>'+esc(a.title)+'</h4><small>'+esc(TN(a.topic))+' · '+when2(a)+'</small></a>'; }
 
 // Top story rule: the newest episode (by RELEASE date, never by when we processed it) holds the top slot until a newer one
 // arrives, but never longer than 150 minutes. After that the slot moves on to the next newest, and keeps moving every
@@ -470,7 +516,7 @@ function takeD(list, n, used, blockPods, pagePods){
   return out;
 }
 const take = (list, n, used) => { const out=[]; for(const a of list){ if(out.length>=n) break; if(!used.has(a.slug)){ used.add(a.slug); out.push(a); } } return out; };
-function bar(topic, more){ return '<div class="sec-h" style="--c:'+col(topic)+'"><b>'+esc(topic)+'</b>'+(more?'<a href="#'+encodeURIComponent(topic)+'" data-go="'+esc(topic)+'">עוד ב'+esc(topic)+' ›</a>':'')+'</div>'; }
+function bar(topic, more){ return '<div class="sec-h" style="--c:'+col(topic)+'"><b>'+esc(TN(topic))+'</b>'+(more?'<a href="#'+encodeURIComponent(topic)+'" data-go="'+esc(topic)+'">'+t('moreIn')+esc(TN(topic))+' ›</a>':'')+'</div>'; }
 
 // each section uses a different arrangement so the page never reads as identical blocks stacked on each other
 function pattern(kind, L){
@@ -512,8 +558,8 @@ function moreFeed(force){
   while(L.length<n && step<N){ const a = FEED.seq[(FEED.pos+step) % N]; step++; const pod = podOf(a); if(pods.has(pod)) continue; pods.add(pod); L.push(a); }
   for(let i=0; L.length<n; i++) L.push(FEED.seq[(FEED.pos+step+i) % N]);        // not enough different pods: fill up anyway
   FEED.pos = (FEED.pos+step) % N;                                                // wraps around: the feed never ends
-  const lap = FEED.chunk>0 && FEED.pos < n ? ' · סיבוב נוסף' : '';
-  const head = FEED.chunk===0 ? '<div class="sec-h" style="--c:#2a211b"><b>עוד מכל התחומים</b></div>' : (FEED.chunk%4===0 ? '<div class="sec-h" style="--c:#2a211b"><b>המשך הפיד'+lap+'</b></div>' : '');
+  const lap = FEED.chunk>0 && FEED.pos < n ? t('lap') : '';
+  const head = FEED.chunk===0 ? '<div class="sec-h" style="--c:#2a211b"><b>'+t('more2')+'</b></div>' : (FEED.chunk%4===0 ? '<div class="sec-h" style="--c:#2a211b"><b>'+t('cont')+lap+'</b></div>' : '');
   const html = '<section class="sec feedchunk">'+head+(kind===3 ? patternMix(L) : pattern(kind, L))+'</section>';
   document.getElementById('feed2').insertAdjacentHTML('beforeend', html);
   FEED.chunk++; hydrateThumbs();
@@ -527,7 +573,7 @@ setInterval(()=>{
   if(heroIndex(list)!==HERO_SHOWN && window.scrollY<300) render();
 }, 60*1000);
 // floating "back to top" (the feed never ends, so the footer is out of reach)
-(function(){ const b=document.createElement('button'); b.id='totop'; b.textContent='↑'; b.setAttribute('aria-label','חזרה למעלה');
+(function(){ const b=document.createElement('button'); b.id='totop'; b.textContent='↑'; b.setAttribute('aria-label',t('totop'));
   b.onclick=()=>window.scrollTo({top:0,behavior:'smooth'}); document.body.appendChild(b);
   addEventListener('scroll',()=>{ b.classList.toggle('on', scrollY>1400); },{passive:true}); })();
 
@@ -536,7 +582,7 @@ function render(){
   if(FILTER===COOK){ ckShow(); return; }
   const all = DATA.items, main = document.getElementById('main');
   const sorted = FILTER==='all' ? all : all.filter(a=>inT(a,FILTER));
-  if(!sorted.length){ main.innerHTML='<p class="empty">אין עדיין סיכומים במדור הזה — הם יופיעו כאן אוטומטית.</p>'; return; }
+  if(!sorted.length){ main.innerHTML='<p class="empty">'+t('emptyTopic')+'</p>'; return; }
   const k = heroIndex(sorted); HERO_SHOWN = k;
   const items = k===0 ? sorted : [sorted[k], ...sorted.filter((_,i)=>i!==k)];   // featured story first, everything else still newest-first
   // A category's head (top story, the three under it, the first tiles) only holds articles whose PRIMARY category it is, so an
@@ -580,13 +626,13 @@ let LV = null, LVF = {cat:'', city:'', q:'', when:'all', n:48};
 const LV_CATS = {Music:'מוזיקה', Comedy:'סטנדאפ וקומדיה', Dance:'מחול', Festival:'פסטיבלים', Art:'אמנות'};
 const lvDate = d => new Date(d+'T12:00:00');
 function lvCard(e){
-  const dt = lvDate(e.date), day = dt.toLocaleDateString('he-IL',{day:'numeric'}), mon = dt.toLocaleDateString('he-IL',{month:'short'}), wd = dt.toLocaleDateString('he-IL',{weekday:'long'});
-  const price = e.price ? ' · מ-'+Math.round(e.price)+(e.currency==='ILS'||!e.currency?' ₪':' '+esc(e.currency)) : '';
+  const dt = lvDate(e.date), day = dt.toLocaleDateString(LOC,{day:'numeric'}), mon = dt.toLocaleDateString(LOC,{month:'short'}), wd = dt.toLocaleDateString(LOC,{weekday:'long'});
+  const price = e.price ? t('lv_from')+Math.round(e.price)+(e.currency==='ILS'||!e.currency?' ₪':' '+esc(e.currency)) : '';
   return '<a class="lv-c" target="_blank" rel="noopener" href="'+esc(e.link||'https://superca.ly')+'"><div class="lv-i'+(e.image?' fit':'')+'"'+(e.image?' style="--img:url(\''+esc(e.image)+'\')"':'')+'><div class="lv-d"><b>'+day+'</b>'+esc(mon)+'</div></div>'
-    +'<div class="lv-b"><h3>'+esc(e.name)+'</h3><small>'+esc(wd)+(e.time?' · '+esc(e.time):'')+'</small><small>'+esc(e.venue)+(e.venue&&e.city?' · ':'')+esc(e.city)+esc(price)+'</small><span class="lv-go">לכרטיסים ›</span></div></a>';
+    +'<div class="lv-b"><h3>'+esc(e.name)+'</h3><small>'+esc(wd)+(e.time?' · '+esc(e.time):'')+'</small><small>'+esc(e.venue)+(e.venue&&e.city?' · ':'')+esc(e.city)+esc(price)+'</small><span class="lv-go">'+t('lv_tix')+'</span></div></a>';
 }
 function lvRender(){
-  const main = document.getElementById('main'); if(!LV){ main.innerHTML = '<p class="empty">טוען מופעים…</p>'; return; }
+  const main = document.getElementById('main'); if(!LV){ main.innerHTML = '<p class="empty">'+t('lv_load')+'</p>'; return; }
   const today = new Date(); today.setHours(0,0,0,0);
   const lim = LVF.when==='week' ? 7 : LVF.when==='month' ? 31 : 0;
   const q = LVF.q.trim().toLowerCase();
@@ -594,14 +640,14 @@ function lvRender(){
     && (!lim || (lvDate(e.date)-today)/864e5 < lim));
   const cities = [...new Set(LV.map(e=>e.city).filter(Boolean))].sort((a,b)=>LV.filter(e=>e.city===b).length-LV.filter(e=>e.city===a).length);
   const chip = (k,l,on) => '<button data-k="'+k+'" class="'+(on?'on':'')+'">'+l+'</button>';
-  main.innerHTML = '<div class="sec-h" style="--c:'+col(LIVE)+'"><b>הופעות חיות</b><span style="color:rgba(255,255,255,.9);font-size:13px">'+list.length.toLocaleString()+' מופעים קרובים בישראל</span></div>'
-    +'<div class="lv-bar">'+chip('cat:','הכל',!LVF.cat)+Object.entries(LV_CATS).filter(([k])=>LV.some(e=>e.cats.includes(k))).map(([k,l])=>chip('cat:'+k,l,LVF.cat===k)).join('')
-    +'<select id="lvcity"><option value="">כל הערים</option>'+cities.slice(0,40).map(c=>'<option'+(LVF.city===c?' selected':'')+'>'+esc(c)+'</option>').join('')+'</select>'
-    +chip('when:all','הכל',LVF.when==='all')+chip('when:week','השבוע',LVF.when==='week')+chip('when:month','החודש',LVF.when==='month')
-    +'<input id="lvq" placeholder="חיפוש אמן, מקום…" value="'+esc(LVF.q)+'"></div>'
-    +(list.length?'<div class="lv-grid">'+list.slice(0,LVF.n).map(lvCard).join('')+'</div>':'<p class="empty">אין מופעים שמתאימים לסינון.</p>')
-    +(list.length>LVF.n?'<button class="lv-more" id="lvmore">הצג עוד</button>':'')
-    +'<div class="lv-src">המופעים מ-<a href="https://superca.ly" target="_blank" rel="noopener">Supercaly</a></div>';
+  main.innerHTML = '<div class="sec-h" style="--c:'+col(LIVE)+'"><b>'+TN(LIVE)+'</b><span style="color:rgba(255,255,255,.9);font-size:13px">'+list.length.toLocaleString()+t('lv_n')+'</span></div>'
+    +'<div class="lv-bar">'+chip('cat:',t('lv_all'),!LVF.cat)+Object.entries(LV_CATS).filter(([k])=>LV.some(e=>e.cats.includes(k))).map(([k,l])=>chip('cat:'+k,EN?LV_CATS_EN[k]:l,LVF.cat===k)).join('')
+    +'<select id="lvcity"><option value="">'+t('lv_cities')+'</option>'+cities.slice(0,40).map(c=>'<option'+(LVF.city===c?' selected':'')+'>'+esc(c)+'</option>').join('')+'</select>'
+    +chip('when:all',t('lv_all'),LVF.when==='all')+chip('when:week',t('lv_week'),LVF.when==='week')+chip('when:month',t('lv_month'),LVF.when==='month')
+    +'<input id="lvq" placeholder="'+t('lv_q')+'" value="'+esc(LVF.q)+'"></div>'
+    +(list.length?'<div class="lv-grid">'+list.slice(0,LVF.n).map(lvCard).join('')+'</div>':'<p class="empty">'+t('lv_none')+'</p>')
+    +(list.length>LVF.n?'<button class="lv-more" id="lvmore">'+t('lv_more')+'</button>':'')
+    +'<div class="lv-src">'+t('lv_src')+'<a href="https://superca.ly" target="_blank" rel="noopener">Supercaly</a></div>';
   main.querySelectorAll('.lv-bar button').forEach(b=>b.onclick=()=>{ const [k,v]=b.dataset.k.split(':'); LVF[k]=v; LVF.n=48; lvRender(); });
   const c=document.getElementById('lvcity'); if(c) c.onchange=()=>{ LVF.city=c.value; LVF.n=48; lvRender(); };
   const qi=document.getElementById('lvq'); if(qi) qi.oninput=()=>{ LVF.q=qi.value; LVF.n=48; const p=qi.selectionStart; lvRender(); const n=document.getElementById('lvq'); n.focus(); n.setSelectionRange(p,p); };
@@ -616,14 +662,14 @@ function lvShow(){
 // ---- מבשלים: 2 dishes of the day per group, all from cookin.jarcud.com ----
 let CK = null;
 function ckRender(){
-  const main = document.getElementById('main'); if(!CK){ main.innerHTML='<p class="empty">טוען מנות…</p>'; return; }
-  if(!CK.ok){ main.innerHTML='<p class="empty">המנות לא זמינות כרגע.</p>'; return; }
-  const day = new Date(CK.day+'T12:00:00').toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'});
-  const ban = (extra) => '<div class="ck-ban"><div><h2>'+(extra?'עוד '+CK.total+' מתכונים מחכים לכם':'מנות היום מהמטבח של המשפחה')+'</h2><p>'+(extra?'כל המתכונים, חיפוש לפי מה שיש לכם במקרר, תחליפים למצרכים שחסרים וסרטוני הכנה':esc(day)+' · 2 מנות מכל סוג, אחרות בכל יום')+' ב-cookin.jarcud.com</p></div>'
-    +'<a class="go" target="_blank" rel="noopener" href="'+esc(CK.site)+'">לכל המתכונים ב-cookin ›</a></div>';
-  main.innerHTML = '<div class="sec-h" style="--c:'+col(COOK)+'"><b>מבשלים</b><span style="color:rgba(255,255,255,.9);font-size:13px">מנות היום</span></div>'+ban(false)
-    + CK.groups.map(g=>'<section class="ck-g"><h3>'+esc(g.label)+' <small>'+g.count+' מתכונים ב-cookin</small></h3><div class="ck-row">'+g.dishes.map(d=>
-      '<a class="ck-c" target="_blank" rel="noopener" href="'+esc(d.url)+'"><div class="ck-i fit" style="--img:url(\''+esc(d.image)+'\')"></div><div class="ck-b"><h4>'+esc(d.name)+'</h4><small>'+esc(d.time)+(d.time&&d.serves?' · ':'')+esc(d.serves)+'</small><p>'+esc(d.intro)+'</p><span class="ck-go">למתכון המלא ב-cookin ›</span></div></a>').join('')+'</div></section>').join('')
+  const main = document.getElementById('main'); if(!CK){ main.innerHTML='<p class="empty">'+t('ck_load')+'</p>'; return; }
+  if(!CK.ok){ main.innerHTML='<p class="empty">'+t('ck_na')+'</p>'; return; }
+  const day = new Date(CK.day+'T12:00:00').toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'});
+  const ban = (extra) => '<div class="ck-ban"><div><h2>'+(extra?(EN?CK.total+t('ck_more2'):t('ck_more')+CK.total+t('ck_more2')):t('ck_h1'))+'</h2><p>'+(extra?t('ck_sub1'):esc(day)+t('ck_sub2'))+t('ck_on')+'</p>'+(EN?'<p style="opacity:.7;font-size:12px">'+t('ck_note')+'</p>':'')+'</div>'
+    +'<a class="go" target="_blank" rel="noopener" href="'+esc(CK.site)+'">'+t('ck_all')+'</a></div>';
+  main.innerHTML = '<div class="sec-h" style="--c:'+col(COOK)+'"><b>'+TN(COOK)+'</b><span style="color:rgba(255,255,255,.9);font-size:13px">'+t('ck_today')+'</span></div>'+ban(false)
+    + CK.groups.map(g=>'<section class="ck-g"><h3>'+esc(g.label)+' <small>'+g.count+t('ck_recipes')+'</small></h3><div class="ck-row">'+g.dishes.map(d=>
+      '<a class="ck-c" target="_blank" rel="noopener" href="'+esc(d.url)+'"><div class="ck-i fit" style="--img:url(\''+esc(d.image)+'\')"></div><div class="ck-b"><h4>'+esc(d.name)+'</h4><small>'+esc(d.time)+(d.time&&d.serves?' · ':'')+esc(d.serves)+'</small><p>'+esc(d.intro)+'</p><span class="ck-go">'+t('ck_full')+'</span></div></a>').join('')+'</div></section>').join('')
     + ban(true);
 }
 function ckShow(){
@@ -636,10 +682,10 @@ function nav(){
   const n=document.getElementById('nav');
   const live=DATA.topics.filter(t=>DATA.items.some(a=>(a.topics||[a.topic]).includes(t)));   // a section with nothing in it (e.g. all its sources switched off) disappears
   if(FILTER!=='all' && FILTER!==LIVE && FILTER!==COOK && !live.includes(FILTER)) FILTER='all';
-  n.innerHTML=['all',...live,LIVE,COOK].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?'ראשי':esc(t))+'</button>').join('');
+  n.innerHTML=['all',...live,LIVE,COOK].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?t_('main'):esc(TN(t)))+'</button>').join('');
   n.querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f; nav(); render(); if(innerWidth<=640){ const w=document.querySelector('.nav-wrap'); if(w) w.scrollIntoView({behavior:'smooth',block:'start'}); } history.replaceState(null,'', FILTER==='all'?location.pathname:'#'+encodeURIComponent(FILTER));});
 }
-document.getElementById('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+document.getElementById('today').textContent = new Date().toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
 // after sign-in, point at the Sources link (once: until they open it or close the bubble)
 function showSourcesHint(){
@@ -654,7 +700,7 @@ function showSourcesHint(){
     a.classList.add('hint-pulse'); a.addEventListener('click',done,{once:true});
     a.scrollIntoView({block:'nearest',inline:'center'});
     const b=document.createElement('div'); b.id='srchint';
-    b.innerHTML='<span class="x" aria-label="close">×</span>Add Your Podcast Channels Here<small>הוסיפו כאן את ערוצי הפודקאסטים שלכם</small>';
+    b.innerHTML='<span class="x" aria-label="close">×</span>Add Your Podcast Channels Here<small>'+(EN?'':t('hint'))+'</small>';
     b.onclick=e=>{ if(e.target.className==='x') done(); else location.href='/vidsum/sources'; };
     document.body.appendChild(b);
     function place(){ const r=a.getBoundingClientRect(), w=b.offsetWidth; let left=r.left+r.width/2-w/2; left=Math.max(8,Math.min(innerWidth-w-8,left));
@@ -663,13 +709,15 @@ function showSourcesHint(){
   },200);
 }
 fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
+  if(EN) j.items.forEach(a=>{ if(a.title_en){ a.title=a.title_en; a.lead=a.lead_en||a.lead; } });
+  applyStatic();
   DATA=j; const h=decodeURIComponent(location.hash.slice(1)); if(j.topics.includes(h) || h===LIVE || h===COOK || h==='Live Shows') FILTER = h==='Live Shows' ? LIVE : h;
   const ul=document.querySelector('.utility-links');
-  if(ul && j.me){ const a=document.createElement('a'); a.href='/vidsum/sources'; a.textContent = 'שלום '+j.me.name+(j.personal?' · תצוגה מותאמת':''); a.style.fontWeight='700'; ul.appendChild(a); }
+  if(ul && j.me){ const a=document.createElement('a'); a.href='/vidsum/sources'; a.textContent = t('hello')+j.me.name+(j.personal?t('personal'):''); a.style.fontWeight='700'; ul.appendChild(a); }
   document.getElementById('cta').hidden = !!j.me;
   if(j.me) showSourcesHint();
   nav(); render();
-}).catch(()=>{document.getElementById('main').innerHTML='<p class="empty">שגיאה בטעינה</p>';});
+}).catch(()=>{document.getElementById('main').innerHTML='<p class="empty">'+t('loadErr')+'</p>';});
 </script>
 <script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>
 

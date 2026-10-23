@@ -133,7 +133,7 @@ CSS += ".brand-wordmark{height:88px;width:auto;display:block}@media(max-width:64
 PAW_JS = """<script>(function(){var seq=['maxresdefault','hq720','mqdefault'];
 function fix(img){var v=img.dataset.vid,i=0,own=img.dataset.img;var p=img.parentNode;if(!p.classList||!p.classList.contains('imgw')){var w=document.createElement('div');w.className='imgw';p.insertBefore(w,img);w.appendChild(img);}
 function next(){if(own){var o=own;own=null;img.src=o;return;}if(i<seq.length){img.src='https://i.ytimg.com/vi/'+v+'/'+seq[i++]+'.jpg';}
-else{img.onload=img.onerror=null;img.src='/vidsum/cover/'+v+'.svg';}}
+else{img.onload=img.onerror=null;img.src='/vidsum/cover/'+v+'.svg'+(document.documentElement.lang==='en'?'?lang=en':'');}}
 img.onerror=next;
 img.onload=function(){if(img.naturalWidth<300&&img.src.indexOf('/vidsum/cover/')<0){next();return;}img.parentNode.style.setProperty('--img','url("'+img.src+'")');};
 next();}
@@ -181,8 +181,80 @@ def clean_dashes(o, key=None):
     return o
 
 
-def render(a, latest=(), base="", disclaimer=""):
+EN_TOPICS = {"פוליטיקה": "Politics", "טכנולוגיה": "Technology", "כלכלה": "Economy", "ספורט": "Sports", "תרבות": "Culture",
+             "לייפסטייל": "Lifestyle", "בריאות": "Health"}
+EN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+STR = {
+    "he": {"main": "ראשי", "live": "● מתעדכן אוטומטית", "all": "כל הסיכומים", "sources": "מקורות", "log": "יומן", "by": "מאת", "desk": "מערכת Pawed",
+           "from": "מתוך", "read": "דק׳ קריאה", "ls_pod": "האזנה לפרק", "ls_yt": "צפייה בסרטון ביוטיוב", "shot": " · צילום מסך מתוך הסרטון",
+           "also": "האזנה גם ב:", "on": "האזנה ב-", "key": "עיקרי הדברים", "full_pod": "האזנה לפרק המלא ↗", "full_yt": "צפייה בשיחה המלאה ביוטיוב ↗",
+           "more": "כתבות נוספות", "new": "הכי חדש", "bytopic": "לפי נושא", "stories": "כתבות",
+           "foot": "Pawed · פורטל חדשות המבוסס על סיכומי וידאו", "wait": ""},
+    "en": {"main": "Home", "live": "● Updating automatically", "all": "All summaries", "sources": "Resources", "log": "Log", "by": "By", "desk": "Pawed Desk",
+           "from": "From", "read": "min read", "ls_pod": "Listen to the episode", "ls_yt": "Watch the video on YouTube", "shot": " · Screenshot from the video",
+           "also": "Also listen on:", "on": "Listen on ", "key": "Key points", "full_pod": "Listen to the full episode ↗", "full_yt": "Watch the full conversation on YouTube ↗",
+           "more": "More stories", "new": "Latest", "bytopic": "By topic", "stories": "stories",
+           "foot": "Pawed · a news portal built on video and podcast summaries",
+           "wait": "The English version of this story is being prepared. It will appear here automatically in a few minutes."},
+}
+EN_DISCLAIMER = "The views expressed are those of the interviewees and have not been verified. This article was compiled automatically from a transcript of the conversation."
+
+LTR_CSS = ("body{direction:ltr}.brand-note{border-right:0;border-left:1px solid #ccc;padding-right:0;padding-left:12px}"
+           ".keybox{border-right:0;border-left:4px solid var(--red)}"
+           ".pull{float:left;clear:left;margin:6px 24px 14px 0;border-right:0;border-left:5px solid var(--acc)}"
+           ".pull.alt{float:right;clear:right;margin:6px 0 14px 24px;border-left:0;border-right:5px solid var(--acc)}"
+           "@media(max-width:640px){.pull,.pull.alt{float:none;width:auto;margin:20px 0}}")
+LANG_CSS = (".utility-inner{justify-content:flex-start}.utility-links{margin-inline-start:auto}.langsw{display:inline-flex;gap:6px;order:-1;margin-inline-start:6px}"
+            "html[dir=ltr] .langsw{order:99}.langsw a{font-size:18px;line-height:1;opacity:.45;cursor:pointer;text-decoration:none;"
+            "filter:grayscale(.4)}.langsw a.on{opacity:1;filter:none}.langsw a:hover{opacity:1}"
+            ".he h1,.he .standfirst,.he .body,.he .keybox{direction:rtl;text-align:right}.wait{background:#fff6d6;border:1px solid #ecd57a;padding:10px 14px;margin:0 0 16px;font-size:14px;direction:ltr;text-align:left}")
+LANG_JS = ("<script>document.querySelectorAll('.langsw a').forEach(function(a){a.onclick=function(e){e.preventDefault();var l=a.dataset.l;"
+           "document.cookie='pawed_lang='+l+';path=/;max-age=31536000;samesite=lax';"
+           "try{fetch('/api/vidsum/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).finally(function(){location.reload()});}"
+           "catch(x){location.reload()}};});</script>")
+
+
+def _en_date(iso):
+    try:
+        y, m, d = (int(x) for x in iso[:10].split("-"))
+        return f"{EN_MONTHS[m - 1]} {d}, {y}"
+    except Exception:
+        return ""
+
+
+def _overlay_en(a):
+    """the article with its English text in place of the Hebrew one (ts, links, images stay). -> (article, translated?)"""
+    en = a.get("en")
+    if not en:
+        return a, False
+    b = dict(a)
+    for k in ("title", "standfirst", "lead", "key_points"):
+        if en.get(k):
+            b[k] = en[k]
+    blocks = []
+    for x, y in zip(a.get("blocks") or [], en.get("blocks") or []):
+        z = dict(x)
+        z["text"] = y.get("text", x.get("text", ""))
+        if x.get("speaker") is not None:
+            z["speaker"] = y.get("speaker") or x.get("speaker", "")
+        if x.get("items"):
+            z["items"] = y.get("items") or x["items"]
+        blocks.append(z)
+    b["blocks"] = blocks or a.get("blocks")
+    return b, True
+
+
+def render(a, latest=(), base="", disclaimer="", lang="he"):
     """a: article dict. latest: [{slug,title,topic,vid,channel}] newest first. base: URL prefix ('' on the server)."""
+    en = lang == "en"
+    S = STR["en" if en else "he"]
+    translated = True
+    if en:
+        a, translated = _overlay_en(a)
+        latest = [dict(x, title=x.get("title_en") or x["title"]) for x in latest]
+        disclaimer = EN_DISCLAIMER if disclaimer else ""
+    tname = (lambda t: EN_TOPICS.get(t, t)) if en else (lambda t: t)
+    fdate = _en_date if en else _he_date
     a = clean_dashes(a)
     latest = clean_dashes(list(latest))
     e = _html.escape
@@ -198,42 +270,44 @@ def render(a, latest=(), base="", disclaimer=""):
     tps = [t for t in (a.get("topics") or []) if t in TOPICS] or [a["topic"]]
     if a["topic"] in tps:
         tps = [a["topic"]] + [t for t in tps if t != a["topic"]]
-    crumb_topics = '<a href="%s/vidsum#%s">%s</a>' % (base, urllib.parse.quote(tps[0]), e(tps[0]))   # one highlighted section; the others only list the story
-    nav = "".join(f'<a href="{base}/vidsum#{urllib.parse.quote(t)}" class="{"active" if t == tps[0] else ""}">{e(t)}</a>'
+    crumb_topics = '<a href="%s/vidsum#%s">%s</a>' % (base, urllib.parse.quote(tps[0]), e(tname(tps[0])))   # one highlighted section; the others only list the story
+    nav = "".join(f'<a href="{base}/vidsum#{urllib.parse.quote(t)}" class="{"active" if t == tps[0] else ""}">{e(tname(t))}</a>'
                   for t in TOPICS)
     share_url = urllib.parse.quote(f'{SITE}/vidsum/article/{a["slug"]}', safe="")
     share_txt = urllib.parse.quote(a["title"], safe="")
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
-           f'<span>{e(_he_date(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span>'
-           f'<a class="admin-only" href="{base}/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="{base}/vidsum/sources">מקורות</a><a class="admin-only" href="{base}/vidsum/logs">יומן</a></div></div></div>'
+           f'<span>{e(fdate(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">{S["live"]}</span>'
+           f'<a class="admin-only" href="{base}/vidsum/articles">{S["all"]}</a><a class="auth-only" href="{base}/vidsum/sources">{S["sources"]}</a><a class="admin-only" href="{base}/vidsum/logs">{S["log"]}</a></div>'
+           f'<span class="langsw"><a data-l="en" class="{"on" if en else ""}" title="English">🇺🇸</a><a data-l="he" class="{"" if en else "on"}" title="עברית">🇮🇱</a></span></div></div>'
            f'<header class="masthead"><a class="brand" href="{base}/"><img class="brand-wordmark" src="{base}/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a></header>'
-           f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">ראשי</a>{nav}</nav></div>',
-           '<div class="page"><article>',
-           f'<div class="crumbs"><a href="{base}/vidsum">ראשי</a> › {crumb_topics}</div>',
+           f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">{S["main"]}</a>{nav}</nav></div>',
+           '<div class="page"><article class="he">' if en and not translated else '<div class="page"><article>',
+           f'<div class="crumbs"><a href="{base}/vidsum">{S["main"]}</a> › {crumb_topics}</div>',
+           (f'<div class="wait">{S["wait"]}</div>' if en and not translated else ""),
            f'<h1>{e(a["title"])}</h1><p class="standfirst">{e(a["standfirst"])}</p>',
-           f'<div class="byline"><span>מאת <b>מערכת Pawed</b></span><span>מתוך {e(a.get("channel", "").strip())}</span>'
-           f'<span>{e(_he_date(a.get("published_at") or a.get("published") or ""))}</span><span>{mins} דק׳ קריאה</span>'
+           f'<div class="byline"><span>{S["by"]} <b>{S["desk"]}</b></span><span>{S["from"]} {e(a.get("channel", "").strip())}</span>'
+           f'<span>{e(fdate(a.get("published_at") or a.get("published") or ""))}</span><span>{mins} {S["read"]}</span>'
            f'<span class="share"><a href="https://wa.me/?text={share_txt}%20{share_url}" target="_blank" rel="noopener" title="WhatsApp">W</a>'
            f'<a href="https://www.facebook.com/sharer/sharer.php?u={share_url}" target="_blank" rel="noopener" title="Facebook">f</a>'
            f'<a href="https://twitter.com/intent/tweet?url={share_url}&amp;text={share_txt}" target="_blank" rel="noopener" title="X">X</a></span></div>',
-           f'<figure><a class="hero" href="{e(a["url"])}" target="_blank" rel="noopener" title="{"האזנה לפרק" if rss else "צפייה בסרטון ביוטיוב"}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""></a>'
-           f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())}{"" if rss else " · צילום מסך מתוך הסרטון"}</figcaption></figure>']
+           f'<figure><a class="hero" href="{e(a["url"])}" target="_blank" rel="noopener" title="{S["ls_pod"] if rss else S["ls_yt"]}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""></a>'
+           f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())}{"" if rss else S["shot"]}</figcaption></figure>']
     lk = a.get("links") or {}
     icons = ""
     if lk.get("spotify"):
-        icons += (f'<a class="listen-ic" href="{e(lk["spotify"])}" target="_blank" rel="noopener" title="האזנה ב-Spotify" aria-label="Spotify">'
+        icons += (f'<a class="listen-ic" href="{e(lk["spotify"])}" target="_blank" rel="noopener" title="{S["on"]}Spotify" aria-label="Spotify">'
                   '<svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="12" r="12" fill="#1ED760"/>'
                   '<path d="M5.4 9.2c4.2-1.2 9.2-.8 13 1.4M6.2 12.6c3.5-1 7.6-.7 10.7 1.1M7 15.8c2.8-.8 5.9-.5 8.4.9" fill="none" stroke="#000" stroke-width="1.7" stroke-linecap="round"/></svg></a>')
     if lk.get("apple"):
-        icons += (f'<a class="listen-ic" href="{e(lk["apple"])}" target="_blank" rel="noopener" title="האזנה ב-Apple Podcasts" aria-label="Apple Podcasts">'
+        icons += (f'<a class="listen-ic" href="{e(lk["apple"])}" target="_blank" rel="noopener" title="{S["on"]}Apple Podcasts" aria-label="Apple Podcasts">'
                   '<svg viewBox="0 0 24 24" width="30" height="30"><defs><linearGradient id="apg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F452FF"/><stop offset="1" stop-color="#832BC1"/></linearGradient></defs>'
                   '<rect width="24" height="24" rx="5.5" fill="url(#apg)"/><circle cx="12" cy="10" r="2" fill="#fff"/>'
                   '<path d="M12 13.2c-1 0-1.6.7-1.5 1.6l.4 3.4c.1.8.5 1.3 1.1 1.3s1-.5 1.1-1.3l.4-3.4c.1-.9-.5-1.6-1.5-1.6z" fill="#fff"/>'
                   '<path d="M7.6 12.2a4.7 4.7 0 117.5-.4M5.9 12.6a6.5 6.5 0 1112.2-.2" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg></a>')
     if icons:
-        out.append(f'<div class="listen"><span>האזנה גם ב:</span>{icons}</div>')
+        out.append(f'<div class="listen"><span>{S["also"]}</span>{icons}</div>')
     if a.get("key_points"):
-        out.append('<div class="keybox"><h4>עיקרי הדברים</h4><ul>' + "".join(f"<li>{e(k)}</li>" for k in a["key_points"]) + "</ul></div>")
+        out.append(f'<div class="keybox"><h4>{S["key"]}</h4><ul>' + "".join(f"<li>{e(k)}</li>" for k in a["key_points"]) + "</ul></div>")
     out.append('<div class="body">')
     qn = 0
     for b in a["blocks"]:
@@ -249,30 +323,31 @@ def render(a, latest=(), base="", disclaimer=""):
         elif t == "list":
             out.append('<ul class="l">' + "".join(f"<li>{e(i)}</li>" for i in b["items"]) + "</ul>")
     out.append("</div>")
-    out.append(f'<a class="watch" href="{e(a["url"])}" target="_blank" rel="noopener">{"האזנה לפרק המלא ↗" if rss else "צפייה בשיחה המלאה ביוטיוב ↗"}</a>')
+    out.append(f'<a class="watch" href="{e(a["url"])}" target="_blank" rel="noopener">{S["full_pod"] if rss else S["full_yt"]}</a>')
     if disclaimer:
         out.append(f'<p class="disclaimer">{e(disclaimer)}</p>')
     rel = [x for x in others if set(x.get("topics") or [x["topic"]]) & set(tps)][:3] or others[:3]
     if rel:
-        out.append('<section class="related"><h3>כתבות נוספות</h3><div class="rel-grid">' + "".join(
-            f'<a class="rel-card" href="{art_url(x)}"><img data-vid="{e(x["vid"])}" data-img="{e(x.get("image") or "")}" alt=""><div class="t">{e(x["topic"])}</div>'
+        out.append(f'<section class="related"><h3>{S["more"]}</h3><div class="rel-grid">' + "".join(
+            f'<a class="rel-card" href="{art_url(x)}"><img data-vid="{e(x["vid"])}" data-img="{e(x.get("image") or "")}" alt=""><div class="t">{e(tname(x["topic"]))}</div>'
             f'<h4>{e(x["title"])}</h4></a>' for x in rel) + "</div></section>")
     out.append("</article><aside>")
     if others:
-        out.append('<div class="box"><h3>הכי חדש</h3><ol>' + "".join(
-            f'<li><a href="{art_url(x)}"><span>{e(x["title"])}</span><small>{e(x["topic"])}</small></a></li>' for x in others[:5]) + "</ol></div>")
+        out.append(f'<div class="box"><h3>{S["new"]}</h3><ol>' + "".join(
+            f'<li><a href="{art_url(x)}"><span>{e(x["title"])}</span><small>{e(tname(x["topic"]))}</small></a></li>' for x in others[:5]) + "</ol></div>")
     cnt = {}
     for x in latest:
         cnt[x["topic"]] = cnt.get(x["topic"], 0) + 1
-    out.append('<div class="box"><h3>לפי נושא</h3><ol>' + "".join(
-        f'<li><a href="{base}/vidsum#{urllib.parse.quote(t)}"><span>{e(t)}</span><small>{cnt.get(t, 0)} כתבות</small></a></li>'
+    out.append(f'<div class="box"><h3>{S["bytopic"]}</h3><ol>' + "".join(
+        f'<li><a href="{base}/vidsum#{urllib.parse.quote(t)}"><span>{e(tname(t))}</span><small>{cnt.get(t, 0)} {"story" if en and cnt.get(t, 0) == 1 else S["stories"]}</small></a></li>'
         for t in TOPICS) + "</ol></div></aside></div>")
-    out.append('<footer><div class="footer-inner"><span>Pawed · פורטל חדשות המבוסס על סיכומי וידאו</span>'
+    out.append(f'<footer><div class="footer-inner"><span>{S["foot"]}</span>'
                '<span>Summarized by Pawed (by Mr. Brosh)</span></div></footer>')
     desc = e(a["standfirst"])
-    return (f'<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">'
+    refresh = '<meta http-equiv="refresh" content="60">' if en and not translated else ""
+    return (f'<!doctype html><html lang="{lang}" dir="{"ltr" if en else "rtl"}"><head><meta charset="utf-8">'
             f'<meta name="theme-color" content="#e3222b"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(a["title"])} | Pawed</title>'
             f'<meta name="description" content="{desc}"><link rel="canonical" href="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}">'
             f'<meta property="og:url" content="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}"><meta property="og:title" content="{e(a["title"])}">'
             f'<meta property="og:description" content="{desc}"><meta property="og:image" content="{e(a.get("image")) if rss and a.get("image") else "https://i.ytimg.com/vi/" + e(a["vid"]) + "/maxresdefault.jpg"}">'
-            f'<style>{CSS}</style></head><body style="{_theme(a["topic"])}">{"".join(out)}{PAW_JS}</body></html>')
+            f'<style>{CSS}{LANG_CSS}{LTR_CSS if en else ""}</style>{refresh}</head><body style="{_theme(a["topic"])}">{"".join(out)}{PAW_JS}{LANG_JS}</body></html>')
