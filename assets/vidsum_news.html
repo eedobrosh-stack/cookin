@@ -425,11 +425,14 @@ const HERO_SLOT_MS = 150*60*1000, HERO_POOL = 12;   // walks down the 12 newest,
 // hourly through the latest episode of each daily pod released in the last 30 hours. Outside those hours (or with no fresh
 // daily episode) the normal rule below applies. Category pages never rotate: their top story is simply the newest.
 function ilHour(){ return +new Intl.DateTimeFormat('en-GB',{hour:'2-digit',hour12:false,timeZone:'Asia/Jerusalem'}).format(new Date()) % 24; }
+// Main page rule: Sports and Lifestyle never take a head slot (top story, its three links, the first tiles) on the main page; they keep their own sections below
+const HOME_NOHEAD = new Set(['ספורט','לייפסטייל']);
+const noHead = a => a.nohead || (FILTER==='all' && HOME_NOHEAD.has(a.topic));
 function morningPick(items){
   const h = ilHour(); if(h<7 || h>=11) return -1;
   const seen = new Set(), daily = [];
   for(const a of items){                                   // items are newest first: the first hit per pod is its latest episode
-    if(!a.daily || a.nohead) continue;
+    if(!a.daily || noHead(a)) continue;
     const t = new Date((a.released||a.created).replace(' ','T')+'Z').getTime();
     if(Date.now()-t > 30*3600*1000) continue;
     const pod = podOf(a); if(seen.has(pod)) continue; seen.add(pod); daily.push(a);
@@ -445,7 +448,7 @@ function heroIndex(items){
   return okHero(items, age < HERO_SLOT_MS ? 0 : Math.floor(age/HERO_SLOT_MS) % n);
 }
 // sources flagged no_headline (good but spammy) never take the top story: move on to the next story in line
-function okHero(items, k){ for(let i=0;i<items.length;i++){ const j=(k+i)%items.length; if(!items[j].nohead) return j; } return k; }
+function okHero(items, k){ for(let i=0;i<items.length;i++){ const j=(k+i)%items.length; if(!noHead(items[j])) return j; } return k; }
 // One pod (the show / channel an episode comes from) appears at most once per block: the top block, each topic section,
 // each feed batch. Across the page it also prefers pods not shown yet, and only repeats one when nothing else is left.
 const byNewest = (x,y) => (y.released||'').localeCompare(x.released||'');
@@ -538,9 +541,9 @@ function render(){
   const items = k===0 ? sorted : [sorted[k], ...sorted.filter((_,i)=>i!==k)];   // featured story first, everything else still newest-first
   // A category's head (top story, the three under it, the first tiles) only holds articles whose PRIMARY category it is, so an
   // article is never the head of two categories. Secondary-category articles follow below, newest first.
-  const prim = FILTER==='all' ? [] : items.filter(a=>a.topic===FILTER), headList = FILTER==='all' ? items : prim;      // a short list just means a shorter head: never fill it with another category's article
+  const prim = FILTER==='all' ? [] : items.filter(a=>a.topic===FILTER), headList = FILTER==='all' ? (items.filter(a=>!HOME_NOHEAD.has(a.topic)).length ? items.filter(a=>!HOME_NOHEAD.has(a.topic)) : items) : prim;      // a short list just means a shorter head: never fill it with another category's article
   const used = new Set(); let h=''; const pagePods = new Set(), topPods = new Set();
-  const headOK = headList.filter(a=>!a.nohead);            // no_headline sources stay out of the top story and its three bullet links
+  const headOK = headList.filter(a=>!noHead(a));            // no_headline sources stay out of the top story and its three bullet links
   const top = takeD(headOK.length?headOK:headList,1,used,topPods,pagePods)[0], subs = takeD(headOK,3,used,topPods,pagePods);
   if(top) h += hero(top, subs);
   const mixPods = new Set(), tiles = takeD(headList,4,used,mixPods,pagePods), meds = takeD(headList,2,used,mixPods,pagePods);

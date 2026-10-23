@@ -1034,7 +1034,8 @@ def relay_queue(limit=15, for_mac=True):
             continue
         if j.get("srv_claim") and time.time() - j["srv_claim"] < 240:              # the server is fetching this one itself
             continue
-        if for_mac and j.get("kind") == "rss" and not j.get("gstt_next") and (secret("GEMINI_API_KEY") or "").strip():
+        if for_mac and j.get("kind") == "rss" and not j.get("gstt_next") and (secret("GEMINI_API_KEY") or "").strip() \
+                and (j.get("duration") or 0) <= SERVER_PODCAST_MAX_MIN * 60:             # a long episode is the Mac's from the start (Whisper), no head start
             try:                                                                    # a fresh podcast episode: the server's Gemini path gets 4 minutes' head start
                 if time.time() - calendar.timegm(time.strptime(j.get("submitted", ""), "%Y-%m-%d %H:%M:%S")) < 240:
                     continue
@@ -1471,6 +1472,7 @@ def _can_edit_source(c, user):
 # ------------------------------------------------------- channel watcher ---
 CH_PATH = os.path.join(multiuser.DATA_DIR, "vidsum_channels.json")
 WATCH_DAILY_CAP = 120
+SERVER_PODCAST_MAX_MIN = int(os.environ.get("VIDSUM_PODCAST_MAX_MIN", "40"))   # podcast episodes longer than this are transcribed by the Mac (Whisper), not Gemini audio
 
 
 def _used_today(d, today, owner=None):

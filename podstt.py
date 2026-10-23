@@ -10,7 +10,7 @@ import multiuser
 import stt_test as st
 import vidsum_articles as va
 
-MAX_MIN = int(os.environ.get("VIDSUM_PODCAST_MAX_MIN", "240"))             # episodes longer than this stay with the Mac
+MAX_MIN = va.SERVER_PODCAST_MAX_MIN                                        # episodes longer than this stay with the Mac (Gemini audio proved unreliable on long files)
 REPEAT_MAX = 0.10                                                          # more of a window than this repeating earlier windows = Gemini re-told an old stretch
 WINDOW_MIN = 30                                                            # one Gemini answer covers ~30 minutes of speech; longer episodes are done in windows
 DAILY_MINUTES = int(os.environ.get("VIDSUM_PODCAST_MIN_PER_DAY", "600"))   # audio minutes sent to Gemini per day (about 10 hours)
