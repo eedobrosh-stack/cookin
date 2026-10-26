@@ -163,7 +163,7 @@ def _next():
             s = _WANT.pop(0)
             if s not in _BUSY:
                 return s
-    arts = va._articles()                                     # newest release first
+    arts = va._article_index()                                # newest release first (slim copies)
     for a in arts:
         s = a.get("slug")
         if s and not a.get("en") and s not in _BUSY and time.time() - _FAILED.get(s, 0) > 3600:
@@ -178,7 +178,7 @@ def _next():
 
 
 def pending():
-    return sum(1 for a in va._articles() if not a.get("en"))
+    return sum(1 for a in va._article_index() if not a.get("en"))
 
 
 def loop():

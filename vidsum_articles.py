@@ -202,8 +202,62 @@ def _articles():
     return out
 
 
+_IDX_FILES = {}                                   # file name -> ((mtime_ns, size), slim article)
+_IDX = {"sig": None, "items": []}
+_IDX_LOCK = threading.Lock()
+_SLIM_DROP = ("blocks", "key_points", "sections", "en")
+
+
+def _slim(a):
+    """An article without its body text and without the English edition's body: what the lists, lookups and the news feed need.
+    A full article (blocks + 'en' blocks) is tens of KB of Python objects; 200 of them parsed on every call is what ran the 512 MB instance out of memory."""
+    s = {k: v for k, v in a.items() if k not in _SLIM_DROP}
+    s["_min"] = _length_min(a)
+    en = a.get("en")
+    if en:
+        s["en"] = {"title": en.get("title", ""), "lead": en.get("lead", ""), "standfirst": en.get("standfirst", ""), "original": bool(en.get("original"))}
+    return s
+
+
+def _article_index():
+    """Slim copies of every article, newest release first. Cached: a file is read again only when its mtime or size changed. Read-only: callers
+    that rewrite an article use _articles() (the full ones)."""
+    try:
+        names = sorted(n for n in os.listdir(ART_DIR) if n.endswith(".json"))
+    except OSError:
+        return []
+    sig = []
+    for n in names:
+        try:
+            st = os.stat(os.path.join(ART_DIR, n))
+            sig.append((n, st.st_mtime_ns, st.st_size))
+        except OSError:
+            pass
+    sig = tuple(sig)
+    with _IDX_LOCK:
+        if _IDX["sig"] == sig:
+            return _IDX["items"]
+        files, items = {}, []
+        for n, mt, sz in sig:
+            old = _IDX_FILES.get(n)
+            if old and old[0] == (mt, sz):
+                files[n] = old
+            else:
+                try:
+                    with open(os.path.join(ART_DIR, n), encoding="utf-8") as f:
+                        files[n] = ((mt, sz), _slim(json.load(f)))
+                except Exception:
+                    continue
+            items.append(files[n][1])
+        items.sort(key=_rel, reverse=True)
+        _IDX_FILES.clear()
+        _IDX_FILES.update(files)
+        _IDX["sig"], _IDX["items"] = sig, items
+        return items
+
+
 def _find_by_vid(vid):
-    for a in _articles():
+    for a in _article_index():
         if a.get("vid") == vid:
             return a
     return None
@@ -211,7 +265,7 @@ def _find_by_vid(vid):
 
 def _unique_slug(title, vid):
     base = slugify(title)
-    taken = {a["slug"] for a in _articles()}
+    taken = {a["slug"] for a in _article_index()}
     if base not in taken:
         return base
     return f"{base}-{vid[:5].lower()}"
@@ -530,7 +584,7 @@ def find_duplicate(title, vid, source_id=None, channel=None, pub=None):
     nt = _norm_title(title)
     if len(nt) < 8:
         return None
-    for a in _articles():
+    for a in _article_index():
         if a.get("vid") == vid or _norm_title(a.get("src_title")) != nt:
             continue
         if not ((source_id and a.get("source_id") == source_id) or (channel and (a.get("channel") or "").strip() == channel.strip())):
@@ -1225,7 +1279,7 @@ def article_html(a):
 
 def index_html():
     e = _html.escape
-    arts = _articles()
+    arts = _article_index()
     items = "".join(
         f'<a class="item" href="/vidsum/article/{urllib.parse.quote(a["slug"])}">{e(a["title"])}'
         f'<small>{e(a.get("channel", ""))} &middot; {e(a["created"][:10])}</small></a>' for a in arts)
@@ -1407,14 +1461,14 @@ def news_items():
     nohead_ids = {c["id"] for c in chs if c.get("no_headline")}           # good but spammy sources: never a headline
     resolve = _source_resolver(chs)
     out = []
-    for a in _articles():
+    for a in _article_index():
         sid = resolve(a)
         out.append({"slug": a["slug"], "title": nd(a["title"]), "lead": nd(a.get("lead") or a.get("standfirst") or a.get("subtitle", "")),
                     "title_en": nd(((a.get("en") or {}).get("title")) or ""), "lead_en": nd(((a.get("en") or {}).get("lead") or (a.get("en") or {}).get("standfirst")) or ""),
                     "topic": a.get("topic") or "תרבות", "topics": article_topics(a), "channel": a.get("channel", ""), "vid": a.get("vid"),
                     "source_id": sid, "image": a.get("image") or "", "kind": a.get("kind") or "yt", "daily": sid in daily_ids, "nohead": sid in nohead_ids,
                     "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
-                    "released_time": len((a.get("published_at") or "")) >= 19, "minutes": _length_min(a)})
+                    "released_time": len((a.get("published_at") or "")) >= 19, "minutes": a["_min"] if "_min" in a else _length_min(a)})
     return out
 
 
