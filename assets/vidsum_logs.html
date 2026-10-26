@@ -252,7 +252,11 @@ function renderQueue(){
 function render(){
   if(!DATA) return;
   const sm = DATA.summary;
-  $('tiles').innerHTML = TILES.map(([k,l,c])=>'<div class="tile" style="--c:'+c+'"><b>'+(sm[k]||0)+'</b><span>'+l+'</span></div>').join('');
+  const PH = DATA.podcast_hours;
+  $('tiles').innerHTML = TILES.map(([k,l,c])=>'<div class="tile" style="--c:'+c+'"><b>'+(sm[k]||0)+'</b><span>'+l+'</span></div>').join('')
+    + (PH ? '<div class="tile" style="--c:#0e7a6e"><b>'+PH.total_h.toLocaleString()+' ש׳</b><span>שעות פודקאסט שסוכמו ('+PH.episodes+' פרקים)</span></div>'
+          + '<div class="tile" style="--c:#0e7a6e"><b>'+PH.today_h+' ש׳</b><span>היום · ב-7 ימים: '+PH.week_h+' ש׳</span></div>'
+          + (PH.gemini_budget_min ? '<div class="tile" style="--c:#8a4fd0"><b>'+PH.gemini_min_today+'/'+PH.gemini_budget_min+'</b><span>דקות אודיו ל-Gemini היום</span></div>' : '') : '');
   $('chips').innerHTML = [['all','הכל'],['active','בתהליך'],['ok','הצלחות'],['fail','כשלונות']].map(([k,l])=>'<button data-f="'+k+'" class="'+(k===FILTER?'on':'')+'">'+l+'</button>').join('');
   $('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f;render();});
   const g = GROUP[FILTER], evs = DATA.events.filter(e=>!g||g.includes(e.stage));

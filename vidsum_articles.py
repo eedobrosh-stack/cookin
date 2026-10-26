@@ -1988,6 +1988,34 @@ def start_background():
     vidsum_translate.start()
 
 
+def podcast_hours():
+    """Hours of podcast audio turned into published stories: all time, today and the last 7 days (by the day the story was made), plus the
+    Gemini audio budget used today. Episode length = the article's duration."""
+    now = time.time()
+    today = time.strftime("%Y-%m-%d")
+    week = time.strftime("%Y-%m-%d", time.localtime(now - 6 * 86400))
+    tot = tod = wk = n = 0
+    for a in _article_index():
+        if a.get("kind") != "rss":
+            continue
+        d = float(a.get("duration") or 0)
+        c = (a.get("created") or "")[:10]
+        tot += d
+        n += 1
+        if c == today:
+            tod += d
+        if c >= week:
+            wk += d
+    try:
+        import podstt
+        used = int(podstt._today_minutes())
+        budget = podstt.DAILY_MINUTES
+    except Exception:
+        used = budget = None
+    return {"total_h": round(tot / 3600, 1), "today_h": round(tod / 3600, 1), "week_h": round(wk / 3600, 1), "episodes": n,
+            "gemini_min_today": used, "gemini_budget_min": budget}
+
+
 _ERR_RX = re.compile(r"fail|error|exception|traceback|quota|unavailable|memory|\b(?:4\d\d|5\d\d)\b|reset by peer|timed? ?out|stopped early|malformed|repeats", re.I)
 _BOOT = time.time()
 
@@ -2344,7 +2372,7 @@ def handle_get(handler, path, qs):
         for j in jobs.values():
             cnt[j.get("status", "?")] = cnt.get(j.get("status", "?"), 0) + 1
         qrows, qtotal = queue_view()
-        handler._json({"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "summary": cnt, "total": len(jobs),
+        handler._json({"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "summary": cnt, "total": len(jobs), "podcast_hours": podcast_hours(),
                        "events": _recent_events(int((qs.get("limit") or ["300"])[0])), "relay": relay_status_get(),
                        "queue": qrows, "queue_total": qtotal})
         return True
