@@ -2073,6 +2073,14 @@ def health_report(qs=None):
     rep["alerts"] = pawed_alerts.system_alerts({**rep, "relay": relay_status_get()}) + [
         {"severity": g["class"]["severity"], "id": g["class"]["id"], "title": g["kind"], "count": g["count"], "last": g["last"], "first": g["first"],
          "meaning": g["class"]["meaning"], "next": g["class"]["next"], "who": g["class"]["who"], "example": g["example"], "source": "log"} for g in rep["errors"]]
+    for a in rep["alerts"]:                                   # a quota hit is logged every 10 min while it lasts: silence for 45 min means it has cleared
+        if a["id"] == "supadata-quota" and a["severity"] != "info" and a.get("last"):
+            try:
+                age = (time.mktime(time.strptime(rep["now"], "%Y-%m-%d %H:%M:%S")) - time.mktime(time.strptime(a["last"], "%Y-%m-%d %H:%M:%S"))) / 60
+                if age > 45:
+                    a["severity"], a["title"] = "info", f"Earlier: {a['title']} (last seen {int(age // 60)} h {int(age % 60)} min ago, not since)"
+            except Exception:
+                pass
     order = {"crit": 0, "warn": 1, "info": 2}
     rep["alerts"].sort(key=lambda a: (order[a["severity"]], -a["count"]))
     return rep
