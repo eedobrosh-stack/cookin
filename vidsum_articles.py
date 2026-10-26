@@ -1876,7 +1876,11 @@ def server_captions_once(limit=6):
             c = ytserver.captions(vid)
             relay_transcript({"vid": vid, **c})
         except ytserver.NoCaptions as e:
-            _set_job(vid, status="no_captions", error=str(e)[:200], srv_claim=0)
+            if str(e) == "video not found or private":          # gone from YouTube (deleted / private): retrying can never work
+                _set_job(vid, status="unavailable", error=str(e)[:200], srv_claim=0)
+                log(f"vidsum {vid} unavailable on YouTube, no more retries")
+            else:
+                _set_job(vid, status="no_captions", error=str(e)[:200], srv_claim=0)
         except ytserver.RateLimited as e:                                   # the service allows only a few requests per second: try again shortly
             _set_job(vid, srv_claim=0, srv_next=time.time() + e.after)
         except RuntimeError as e:

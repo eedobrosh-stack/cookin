@@ -97,6 +97,17 @@ def _blocks(segments):
     return "\n".join(blocks)
 
 
+_QUOTA_LOGGED = 0.0
+
+
+def _note_quota(code, body):
+    """one log line per 10 minutes with the provider's own words, so 'plan used up' is told apart from 'too fast'"""
+    global _QUOTA_LOGGED
+    if time.time() - _QUOTA_LOGGED > 600:
+        _QUOTA_LOGGED = time.time()
+        multiuser.log(f"vidsum caption service QUOTA: HTTP {code} {body[:240]}")
+
+
 def _supadata(vid, lang):
     """-> list of (seconds, text). Raises NoCaptions / RateLimited."""
     key = _key("SUPADATA_API_KEY")
@@ -107,12 +118,17 @@ def _supadata(vid, lang):
         status, d = _get(f"{SUPADATA}/transcript?{urllib.parse.urlencode(q)}", {"x-api-key": key, "User-Agent": "pawed/1.0"}, timeout=60)
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", "replace")[:300]
-        if e.code == 429:
+        if e.code in (402, 429):
             try:
                 after = int(float(e.headers.get("Retry-After") or 0))
             except ValueError:
                 after = 0
-            raise RateLimited("caption service rate limit", min(60, max(5, after or 10)))
+            low = body.lower()
+            quota = e.code == 402 or any(w in low for w in ("quota", "credit", "upgrade", "plan", "monthly", "limit exceeded", "usage"))
+            if quota:                                           # not a burst limit: the plan is used up, so stay away for a while (the Mac covers meanwhile)
+                _note_quota(e.code, body)
+                raise RateLimited(f"caption service quota exhausted ({e.code}): {body[:140]}", 1800)
+            raise RateLimited(f"caption service rate limit ({e.code}): {body[:140]}", min(60, max(5, after or 10)))
         if e.code in (400, 404, 206) or "unavailable" in body.lower() or "not-found" in body.lower():
             raise NoCaptions("no captions available")
         raise RuntimeError(f"caption service {e.code}: {body}")
