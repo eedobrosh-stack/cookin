@@ -40,10 +40,18 @@ DIET_HE2EN = dict(zip(DIET_HE, DIET_EN))
 _LOCK = threading.Lock()
 
 
+_LOG_WRITES = 0
+LOG_MAX_BYTES = 6_000_000                 # the disk log is rotated once (multiuser.log -> multiuser.log.1) so it can never fill the disk
+
+
 def log(msg):
+    global _LOG_WRITES
     line = f"{time.strftime('%Y-%m-%d %H:%M:%S')} {msg}"
     print("[multiuser]", line, flush=True)
     try:
+        _LOG_WRITES += 1
+        if _LOG_WRITES % 200 == 0 and os.path.getsize(LOG_PATH) > LOG_MAX_BYTES:
+            os.replace(LOG_PATH, LOG_PATH + ".1")
         with open(LOG_PATH, "a", encoding="utf-8") as f:
             f.write(line + "\n")
     except OSError:

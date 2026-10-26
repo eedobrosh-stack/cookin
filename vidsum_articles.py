@@ -1988,6 +1988,76 @@ def start_background():
     vidsum_translate.start()
 
 
+_ERR_RX = re.compile(r"fail|error|exception|traceback|quota|unavailable|memory|\b(?:4\d\d|5\d\d)\b|reset by peer|timed? ?out|stopped early|malformed|repeats", re.I)
+_BOOT = time.time()
+
+
+def _norm_msg(line):
+    """one error 'kind' per distinct message: ids, numbers and slugs removed so the same problem groups together"""
+    m = re.sub(r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d ", "", line.strip())
+    m = re.sub(r"\b(?:r[0-9a-f]{10}|[\w-]{11})\b(?= (?:DONE|FAILED|video|failed|unavailable|luna|gemini|error|server))", "<id>", m)
+    m = re.sub(r"slug=\S+", "slug=<s>", m)
+    m = re.sub(r"vidsum translate \S+ ", "vidsum translate <slug> ", m)
+    m = re.sub(r"\d+(?:[.,]\d+)?", "N", m)
+    return m[:200]
+
+
+def _tail_lines(path, max_bytes=1_500_000):
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            f.seek(max(0, size - max_bytes))
+            data = f.read().decode("utf-8", "replace")
+    except OSError:
+        return []
+    return data.splitlines()[1 if size > max_bytes else 0:]
+
+
+def health_report(qs=None):
+    """Admin: what the server knows about its own health, for the QA agent: memory, uptime, loops, disk, and the error lines of the
+    persistent log grouped by kind (the log survives restarts and out-of-memory kills, unlike the dashboard's live tail)."""
+    import shutil
+    qs = qs or {}
+    rss = peak = None
+    try:
+        with open("/proc/self/status") as f:
+            st = dict(l.split(":", 1) for l in f.read().splitlines() if ":" in l)
+        rss = int(st["VmRSS"].split()[0]) // 1024
+        peak = int(st["VmHWM"].split()[0]) // 1024
+    except Exception:
+        try:
+            import resource
+            peak = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024 if sys.platform == "darwin" else 1024))
+        except Exception:
+            pass
+    du = shutil.disk_usage(multiuser.DATA_DIR)
+    hours = float((qs.get("hours") or ["24"])[0])
+    since = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - hours * 3600))
+    lines = [l for l in _tail_lines(multiuser.LOG_PATH + ".1", 600_000) + _tail_lines(multiuser.LOG_PATH) if l[:19] >= since]
+    groups = {}
+    for l in lines:
+        if _ERR_RX.search(l):
+            k = _norm_msg(l)
+            g = groups.setdefault(k, {"kind": k, "count": 0, "first": l[:19], "last": l[:19], "example": l[:400]})
+            g["count"] += 1
+            g["last"] = l[:19]
+    last = lambda needle: next((l[:19] for l in reversed(lines) if needle in l), None)
+    jobs = {}
+    for j in _load_jobs().values():
+        jobs[j.get("status", "?")] = jobs.get(j.get("status", "?"), 0) + 1
+    raw_q = (qs.get("q") or [""])[0]
+    raw = [l for l in lines if re.search(raw_q, l, re.I)][-int((qs.get("limit") or ["40"])[0]):] if raw_q else []
+    import vidsum_translate
+    return {"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "uptime_min": int((time.time() - _BOOT) / 60), "rss_mb": rss, "peak_mb": peak,
+            "disk_free_mb": du.free // 1048576, "disk_used_mb": du.used // 1048576, "log_mb": round(os.path.getsize(multiuser.LOG_PATH) / 1048576, 1) if os.path.exists(multiuser.LOG_PATH) else 0,
+            "threads": sorted({t.name for t in threading.enumerate()})[:30], "thread_count": threading.active_count(),
+            "last": {"yt_pass": last("vidsum yt-api pass"), "rss_found": last("vidsum rss:"), "translate": last("vidsum translate"), "done": last(" DONE "),
+                     "quota": last("caption service QUOTA")},
+            "jobs": jobs, "translate_pending": vidsum_translate.pending(), "hours": hours, "log_lines": len(lines),
+            "errors": sorted(groups.values(), key=lambda g: -g["count"])[:60], "raw": raw}
+
+
 _ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 NEWS_PAGE = os.path.join(_ASSETS, "vidsum_news.html")
 V1_PAGE = os.path.join(_ASSETS, "vidsum_discover.html")
@@ -2268,6 +2338,13 @@ def handle_get(handler, path, qs):
     if path == "/api/vidsum/admin/stt-compare":
         import stt_test
         return stt_test.handle_get(handler, qs)
+    if path == "/api/vidsum/admin/health":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "not found"}, 404)
+            return True
+        handler._json(health_report(qs))
+        return True
     if path == "/api/vidsum/admin/ytcheck":
         user = current_user(handler)
         if not (user and user.get("admin")):
