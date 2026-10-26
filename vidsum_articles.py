@@ -2060,14 +2060,22 @@ def health_report(qs=None):
         jobs[j.get("status", "?")] = jobs.get(j.get("status", "?"), 0) + 1
     raw_q = (qs.get("q") or [""])[0]
     raw = [l for l in lines if re.search(raw_q, l, re.I)][-int((qs.get("limit") or ["40"])[0]):] if raw_q else []
-    import vidsum_translate
-    return {"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "uptime_min": int((time.time() - _BOOT) / 60), "rss_mb": rss, "peak_mb": peak,
+    import vidsum_translate, pawed_alerts
+    rep = {"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "uptime_min": int((time.time() - _BOOT) / 60), "rss_mb": rss, "peak_mb": peak,
             "disk_free_mb": du.free // 1048576, "disk_used_mb": du.used // 1048576, "log_mb": round(os.path.getsize(multiuser.LOG_PATH) / 1048576, 1) if os.path.exists(multiuser.LOG_PATH) else 0,
             "threads": sorted({t.name for t in threading.enumerate()})[:30], "thread_count": threading.active_count(),
             "last": {"yt_pass": last("vidsum yt-api pass"), "rss_found": last("vidsum rss:"), "translate": last("vidsum translate"), "done": last(" DONE "),
                      "quota": last("caption service QUOTA")},
             "jobs": jobs, "translate_pending": vidsum_translate.pending(), "hours": hours, "log_lines": len(lines),
             "errors": sorted(groups.values(), key=lambda g: -g["count"])[:60], "raw": raw}
+    for g in rep["errors"]:
+        g["class"] = pawed_alerts.classify(g["example"])
+    rep["alerts"] = pawed_alerts.system_alerts({**rep, "relay": relay_status_get()}) + [
+        {"severity": g["class"]["severity"], "id": g["class"]["id"], "title": g["kind"], "count": g["count"], "last": g["last"], "first": g["first"],
+         "meaning": g["class"]["meaning"], "next": g["class"]["next"], "who": g["class"]["who"], "example": g["example"], "source": "log"} for g in rep["errors"]]
+    order = {"crit": 0, "warn": 1, "info": 2}
+    rep["alerts"].sort(key=lambda a: (order[a["severity"]], -a["count"]))
+    return rep
 
 
 _ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")

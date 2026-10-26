@@ -184,6 +184,16 @@
     .brand-wordmark { height:88px; width:auto; display:block; }
     @media (max-width:640px) { .masthead { grid-template-columns:1fr; min-height:0; padding-block:8px; } .masthead .brand { grid-column:1; } .masthead .masthead-actions { grid-column:1; grid-row:2; justify-self:center; margin-top:4px; } .brand-wordmark { height:56px; } }
 
+    .alerts { background:#fff; border:1px solid var(--line); border-radius:8px; margin:0 0 16px; padding:10px 14px 12px; }
+    .alerts h2 { margin:0 0 2px; font-size:17px; } .alerts .asub { color:#777; font-size:12.5px; margin-bottom:8px; }
+    .alerts .achips { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 10px; }
+    .alerts .achips button { border:1px solid var(--line); background:#fff; border-radius:999px; padding:4px 12px; font-size:13px; cursor:pointer; }
+    .alerts .achips button.on { background:#171717; color:#fff; border-color:#171717; }
+    .alerts .arow { display:grid; grid-template-columns:26px minmax(0,1fr) 120px; gap:10px; padding:9px 0; border-top:1px solid var(--line); direction:ltr; text-align:left; font-size:13.5px; }
+    .alerts .arow b { font-weight:600; } .alerts .ameta { color:#777; font-size:12px; text-align:right; }
+    .alerts .anext { color:#444; margin-top:2px; } .alerts .awho { color:#777; font-size:12px; }
+    .alerts .arow.crit { background:#fdf0f0; } .alerts .arow.info { opacity:.75; }
+    .alerts .aclear { color:#2e7d32; font-weight:700; padding:6px 0; }
     .qbox { background:#fff; border:1px solid var(--line); border-radius:8px; margin:0 0 16px; padding:10px 14px 12px; }
     .qbox h2 { margin:0 0 2px; font-size:17px; } .qbox .qsub { color:#777; font-size:12.5px; margin-bottom:8px; }
     .qbox table { width:100%; border-collapse:collapse; font-size:13.5px; } .qbox th { text-align:right; color:#888; font-weight:600; font-size:12px; padding:4px 8px; border-bottom:1px solid var(--line); }
@@ -207,6 +217,7 @@
     <div class="tiles" id="tiles"></div>
     <div class="bar"><div class="chips" id="chips"></div><span id="stamp"></span></div>
     <div id="scan" class="scan"></div>
+    <section class="alerts" id="alerts"><h2>התראות</h2><div class="asub">מה השרת מדווח על עצמו: זיכרון, מצב הלולאות, הממסר, ושגיאות מהיומן הקבוע, מסווגות לפי קטלוג השגיאות. מתרענן כל דקה.</div><div class="achips" id="achips"></div><div id="alist">טוען…</div></section>
     <section class="qbox" id="qbox"></section>
     <div class="scroll"><table>
       <thead><tr><th>שעה</th><th>שלב</th><th>סרטון</th><th>פרטים</th></tr></thead>
@@ -264,6 +275,22 @@ function render(){
 async function tick(){ try{ DATA = await (await fetch('/api/vidsum/logs?limit=400')).json(); render(); }catch(e){ $('stamp').textContent='שגיאת רענון'; } }
 $('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 tick(); setInterval(tick, 4000);
+// ---- alerts panel: /api/vidsum/admin/health (admin only) -> classified alerts, critical first ----
+let ALERTS = [], AFILTER = 'warn';        // warn = critical + warnings; info = everything
+const ICON = {crit:'🔴', warn:'🟠', info:'⚪'}, SEV = {crit:'critical', warn:'to watch', info:'expected'};
+function renderAlerts(){
+  const n = k => ALERTS.filter(a=>a.severity===k).length;
+  $('achips').innerHTML = [['warn','התראות פעילות ('+(n('crit')+n('warn'))+')'],['info','הכל ('+ALERTS.length+')']].map(([k,l])=>'<button data-k="'+k+'" class="'+(AFILTER===k?'on':'')+'">'+l+'</button>').join('')
+    + '<span dir="ltr" style="margin-inline-start:6px;font-size:13px;color:#555;align-self:center">'+ICON.crit+' '+n('crit')+' &nbsp; '+ICON.warn+' '+n('warn')+' &nbsp; '+ICON.info+' '+n('info')+'</span>';
+  $('achips').querySelectorAll('button').forEach(b=>b.onclick=()=>{ AFILTER=b.dataset.k; renderAlerts(); });
+  const list = ALERTS.filter(a=>AFILTER==='info' || a.severity!=='info');
+  $('alist').innerHTML = list.length ? list.map(a=>'<div class="arow '+a.severity+'"><div>'+ICON[a.severity]+'</div><div><b>'+esc(a.title)+'</b>'
+      +'<div>'+esc(a.meaning)+'</div><div class="anext"><i>Next:</i> '+esc(a.next)+' <span class="awho">('+esc(a.who)+')</span></div></div>'
+      +'<div class="ameta">'+(a.count>1?a.count+'× ':'')+esc((a.last||'').slice(5,16))+'<br>'+SEV[a.severity]+'</div></div>').join('')
+    : '<div class="aclear">✓ אין התראות פעילות</div>';
+}
+async function alertsTick(){ try{ const h = await (await fetch('/api/vidsum/admin/health?hours=24')).json(); if(h.alerts){ ALERTS = h.alerts; renderAlerts(); } else $('alist').textContent='אין הרשאה'; }catch(e){ $('alist').textContent='שגיאה בטעינת ההתראות'; } }
+alertsTick(); setInterval(alertsTick, 60000);
 </script>
 <script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>
 
