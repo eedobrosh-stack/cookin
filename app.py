@@ -791,6 +791,14 @@ class Handler(SimpleHTTPRequestHandler):
                     self._json({"error": "icon not found"}, 404); return
                 self.send_response(200); self.send_header("Content-Type", ctype); self.send_header("Content-Length", str(len(body)))
                 self.send_header("Cache-Control", "public, max-age=604800"); self.end_headers(); self.wfile.write(body); return
+            if p in ("/design.html", "/design"):                      # how Pawed works: one static page
+                try:
+                    with open(os.path.join(ASSETS, "pawed_design.html"), "rb") as f:
+                        body = f.read()
+                except OSError:
+                    self._json({"error": "not found"}, 404); return
+                self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "public, max-age=300"); self.end_headers(); self.wfile.write(body); return
             if p in ("/vidsum", "/vidsum/"):
                 self.send_response(301); self.send_header("Location", "/")
                 self.send_header("Content-Length", "0"); self.end_headers(); return
