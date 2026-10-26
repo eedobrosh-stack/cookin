@@ -2034,7 +2034,19 @@ def health_report(qs=None):
     du = shutil.disk_usage(multiuser.DATA_DIR)
     hours = float((qs.get("hours") or ["24"])[0])
     since = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - hours * 3600))
-    lines = [l for l in _tail_lines(multiuser.LOG_PATH + ".1", 600_000) + _tail_lines(multiuser.LOG_PATH) if l[:19] >= since]
+    ts_rx = re.compile(r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d ")
+    lines, cur, in_tb = [], "", False                  # lines with a timestamp; a Python traceback block becomes ONE line "<time> traceback: <exception line>"
+    for l in _tail_lines(multiuser.LOG_PATH + ".1", 600_000) + _tail_lines(multiuser.LOG_PATH):
+        if ts_rx.match(l):
+            cur, in_tb = l[:19], False
+            if cur >= since:
+                lines.append(l)
+        elif l.startswith("Traceback"):
+            in_tb = True
+        elif in_tb and l and not l[0].isspace():        # the exception line that ends the block
+            in_tb = False
+            if cur >= since:
+                lines.append(f"{cur} traceback: {l}")
     groups = {}
     for l in lines:
         if _ERR_RX.search(l):
