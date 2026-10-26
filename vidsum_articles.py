@@ -1,7 +1,7 @@
 """Vidsum server-side: YouTube link -> Gemini (reads the URL itself, so Render's
 blocked IP never touches YouTube) -> detailed RTL summary stored as an article
 served at /vidsum/article/<slug>."""
-import calendar, datetime, json, math, os, re, threading, uuid, time, html as _html, unicodedata
+import calendar, datetime, json, math, os, re, sys, threading, uuid, time, html as _html, unicodedata
 import urllib.request, urllib.parse, urllib.error
 
 import multiuser
