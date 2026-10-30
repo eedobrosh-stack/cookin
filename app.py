@@ -953,6 +953,21 @@ class Handler(SimpleHTTPRequestHandler):
             except OSError:
                 self._json({"error": "gallery not found"}, 404)
             return
+        # Short, paste-safe dish links: /dish/80380 -> the Hebrew-slug page (long
+        # percent-encoded URLs get truncated by WhatsApp and similar apps).
+        m = re.fullmatch(r"/dish/(\d+)/?", p)
+        if m:
+            try:
+                with open(os.path.join(SITE, "dishlinks.js"), encoding="utf-8") as f:
+                    mm = re.search(r'"%s":"([^"]+)"' % m.group(1), f.read())
+            except OSError:
+                mm = None
+            if mm:
+                self.send_response(302)
+                self.send_header("Location", "/" + mm.group(1))
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
         if cs == "all":
             self.send_response(302)
             self.send_header("Location", "/")
