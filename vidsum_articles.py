@@ -2657,8 +2657,8 @@ def handle_get(handler, path, qs):
                     continue
                 if not a.get("vid") or (lk.get("apple") and lk.get("spotify")):
                     continue
-                if lk.get("checked") and lk["checked"] >= time.strftime("%Y-%m-%d", time.localtime(time.time() - 3 * 86400)):
-                    continue                      # looked recently; new episodes appear on podcast feeds late, retry after 3 days
+                if not (qs.get("recheck") or [""])[0] and lk.get("checked") and lk["checked"] >= time.strftime("%Y-%m-%d", time.localtime(time.time() - 3 * 86400)):
+                    continue                      # looked recently; new episodes appear on podcast feeds late, retry after 3 days (recheck=1 ignores this)
                 todo.append({"slug": a["slug"], "vid": a["vid"], "channel": a.get("channel", ""), "src_title": a.get("src_title", ""),
                              "published": a.get("published") or ""})
                 if len(todo) >= lim:
