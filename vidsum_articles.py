@@ -1461,6 +1461,13 @@ def audio_lang(a, ch=None):
     l = (ch or {}).get("lang_full") or (ch or {}).get("language") or a.get("language") or ""
     if l and l != "other":
         return l
+    try:                                    # saved as "other" before the exact language was kept: ask the podcast catalog by name
+        import podscanner
+        l = podscanner.catalog_language((ch or {}).get("name") or a.get("channel") or "")
+        if l:
+            return l
+    except Exception:
+        pass
     letters = [c for c in (a.get("src_title") or "") if c.isalpha()]       # the ORIGINAL episode title (the article title is always the Hebrew summary)
     if letters and sum(1 for c in letters if "\u0590" <= c <= "\u05ff") / len(letters) > 0.3:
         return "he"

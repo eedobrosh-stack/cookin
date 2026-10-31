@@ -701,6 +701,18 @@ def catalog_options():
             [{"code": c, "name": COUNTRIES.get(c, (c.upper(), ""))[0], "n": n} for c, n in sorted(ctry.items(), key=lambda kv: -kv[1])])
 
 
+_LANG_IDX = {"src": None, "map": {}}
+
+
+def catalog_language(name):
+    """spoken language of a catalog podcast by (normalised) name, '' when unknown. For sources saved before the exact language was kept."""
+    pods = _catalog()
+    if _LANG_IDX["src"] is not pods:
+        _LANG_IDX["map"] = {r["_n"]: r["language"] for r in pods if r.get("language")}
+        _LANG_IDX["src"] = pods
+    return _LANG_IDX["map"].get(_nname(name), "")
+
+
 def catalog_pod(pid):
     with LOCK:
         d = _load()
