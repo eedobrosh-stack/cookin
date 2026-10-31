@@ -167,6 +167,14 @@ up.onclick=function(){if(!signed)return login();post({rating:1}).then(function(j
 dn.onclick=function(){if(!signed)return login();modal('<b>'+f(T.r_rm)+'</b><small>'+T.r_rm_sub+'</small>',[{t:T.r_yes,pri:1,fn:function(){post({rating:-1,remove_source:true}).then(function(j){if(j._s===401){signed=false;return login()}if(!j.ok)return toast(j.error||T.r_err);mark(-1);toast(f(T.r_done))}).catch(function(){toast(T.r_err)})}},{t:T.r_cancel}])}})();</script>"""
 
 
+APP_JS = """<script>document.querySelectorAll('a[data-app]').forEach(function(a){a.addEventListener('click',function(e){
+if(e.metaKey||e.ctrlKey||e.shiftKey||e.button)return;e.preventDefault();var left=false,w=a.href;
+function gone(){left=true}function vis(){if(document.hidden)left=true}
+addEventListener('blur',gone);document.addEventListener('visibilitychange',vis);
+location.href=a.dataset.app;
+setTimeout(function(){removeEventListener('blur',gone);document.removeEventListener('visibilitychange',vis);if(!left)window.open(w,'_blank','noopener')},1300)})});</script>"""
+
+
 def _ts_sec(ts):
     try:
         p = [int(x) for x in str(ts).split(":")]
@@ -330,7 +338,9 @@ def render(a, latest=(), base="", disclaimer="", lang="he"):
     lk = a.get("links") or {}
     icons = ""
     if lk.get("spotify"):
-        icons += (f'<a class="listen-ic" href="{e(lk["spotify"])}" target="_blank" rel="noopener" title="{S["on"]}Spotify" aria-label="Spotify">'
+        _m = re.search(r"open\.spotify\.com/episode/([A-Za-z0-9]{22})", lk["spotify"])
+        _app = f' data-app="spotify:episode:{_m.group(1)}"' if _m else ""
+        icons += (f'<a class="listen-ic" href="{e(lk["spotify"])}"{_app} target="_blank" rel="noopener" title="{S["on"]}Spotify" aria-label="Spotify">'
                   '<svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="12" r="12" fill="#1ED760"/>'
                   '<path d="M5.4 9.2c4.2-1.2 9.2-.8 13 1.4M6.2 12.6c3.5-1 7.6-.7 10.7 1.1M7 15.8c2.8-.8 5.9-.5 8.4.9" fill="none" stroke="#000" stroke-width="1.7" stroke-linecap="round"/></svg></a>')
     if lk.get("apple"):
@@ -388,4 +398,4 @@ def render(a, latest=(), base="", disclaimer="", lang="he"):
             f'<meta name="description" content="{desc}"><link rel="canonical" href="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}">'
             f'<meta property="og:url" content="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}"><meta property="og:title" content="{e(a["title"])}">'
             f'<meta property="og:description" content="{desc}"><meta property="og:image" content="{e(a.get("image")) if rss and a.get("image") else "https://i.ytimg.com/vi/" + e(a["vid"]) + "/maxresdefault.jpg"}">'
-            f'<style>{CSS}{LANG_CSS}{RATE_CSS}{LTR_CSS if en else ""}</style>{refresh}</head><body style="{_theme(a["topic"])}">{"".join(out)}{PAW_JS}{LANG_JS}{RATE_JS}</body></html>')
+            f'<style>{CSS}{LANG_CSS}{RATE_CSS}{LTR_CSS if en else ""}</style>{refresh}</head><body style="{_theme(a["topic"])}">{"".join(out)}{PAW_JS}{LANG_JS}{RATE_JS}{APP_JS}</body></html>')
