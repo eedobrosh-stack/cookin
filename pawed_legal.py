@@ -126,7 +126,7 @@ PRIVACY = {
 <li><b>If you sign in with Google:</b> your Google account ID, name, email address and profile picture link. We never receive your Google password.</li>
 <li><b>Your choices and activity:</b> languages, preferred listening platform, sources you add or hide, episodes you submit, thumbs up or down ratings, and whether your name is hidden.</li>
 <li><b>Cookies and local storage:</b> a session cookie that keeps you signed in, a language cookie (pawed_lang), and a small browser flag that remembers a dismissed hint. These are needed for the site to work.</li>
-<li><b>Analytics:</b> Pawed uses Google Analytics 4. It sets cookies and collects usage data such as pages viewed, device type, approximate location and referrer, so we can understand how the site is used. See Google's own policy for how it handles that data.</li>
+<li><b>Analytics:</b> Pawed uses Google Analytics 4. It sets cookies and collects usage data such as pages viewed, device type, approximate location and referrer, so we can understand how the site is used. If you are in the EU, the UK or Switzerland, analytics loads only after you click Accept in the banner, and you can <a href="#" class="cc">reset your choice</a> at any time. See Google's own policy for how it handles that data.</li>
 </ul>
 
 <h2>What we do not do</h2>
@@ -178,7 +178,7 @@ PRIVACY = {
 <li><b>אם נכנסתם עם Google:</b> מזהה חשבון Google, שם, כתובת דוא"ל וקישור לתמונת הפרופיל. איננו מקבלים את הסיסמה שלכם ל-Google.</li>
 <li><b>הבחירות והפעילות שלכם:</b> שפות, פלטפורמת האזנה מועדפת, מקורות שהוספתם או הסתרתם, פרקים שהגשתם, דירוגי אגודל למעלה או למטה, והאם שמכם מוסתר.</li>
 <li><b>עוגיות ואחסון מקומי:</b> עוגיית התחברות ששומרת אתכם מחוברים, עוגיית שפה (pawed_lang), ודגל קטן בדפדפן שזוכר רמז שנסגר. אלה נדרשים לתפקוד האתר.</li>
-<li><b>אנליטיקה:</b> Pawed משתמש ב-Google Analytics 4. הוא מציב עוגיות ואוסף נתוני שימוש כמו דפים שנצפו, סוג מכשיר, מיקום משוער ומקור הגעה, כדי שנבין איך משתמשים באתר. ראו את מדיניות Google לגבי הטיפול בנתונים אלה.</li>
+<li><b>אנליטיקה:</b> Pawed משתמש ב-Google Analytics 4. הוא מציב עוגיות ואוסף נתוני שימוש כמו דפים שנצפו, סוג מכשיר, מיקום משוער ומקור הגעה, כדי שנבין איך משתמשים באתר. אם אתם באיחוד האירופי, בבריטניה או בשווייץ, האנליטיקה נטענת רק לאחר שלחצתם על אישור בבאנר, ואפשר <a href="#" class="cc">לאפס את הבחירה</a> בכל עת. ראו את מדיניות Google לגבי הטיפול בנתונים אלה.</li>
 </ul>
 
 <h2>מה אנחנו לא עושים</h2>
@@ -289,7 +289,9 @@ def render_terms(lang):
 
 
 def render_privacy(lang):
-    return _page("מדיניות פרטיות" if lang == "he" else "Privacy policy", PRIVACY[lang], lang)
+    js = ("<script>document.querySelectorAll('a.cc').forEach(function(a){a.onclick=function(e){e.preventDefault();"
+          "document.cookie='pawed_consent=;path=/;max-age=0;samesite=lax';location.reload()}});</script>")
+    return _page("מדיניות פרטיות" if lang == "he" else "Privacy policy", PRIVACY[lang], lang, js)
 
 
 def render_takedown(lang):

@@ -450,6 +450,28 @@ def _ga_snippet(ga_id):
 
 
 GA_SNIPPET = _ga_snippet(GA_ID)
+# Visitors from the EEA, the UK and Switzerland get Google Analytics only after they accept it (cookie pawed_consent=1). Everyone else: as before.
+CONSENT_COUNTRIES = {"AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO",
+                     "SK", "SI", "ES", "SE", "IS", "LI", "NO", "GB", "CH"}
+CONSENT_TEXT = {
+    "en": ("We use Google Analytics to understand how the site is used. It sets cookies only if you accept.", "Accept", "Decline", "Privacy policy"),
+    "he": ("אנו משתמשים ב-Google Analytics כדי להבין איך משתמשים באתר. הוא מציב עוגיות רק אם תסכימו.", "אישור", "דחייה", "מדיניות פרטיות"),
+}
+
+
+def consent_banner(lang, with_link):
+    t = CONSENT_TEXT.get(lang, CONSENT_TEXT["en"])
+    link = f' <a href="/vidsum/privacy" style="color:#9cf">{t[3]}</a>' if with_link else ""
+    rtl = "rtl" if lang == "he" else "ltr"
+    return ('<div id="pcons" dir="%s" style="position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#222;color:#eee;font:14px/1.45 -apple-system,Segoe UI,Arial,sans-serif;'
+            'padding:12px 16px;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;box-shadow:0 -2px 12px rgba(0,0,0,.3)"><span>%s%s</span>'
+            '<button id="pcons-y" style="background:#e3222b;color:#fff;border:0;border-radius:999px;padding:8px 20px;font:inherit;font-weight:700;cursor:pointer">%s</button>'
+            '<button id="pcons-n" style="background:transparent;color:#eee;border:1px solid #888;border-radius:999px;padding:8px 20px;font:inherit;font-weight:700;cursor:pointer">%s</button></div>'
+            "<script>(function(){var b=document.getElementById('pcons');function set(v){document.cookie='pawed_consent='+v+';path=/;max-age=31536000;samesite=lax';}"
+            "document.getElementById('pcons-y').onclick=function(){set(1);location.reload()};"
+            "document.getElementById('pcons-n').onclick=function(){set(0);b.remove()};})();</script>" % (rtl, t[0], link, t[1], t[2]))
+
+
 PAWED_GA_ID = "G-JHRSTQ084Y"                  # GA4 property "Pawed" (stream pawed.io), separate from Jarcud
 PAWED_GA_SNIPPET = _ga_snippet(PAWED_GA_ID)
 
@@ -688,9 +710,25 @@ class Handler(SimpleHTTPRequestHandler):
         host = (self.headers.get("Host") or "").split(":")[0].lower()
         return host in ("jarcud.com", "www.jarcud.com")
 
+    def _consent(self):
+        """'ok' = load analytics, 'ask' = show the banner (no analytics yet), 'no' = declined"""
+        cc = (self.headers.get("CF-IPCountry") or "").strip().upper()
+        if cc not in CONSENT_COUNTRIES:
+            return "ok"
+        m = re.search(r"(?:^|;\s*)pawed_consent=([01])\b", self.headers.get("Cookie") or "")
+        return "ask" if not m else ("ok" if m.group(1) == "1" else "no")
+
     def _ga(self, body):
         if not self._inject_ga():
             return body
+        st = self._consent()
+        if st == "no":
+            return body
+        if st == "ask":
+            m = re.search(r"(?:^|;\s*)pawed_lang=(he|en)\b", self.headers.get("Cookie") or "")
+            snip = consent_banner(m.group(1) if m else "en", self._is_pawed_host()).encode("utf-8")
+            i = body.rfind(b"</body>")
+            return body[:i] + snip + body[i:] if i != -1 else body + snip
         snip = (PAWED_GA_SNIPPET if self._is_pawed_host() else GA_SNIPPET).encode("utf-8")
         i = body.rfind(b"</body>")
         return body[:i] + snip + body[i:] if i != -1 else body + snip
