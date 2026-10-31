@@ -74,7 +74,7 @@ figcaption{font-size:12px;color:#888;padding-top:8px;font-style:italic}
 .body::after{content:"";display:block;clear:both}
 .hero{position:relative;display:block}
 .pico{position:absolute;inset:auto auto 14px 14px;display:flex;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45));transition:transform .12s}
-.hero:hover .pico{transform:scale(1.08)}.pgen{border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center;font-size:24px;padding-inline-start:4px;box-sizing:border-box}.hero:hover .pgen{background:var(--red)}
+.hero:hover .pico{transform:scale(1.08)}.pgen{border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center;font-size:19px;padding-inline-start:3px;box-sizing:border-box}.hero:hover .pgen{background:var(--red)}
 .watch{display:inline-block;margin:6px 0 30px;padding:11px 20px;background:var(--red);color:#fff;font-weight:700;font-size:15px}
 .watch:hover{background:var(--red-dark)}
 .disclaimer{font-size:13px;color:#888;border-top:1px solid var(--line);padding-top:14px;margin-top:10px}
@@ -388,14 +388,14 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform=""):
            f'<span class="share"><a href="https://wa.me/?text={share_txt}%20{share_url}" target="_blank" rel="noopener" title="WhatsApp">W</a>'
            f'<a href="https://www.facebook.com/sharer/sharer.php?u={share_url}" target="_blank" rel="noopener" title="Facebook">f</a>'
            f'<a href="https://twitter.com/intent/tweet?url={share_url}&amp;text={share_txt}" target="_blank" rel="noopener" title="X">X</a></span></div>',
-           f'<figure><a class="hero" href="{e(hero_url)}"{app_attr(hero_app)} target="_blank" rel="noopener" title="{e(hero_title)}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""><span class="pico">{_pf_svg(hero_k, 66)}</span></a>'
+           f'<figure><a class="hero" href="{e(hero_url)}"{app_attr(hero_app)} target="_blank" rel="noopener" title="{e(hero_title)}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""><span class="pico">{_pf_svg(hero_k, 53)}</span></a>'
            f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())}{"" if rss else S["shot"]}</figcaption></figure>']
     icons = ""
     for k in ("youtube", "spotify", "apple", "rss"):
         if k == hero_k or k not in pl:
             continue
         t = pf_titles[k]
-        icons += (f'<a class="listen-ic" href="{e(pl[k])}"{app_attr(_pf_app(k, pl[k]))} target="_blank" rel="noopener" title="{e(t)}" aria-label="{e(t)}">{_pf_svg(k, 45)}</a>')
+        icons += (f'<a class="listen-ic" href="{e(pl[k])}"{app_attr(_pf_app(k, pl[k]))} target="_blank" rel="noopener" title="{e(t)}" aria-label="{e(t)}">{_pf_svg(k, 36)}</a>')
     if icons:
         out.append(f'<div class="listen"><span>{S["also"]}</span>{icons}</div>')
     if a.get("key_points"):

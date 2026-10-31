@@ -1468,7 +1468,9 @@ def news_items():
                     "topic": a.get("topic") or "תרבות", "topics": article_topics(a), "channel": a.get("channel", ""), "vid": a.get("vid"),
                     "source_id": sid, "image": a.get("image") or "", "kind": a.get("kind") or "yt", "daily": sid in daily_ids, "nohead": sid in nohead_ids,
                     "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
-                    "released_time": len((a.get("published_at") or "")) >= 19, "minutes": a["_min"] if "_min" in a else _length_min(a)})
+                    "released_time": len((a.get("published_at") or "")) >= 19, "minutes": a["_min"] if "_min" in a else _length_min(a),
+                    "pf": (pl := vidsum_render.platform_links(a, a.get("kind") == "rss")),
+                    "pfa": {k: ap for k, ap in ((k, vidsum_render._pf_app(k, u)) for k, u in pl.items()) if ap}})
     return out
 
 
@@ -2605,7 +2607,8 @@ def handle_get(handler, path, qs):
         if gone:                                         # a switched-off section loses its tab and every article filed under it
             items = [dict(i, topics=[t for t in i["topics"] if t not in gone]) for i in items if i["topic"] not in gone]
         handler._json({"ok": True, "topics": [t for t in TOPICS if t not in gone], "items": items, "personal": personal,
-                       "me": ({"name": user.get("name") or user.get("email")} if user and user.get("id") != "admin-token" else None)})
+                       "me": ({"name": user.get("name") or user.get("email")} if user and user.get("id") != "admin-token" else None),
+                       "platform": (get_vprefs(user["id"]).get("platform") or "") if user and user.get("id") != "admin-token" else ""})
         return True
     if path == "/api/vidsum/channels":
         user = current_user(handler)
