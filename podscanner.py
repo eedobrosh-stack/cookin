@@ -630,21 +630,43 @@ def catalog_quality(r, q=None):
             and r["score"] >= q["min_score"])
 
 
-def catalog_browse(language="", country="", topic="", limit=30, strict=None):
+def catalog_browse(language="", country="", topic="", limit=None, strict=None):
     q = QUALITY if strict is None else quality_for(strict)
+    if limit is None:
+        limit = browse_limit(10 if strict is None else strict)
     out = [r for r in _catalog() if catalog_quality(r, q) and (not language or r["language"] == language) and (not country or country in r["geo_codes"])
            and (not topic or r["topic"] == topic)]
     out.sort(key=lambda r: -r["score"])
     return [_pub(r) for r in out[:limit]], len(out)
 
 
-MAX_PER_TOPIC = 8           # a weight of 10 asks for up to this many podcasts in a section; 5 -> 4, 1 -> 1
+MAX_PER_TOPIC = 8           # at full strictness a weight of 10 asks for this many podcasts in a section (5 -> 4, 1 -> 1)
+
+
+def per_topic_cap(strict):
+    """What a weight of 10 is worth. Loosening the dial opens the tap: 8 at strictness 10, 21 at the default 6, 40 at 0."""
+    try:
+        v = max(0.0, min(10.0, float(strict)))
+    except (TypeError, ValueError):
+        v = DEFAULT_STRICT
+    return round(MAX_PER_TOPIC + (10 - v) * 3.2)
+
+
+def browse_limit(strict):
+    """How many rows the preference tab lists: 30 at strictness 10 up to 150 at 0 (was a flat 30)."""
+    try:
+        v = max(0.0, min(10.0, float(strict)))
+    except (TypeError, ValueError):
+        v = 10
+    return round(30 + (10 - v) * 12)
 
 
 def catalog_select(weights, languages=(), strict=None, exclude=lambda name: False, hide_langs=()):
     """The generic layer: {topic: weight 0..10} + languages (empty = all) + strictness -> podcasts per topic, best first.
     Podcasts already in the sources table (exclude(name)) are left out. -> (pods, counts)"""
-    q = quality_for(DEFAULT_STRICT if strict is None else strict)
+    strict = DEFAULT_STRICT if strict is None else strict
+    q = quality_for(strict)
+    cap = per_topic_cap(strict)
     langs = set(languages or ())
     by_topic = {}
     for r in _catalog():
@@ -657,7 +679,7 @@ def catalog_select(weights, languages=(), strict=None, exclude=lambda name: Fals
     pods, counts = [], {}
     for t, rows in by_topic.items():
         rows.sort(key=lambda r: (-r["score"], r["days_since"] if r["days_since"] is not None else 9999))
-        n = max(1, round(weights[t] / 10 * MAX_PER_TOPIC))
+        n = max(1, round(weights[t] / 10 * cap))
         counts[t] = {"available": len(rows), "picked": min(n, len(rows))}
         pods += [dict(_pub(r), weight=weights[t]) for r in rows[:n]]
     pods.sort(key=lambda p: (-p["weight"], -p["score"]))
