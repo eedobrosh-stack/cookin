@@ -354,12 +354,14 @@
     .pf { display:inline-flex; cursor:pointer; --s:28px; transition:transform .12s; }
     .pf svg { width:var(--s); height:var(--s); display:block; }
     .pf:hover { transform:scale(1.12); }
-    .im > .pf { position:absolute; inset-inline-start:8px; bottom:8px; filter:drop-shadow(0 1px 4px rgba(0,0,0,.5)); }
-    .hero2-i .im > .pf, .cd.big .im > .pf { --s:40px; inset-inline-start:12px; bottom:12px; }
+    .im > .pfbar { position:absolute; left:8px; bottom:8px; direction:ltr; display:flex; align-items:center; gap:6px; }
+    .pfbar .pf { filter:drop-shadow(0 1px 4px rgba(0,0,0,.5)); }
+    .hero2-i .im > .pfbar, .cd.big .im > .pfbar { left:12px; bottom:12px; gap:8px; }
+    .hero2-i .im .pf, .cd.big .im .pf { --s:40px; }
     .hero2-s li .pf, .tr small .pf { --s:18px; vertical-align:middle; margin-inline-start:8px; }
 
-    .im > .aflag { position:absolute; top:8px; inset-inline-end:8px; font-size:15px; line-height:1; background:rgba(0,0,0,.55); border-radius:6px; padding:3px 5px; box-shadow:0 1px 5px rgba(0,0,0,.35); }
-    .hero2-i .im > .aflag, .cd.big .im > .aflag { font-size:20px; top:12px; inset-inline-end:12px; padding:4px 7px; border-radius:8px; }
+    .pfbar .aflag { font-size:15px; line-height:1; background:rgba(0,0,0,.55); border-radius:6px; padding:3px 5px; box-shadow:0 1px 5px rgba(0,0,0,.35); }
+    .hero2-i .pfbar .aflag, .cd.big .pfbar .aflag { font-size:22px; padding:4px 7px; border-radius:8px; }
 </style>
 </head>
 <body>
@@ -472,10 +474,11 @@ function openPf(el){
 document.addEventListener('click', e=>{ const el = e.target.closest('.pf'); if(!el) return; e.preventDefault(); e.stopPropagation(); openPf(el); }, true);
 document.addEventListener('keydown', e=>{ if(e.key!=='Enter') return; const el = e.target.closest && e.target.closest('.pf'); if(!el) return; e.preventDefault(); e.stopPropagation(); openPf(el); }, true);
 // language spoken in the episode, as a flag in the corner of its preview
-const AFLAG = {he:'\u{1F1EE}\u{1F1F1}',en:'\u{1F1FA}\u{1F1F8}',es:'\u{1F1EA}\u{1F1F8}',fr:'\u{1F1EB}\u{1F1F7}',de:'\u{1F1E9}\u{1F1EA}',it:'\u{1F1EE}\u{1F1F9}',pt:'\u{1F1E7}\u{1F1F7}',nl:'\u{1F1F3}\u{1F1F1}',sv:'\u{1F1F8}\u{1F1EA}',no:'\u{1F1F3}\u{1F1F4}',pl:'\u{1F1F5}\u{1F1F1}',ru:'\u{1F1F7}\u{1F1FA}',tr:'\u{1F1F9}\u{1F1F7}',ja:'\u{1F1EF}\u{1F1F5}',ko:'\u{1F1F0}\u{1F1F7}',ar:'\u{1F1F8}\u{1F1E6}'};
-const ANAME = {he:['Hebrew','עברית'],en:['English','אנגלית'],es:['Spanish','ספרדית'],fr:['French','צרפתית'],de:['German','גרמנית'],it:['Italian','איטלקית'],pt:['Portuguese','פורטוגזית'],nl:['Dutch','הולנדית'],sv:['Swedish','שוודית'],no:['Norwegian','נורווגית'],pl:['Polish','פולנית'],ru:['Russian','רוסית'],tr:['Turkish','טורקית'],ja:['Japanese','יפנית'],ko:['Korean','קוריאנית'],ar:['Arabic','ערבית']};
+const ACC = {"he": "IL", "en": "US", "es": "ES", "fr": "FR", "de": "DE", "it": "IT", "pt": "BR", "nl": "NL", "sv": "SE", "no": "NO", "pl": "PL", "ru": "RU", "tr": "TR", "ja": "JP", "ko": "KR", "ar": "SA", "da": "DK", "fi": "FI", "cs": "CZ", "sk": "SK", "uk": "UA", "el": "GR", "hu": "HU", "ro": "RO", "bg": "BG", "hr": "HR", "sr": "RS", "sl": "SI", "lt": "LT", "lv": "LV", "et": "EE", "hi": "IN", "zh": "CN", "id": "ID", "ms": "MY", "th": "TH", "vi": "VN", "fa": "IR", "ur": "PK", "bn": "BD", "ta": "IN", "te": "IN", "mr": "IN", "af": "ZA", "ga": "IE", "is": "IS", "mt": "MT", "sq": "AL", "mk": "MK", "be": "BY", "az": "AZ", "ka": "GE", "hy": "AM", "kk": "KZ", "uz": "UZ", "mn": "MN", "my": "MM", "sw": "KE", "fil": "PH"};
+const AFLAG = Object.fromEntries(Object.entries(ACC).map(([k,c])=>[k,[...c].map(ch=>String.fromCodePoint(0x1F1E6+ch.charCodeAt(0)-65)).join('')]));
+const ANAME = {"he": ["Hebrew", "עברית"], "en": ["English", "אנגלית"], "es": ["Spanish", "ספרדית"], "fr": ["French", "צרפתית"], "de": ["German", "גרמנית"], "it": ["Italian", "איטלקית"], "pt": ["Portuguese", "פורטוגזית"], "nl": ["Dutch", "הולנדית"], "sv": ["Swedish", "שוודית"], "no": ["Norwegian", "נורווגית"], "pl": ["Polish", "פולנית"], "ru": ["Russian", "רוסית"], "tr": ["Turkish", "טורקית"], "ja": ["Japanese", "יפנית"], "ko": ["Korean", "קוריאנית"], "ar": ["Arabic", "ערבית"], "da": ["Danish", "דנית"], "fi": ["Finnish", "פינית"], "cs": ["Czech", "צ׳כית"], "sk": ["Slovak", "סלובקית"], "uk": ["Ukrainian", "אוקראינית"], "el": ["Greek", "יוונית"], "hu": ["Hungarian", "הונגרית"], "ro": ["Romanian", "רומנית"], "bg": ["Bulgarian", "בולגרית"], "hr": ["Croatian", "קרואטית"], "sr": ["Serbian", "סרבית"], "sl": ["Slovenian", "סלובנית"], "lt": ["Lithuanian", "ליטאית"], "lv": ["Latvian", "לטבית"], "et": ["Estonian", "אסטונית"], "hi": ["Hindi", "הינדי"], "zh": ["Chinese", "סינית"], "id": ["Indonesian", "אינדונזית"], "ms": ["Malay", "מלאית"], "th": ["Thai", "תאית"], "vi": ["Vietnamese", "וייטנאמית"], "fa": ["Persian", "פרסית"], "ur": ["Urdu", "אורדו"], "bn": ["Bengali", "בנגלית"], "ta": ["Tamil", "טמילית"], "te": ["Telugu", "טלוגו"], "mr": ["Marathi", "מרטהי"], "af": ["Afrikaans", "אפריקאנס"], "ga": ["Irish", "אירית"], "is": ["Icelandic", "איסלנדית"], "mt": ["Maltese", "מלטזית"], "sq": ["Albanian", "אלבנית"], "mk": ["Macedonian", "מקדונית"], "be": ["Belarusian", "בלארוסית"], "az": ["Azerbaijani", "אזרית"], "ka": ["Georgian", "גאורגית"], "hy": ["Armenian", "ארמנית"], "kk": ["Kazakh", "קזחית"], "uz": ["Uzbek", "אוזבקית"], "mn": ["Mongolian", "מונגולית"], "my": ["Burmese", "בורמזית"], "sw": ["Swahili", "סוואהילית"], "fil": ["Filipino", "פיליפינית"]};
 const afl = a => AFLAG[a.lang] ? '<span class="aflag" title="'+(EN?'Audio language: ':'שפת האודיו: ')+ANAME[a.lang][EN?0:1]+'">'+AFLAG[a.lang]+'</span>' : '';
-const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" data-img="'+esc(a.image||'')+'" style="background-image:'+tone(a)+'">'+pfi(a)+afl(a)+'</div>';
+const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" data-img="'+esc(a.image||'')+'" style="background-image:'+tone(a)+'">'+(pfi(a)||afl(a)?'<div class="pfbar">'+pfi(a)+afl(a)+'</div>':'')+'</div>';
 const when2 = a => esc(rel(a));
 // an article can sit in up to 3 sections (a.topics, primary first); the home page groups by the primary one
 const inT = (a,t) => (a.topics||[a.topic]).includes(t);

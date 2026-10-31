@@ -259,6 +259,25 @@ def cadence_of(dates):
     return (lab, g)
 
 
+# ISO 639-1 codes that podcast feeds use correctly, with native names. Anything else in a feed's <language> tag (und, aa, hz, "norwegian", ...) is noise.
+LANG_NATIVE = {"en": "English", "he": "עברית", "ar": "العربية", "es": "Español", "fr": "Français", "de": "Deutsch", "it": "Italiano", "pt": "Português",
+               "ru": "Русский", "nl": "Nederlands", "sv": "Svenska", "no": "Norsk", "da": "Dansk", "fi": "Suomi", "pl": "Polski", "cs": "Čeština",
+               "sk": "Slovenčina", "tr": "Türkçe", "ja": "日本語", "ko": "한국어", "zh": "中文", "hi": "हिन्दी", "id": "Bahasa Indonesia", "ms": "Bahasa Melayu",
+               "th": "ไทย", "vi": "Tiếng Việt", "uk": "Українська", "el": "Ελληνικά", "hu": "Magyar", "ro": "Română", "bg": "Български", "hr": "Hrvatski",
+               "sr": "Српски", "sl": "Slovenščina", "lt": "Lietuvių", "lv": "Latviešu", "et": "Eesti", "fa": "فارسی", "ur": "اردو", "bn": "বাংলা",
+               "ta": "தமிழ்", "te": "తెలుగు", "mr": "मराठी", "af": "Afrikaans", "ca": "Català", "gl": "Galego", "eu": "Euskara", "cy": "Cymraeg",
+               "ga": "Gaeilge", "is": "Íslenska", "mt": "Malti", "sq": "Shqip", "mk": "Македонски", "be": "Беларуская", "az": "Azərbaycanca",
+               "ka": "ქართული", "hy": "Հայերեն", "kk": "Қазақша", "uz": "Oʻzbekcha", "mn": "Монгол", "my": "မြန်မာ", "sw": "Kiswahili", "fil": "Filipino"}
+_LANG_ALIAS = {"iw": "he", "nb": "no", "nn": "no", "norwegian": "no", "jp": "ja", "in": "id", "tl": "fil", "zh-cn": "zh", "zh-tw": "zh"}
+
+
+def canon_lang(l):
+    """feed language tag -> a known ISO 639-1 code, or '' when it is not a real language"""
+    l = (l or "").strip().lower().replace("_", "-")
+    base = _LANG_ALIAS.get(l) or _LANG_ALIAS.get(l.split("-")[0]) or l.split("-")[0]
+    return base if base in LANG_NATIVE else ""
+
+
 def _norm_lang(l, default=""):
     l = (l or "").strip().lower().replace("_", "-")
     if not l:
@@ -564,6 +583,7 @@ def _catalog():
                 continue
             row = _row(p)
             row["topic"] = _TOPIC_FIX.get(row["topic"], row["topic"])
+            row["language"] = canon_lang(row["language"])
             row["_n"] = _nname(p["name"])
             # the same show can be charted under several Apple ids (re-listed feeds): keep one, the best scored / most recently active
             key = row["_n"]

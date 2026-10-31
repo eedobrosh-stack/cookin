@@ -1507,7 +1507,7 @@ def removed_topics(viewer):
 
 
 # ------------------------------------------------- users: prefs + visibility ---
-MAX_USER_SOURCES = 10
+MAX_USER_SOURCES = 40
 USER_DAILY_VIDEOS = 8
 
 
@@ -2607,7 +2607,7 @@ def handle_get(handler, path, qs):
             langs, ctry = podscanner.catalog_options()
             if not show_il(handler, qs, user):
                 langs.pop("he", None)
-            handler._json({"ok": True, "languages": langs, "countries": ctry, "topics": TOPICS, "rules": podscanner.QUALITY,
+            handler._json({"ok": True, "languages": langs, "names": podscanner.LANG_NATIVE, "countries": ctry, "topics": TOPICS, "rules": podscanner.QUALITY,
                            "default_strict": podscanner.DEFAULT_STRICT, "il": show_il(handler, qs, user)})
         elif path == "/api/vidsum/catalog/browse":
             g = lambda k: (qs.get(k) or [""])[0]

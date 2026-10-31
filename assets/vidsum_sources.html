@@ -416,18 +416,19 @@ $('n_add').onclick = async () => {
 
 // ---------- add-source panel ----------
 const LANG_NAMES = {he:'עברית',en:'English',es:'Español',de:'Deutsch',fr:'Français',pt:'Português',nl:'Nederlands',sv:'Svenska',ja:'日本語',it:'Italiano',ru:'Русский',pl:'Polski',tr:'Türkçe',ko:'한국어',ar:'العربية',no:'Norsk'};
+const langName = k => LANG_NAMES[k] || (CATOPT && CATOPT.names && CATOPT.names[k]) || k;
 const normN = s => String(s||'').replace(/[^\p{L}\p{N}]/gu,'').toLowerCase();
 let CATOPT = null, PICKED = null, PK = [], SELPK = new Set();
 const mineCount = () => D.sources.filter(s=>s.mine).length;
 const quotaLeft = () => D.admin ? 999 : Math.max(0, D.limit - mineCount());
 const inTable = name => { const k=normN(name); return k.length>=3 && D.sources.some(s=>{ const o=normN(s.name); return o && (o.includes(k)||k.includes(o)); }); };
 function podLine(p){ const days = p.days_since==null?'':(p.days_since===0?'היום':'לפני '+p.days_since+' ימים');
-  return '<img loading="lazy" referrerpolicy="no-referrer" src="'+esc(p.image)+'" alt=""><div><b>'+esc(p.name)+'</b><small>'+esc((p.hosts||[]).join(', '))+(p.hosts&&p.hosts.length?' · ':'')+esc(LANG_NAMES[p.language]||p.language)+' · '+(p.episodes||0)+' פרקים'+(days?' · פרק אחרון '+days:'')+'</small></div>'; }
+  return '<img loading="lazy" referrerpolicy="no-referrer" src="'+esc(p.image)+'" alt=""><div><b>'+esc(p.name)+'</b><small>'+esc((p.hosts||[]).join(', '))+(p.hosts&&p.hosts.length?' · ':'')+esc(langName(p.language))+' · '+(p.episodes||0)+' פרקים'+(days?' · פרק אחרון '+days:'')+'</small></div>'; }
 function renderAddPanel(){
   const ok = !!D.me || D.admin; $('addp').hidden = !ok; if(!ok) return;
   $('quota').textContent = D.admin ? 'מקורות שתוסיפו יוצגו לכולם' : 'נותרו לכם '+quotaLeft()+' מתוך '+D.limit+' מקורות. מקורות שתוסיפו נראים רק לכם.';
   if(!CATOPT) fetch('/api/vidsum/catalog/options').then(r=>r.json()).then(j=>{ if(!j.ok) return; CATOPT=j;
-    $('pk_lang').innerHTML = Object.entries(j.languages).map(([k,n])=>'<option value="'+esc(k)+'"'+(k==='he'?' selected':'')+'>'+esc(LANG_NAMES[k]||k)+' ('+n+')</option>').join('');
+    $('pk_lang').innerHTML = Object.entries(j.languages).map(([k,n])=>'<option value="'+esc(k)+'"'+(k==='he'?' selected':'')+'>'+esc(langName(k))+' ('+n+')</option>').join('');
     $('pk_country').innerHTML = '<option value="">כל המדינות</option>'+j.countries.map(c=>'<option value="'+esc(c.code)+'">'+esc(c.name)+' ('+c.n+')</option>').join('');
     $('pk_topic').innerHTML = '<option value="">כל הנושאים</option>'+j.topics.map(t=>'<option>'+esc(t)+'</option>').join('');
     if(j.default_strict!=null) STRICT=j.default_strict; renderDials(); renderAutoForm(); }).catch(()=>{});
@@ -495,7 +496,7 @@ function renderAutoForm(){
   $('au_w').innerHTML = CATOPT.topics.map(t=>'<div class="w"><span>'+esc(t)+'</span><input type="range" min="0" max="10" step="1" value="'+(WTS[t]!=null?WTS[t]:5)+'" data-t="'+esc(t)+'"><b>'+(WTS[t]!=null?WTS[t]:5)+'</b></div>').join('');
   $('au_w').querySelectorAll('input').forEach(i=>i.oninput=()=>{ WTS[i.dataset.t]=+i.value; i.nextElementSibling.textContent=i.value; });
   CATOPT.topics.forEach(t=>{ if(WTS[t]==null) WTS[t]=5; });
-  $('au_langs').innerHTML = '<label><input type="checkbox" id="au_all" checked> כל השפות</label>'+Object.entries(CATOPT.languages).map(([k,n])=>'<label><input type="checkbox" class="aul" value="'+esc(k)+'" disabled> '+esc(LANG_NAMES[k]||k)+' ('+n+')</label>').join('');
+  $('au_langs').innerHTML = '<label><input type="checkbox" id="au_all" checked> כל השפות</label>'+Object.entries(CATOPT.languages).map(([k,n])=>'<label><input type="checkbox" class="aul" value="'+esc(k)+'" disabled> '+esc(langName(k))+' ('+n+')</label>').join('');
   $('au_all').onchange=()=>{ document.querySelectorAll('.aul').forEach(c=>{ c.disabled=$('au_all').checked; if($('au_all').checked) c.checked=false; }); };
 }
 $('au_go').onclick = async () => { $('au_go').disabled=true; $('au_res').innerHTML='<p class="help">מחפש…</p>'; SELAU=new Set();
