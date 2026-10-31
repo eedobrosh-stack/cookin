@@ -2482,6 +2482,20 @@ def handle_get(handler, path, qs):
     if path in ("/vidsum/sources", "/vidsum/sources/"):
         _serve(handler, SOURCES_PAGE, default_lang(handler))
         return True
+    if path.rstrip("/") in ("/vidsum/terms", "/vidsum/privacy", "/vidsum/takedown"):
+        import pawed_legal
+        page = {"/vidsum/terms": pawed_legal.render_terms, "/vidsum/privacy": pawed_legal.render_privacy,
+                "/vidsum/takedown": pawed_legal.render_takedown}[path.rstrip("/")]
+        handler._html(page(request_lang(handler, qs)), "no-store")
+        return True
+    if path == "/api/vidsum/admin/takedowns":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            import pawed_legal
+            handler._json({"ok": True, "requests": pawed_legal.list_requests()})
+        return True
     if path in ("/vidsum/logs", "/vidsum/logs/"):
         _serve(handler, LOGS_PAGE)
         return True
@@ -2977,6 +2991,12 @@ def handle_post(handler, path, req):
         if l in ("he", "en") and user and user.get("id") != "admin-token":
             set_vprefs(user["id"], {"lang": l})
         handler._json({"ok": l in ("he", "en"), "lang": l})
+        return True
+    if path == "/api/vidsum/takedown":                 # public form: no sign-in needed
+        import pawed_legal
+        ip = (handler.headers.get("CF-Connecting-IP") or (handler.client_address[0] if getattr(handler, "client_address", None) else "")).strip()
+        ok, out = pawed_legal.submit(req, ip)
+        handler._json(dict(out, ok=ok), 200 if ok else 400)
         return True
     if path == "/api/vidsum/rate":
         user = current_user(handler)

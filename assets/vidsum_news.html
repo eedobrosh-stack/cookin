@@ -72,6 +72,7 @@
     .topic-row h3 { margin:0 0 5px; font-size:18px; line-height:1.18; }
     .topic-row p { margin:0; color:#666; font-size:13px; line-height:1.4; }
     footer { background:#222; color:#aaa; padding:28px 0; font-size:12px; }
+    footer .legal a { color:#ddd; text-decoration:underline; }
     .footer-inner { display:flex; justify-content:space-between; gap:20px; }
     .prototype { color:#fff; background:#383838; padding:4px 8px; }
     @media (max-width:800px) {
@@ -372,7 +373,7 @@
   </header>
   <div class="nav-wrap"><nav class="nav" id="nav" aria-label="Topics"></nav></div>
   <main id="main"><p class="empty" data-i="loading">טוען…</p></main>
-  <footer><div class="footer-inner"><span data-i="foot">Pawed · פורטל חדשות המבוסס על סיכומי וידאו</span><span>Summarized by Pawed (by Mr. Brosh)</span></div></footer>
+  <footer><div class="footer-inner"><span data-i="foot">Pawed · פורטל חדשות המבוסס על סיכומי וידאו</span><span class="legal"><a href="/vidsum/terms" data-i="terms">תנאי שימוש</a> · <a href="/vidsum/privacy" data-i="privacy">פרטיות</a> · <a href="/vidsum/takedown" data-i="takedown">הסרה ופניות</a></span><span>Summarized by Pawed (by Mr. Brosh)</span></div></footer>
 <script>
 const TONES = [
   'linear-gradient(135deg,#151515,#8c1d24 60%,#d7a100)','linear-gradient(135deg,#102844,#147b9b 55%,#65d2c7)',
@@ -405,7 +406,7 @@ const tone = a => TONES[[...a.vid].reduce((x,c)=>x+c.charCodeAt(0),0) % TONES.le
 // ---- English edition: LANG comes from the pawed_lang cookie (set by the flags / the server for signed-in users) ----
 const EN = LANG==='en';
 const I18N = {
-  live:['● מתעדכן אוטומטית','● Updating automatically'], log:['יומן','Log'], all:['כל הסיכומים','All summaries'], sources:['מקורות','Resources'],
+  live:['● מתעדכן אוטומטית','● Updating automatically'], log:['יומן','Log'], terms:['תנאי שימוש','Terms'], privacy:['פרטיות','Privacy'], takedown:['הסרה ופניות','Takedown'], all:['כל הסיכומים','All summaries'], sources:['מקורות','Resources'],
   cta1:['התחברו והוסיפו את הפודקאסטים שלכם','Sign in and add your podcasts'], cta2:['התחברו ל-Pawed והתאימו את הפודים שלכם','Sign in to Pawed and tailor your pods'],
   cta3:['הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕','Add a channel by name or YouTube link, and remove existing ones with ✕'],
   loading:['טוען…','Loading…'], foot:['Pawed · פורטל חדשות המבוסס על סיכומי וידאו','Pawed · a news portal built on video and podcast summaries'],

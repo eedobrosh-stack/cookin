@@ -225,7 +225,7 @@ def platform_links(a, rss):
     return d
 
 
-COPY_CSS = ".share .copy{border:1px solid #d8d8d8;border-radius:50%;width:30px;height:30px;display:grid;place-items:center;color:#555;background:transparent;cursor:pointer;padding:0}.share .copy:hover{background:#fff;color:var(--red)}"
+COPY_CSS = ".legal a{color:#ddd;text-decoration:underline}.share .copy{border:1px solid #d8d8d8;border-radius:50%;width:30px;height:30px;display:grid;place-items:center;color:#555;background:transparent;cursor:pointer;padding:0}.share .copy:hover{background:#fff;color:var(--red)}"
 COPY_JS = """<script>(function(){var b=document.querySelector('.share .copy');if(!b)return;
 function toast(m){var o=document.getElementById('rtoast');if(o)o.remove();var t=document.createElement('div');t.id='rtoast';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2500)}
 function fallback(u){var t=document.createElement('textarea');t.value=u;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch(e){}t.remove()}
@@ -296,7 +296,7 @@ STR = {
            "also": "האזנה גם ב:", "on": "האזנה ב-", "key": "עיקרי הדברים", "full_pod": "האזנה לפרק המלא ↗", "full_yt": "צפייה בשיחה המלאה ביוטיוב ↗",
            "more": "כתבות נוספות", "new": "הכי חדש", "bytopic": "לפי נושא", "stories": "כתבות",
            "foot": "Pawed · פורטל חדשות המבוסס על סיכומי וידאו", "wait": "",
-           "cp": "העתקת קישור", "cp_ok": "הקישור הועתק", "wt": "צפייה ב-YouTube", "wr": "האזנה בנגן הפודקאסט", "rq": "האם הסיכום עזר לך?", "r_login": "דירוג והסרת תוכן דורשים התחברות", "r_signin": "התחברות עם Google", "r_cancel": "ביטול",
+           "lt": "תנאי שימוש", "lp": "פרטיות", "ld": "הסרה ופניות", "cp": "העתקת קישור", "cp_ok": "הקישור הועתק", "wt": "צפייה ב-YouTube", "wr": "האזנה בנגן הפודקאסט", "rq": "האם הסיכום עזר לך?", "r_login": "דירוג והסרת תוכן דורשים התחברות", "r_signin": "התחברות עם Google", "r_cancel": "ביטול",
            "r_rm": "להסיר את «{n}» מהמקורות שלך?", "r_rm_sub": "הפרקים שלו לא יופיעו יותר אצלך. אפשר להחזיר אותו בעמוד המקורות.", "r_yes": "כן, להסיר",
            "r_up": "נוסף +1 ל-{n}", "r_off": "הדירוג בוטל", "r_done": "«{n}» הוסר מהמקורות שלך", "r_err": "משהו השתבש, נסו שוב"},
     "en": {"main": "Home", "live": "● Updating automatically", "all": "All summaries", "sources": "Resources", "log": "Log", "by": "By", "desk": "Pawed Desk",
@@ -304,7 +304,7 @@ STR = {
            "also": "Also listen on:", "on": "Listen on ", "key": "Key points", "full_pod": "Listen to the full episode ↗", "full_yt": "Watch the full conversation on YouTube ↗",
            "more": "More stories", "new": "Latest", "bytopic": "By topic", "stories": "stories",
            "foot": "Pawed · a news portal built on video and podcast summaries",
-           "cp": "Copy link", "cp_ok": "Link copied", "wt": "Watch on YouTube", "wr": "Listen in the podcast player", "rq": "Was this summary useful?", "r_login": "Rating and removing content require signing in", "r_signin": "Sign in with Google", "r_cancel": "Cancel",
+           "lt": "Terms", "lp": "Privacy", "ld": "Takedown", "cp": "Copy link", "cp_ok": "Link copied", "wt": "Watch on YouTube", "wr": "Listen in the podcast player", "rq": "Was this summary useful?", "r_login": "Rating and removing content require signing in", "r_signin": "Sign in with Google", "r_cancel": "Cancel",
            "r_rm": "Remove \u201c{n}\u201d from your resources?", "r_rm_sub": "Its episodes will no longer show up for you. You can bring it back on the Resources page.", "r_yes": "Yes, remove",
            "r_up": "+1 for {n}", "r_off": "Rating removed", "r_done": "\u201c{n}\u201d removed from your resources", "r_err": "Something went wrong, try again",
            "wait": "The English version of this story is being prepared. It will appear here automatically in a few minutes."},
@@ -460,6 +460,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
         f'<li><a href="{base}/vidsum#{urllib.parse.quote(t)}"><span>{e(tname(t))}</span><small>{cnt.get(t, 0)} {"story" if en and cnt.get(t, 0) == 1 else S["stories"]}</small></a></li>'
         for t in TOPICS) + "</ol></div></aside></div>")
     out.append(f'<footer><div class="footer-inner"><span>{S["foot"]}</span>'
+               f'<span class="legal"><a href="/vidsum/terms">{S["lt"]}</a> \u00b7 <a href="/vidsum/privacy">{S["lp"]}</a> \u00b7 <a href="/vidsum/takedown">{S["ld"]}</a></span>'
                '<span>Summarized by Pawed (by Mr. Brosh)</span></div></footer>')
     desc = e(a["standfirst"])
     refresh = '<meta http-equiv="refresh" content="60">' if en and not translated else ""
