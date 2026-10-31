@@ -1296,7 +1296,9 @@ DISCLAIMER = "הדברים המובאים הם של המרואיינים ולא 
 
 def render_article(a, lang="he", platform=""):
     if a.get("blocks"):
-        return vidsum_render.render(a, news_items(), base="", disclaimer=a.get("disclaimer") or DISCLAIMER, lang=lang, platform=platform)
+        ch = next((c for c in _load_ch()["channels"] if c["id"] == a.get("source_id")), None)
+        return vidsum_render.render(a, news_items(), base="", disclaimer=a.get("disclaimer") or DISCLAIMER, lang=lang, platform=platform,
+                                    audio=audio_lang(a, ch))
     return article_html(a)
 
 
@@ -1454,9 +1456,21 @@ def _source_resolver(chs):
     return resolve
 
 
+def audio_lang(a, ch=None):
+    """Language spoken in the episode: the source's own language (full code when the catalog gave one), else guessed from the title."""
+    l = (ch or {}).get("lang_full") or (ch or {}).get("language") or a.get("language") or ""
+    if l and l != "other":
+        return l
+    letters = [c for c in (a.get("src_title") or "") if c.isalpha()]       # the ORIGINAL episode title (the article title is always the Hebrew summary)
+    if letters and sum(1 for c in letters if "\u0590" <= c <= "\u05ff") / len(letters) > 0.3:
+        return "he"
+    return ""
+
+
 def news_items():
     nd = vidsum_render.nodash
     chs = _load_ch()["channels"]
+    chmap = {c["id"]: c for c in chs}
     daily_ids = {c["id"] for c in chs if c.get("cadence") == "daily"}     # daily pods own the morning slots
     nohead_ids = {c["id"] for c in chs if c.get("no_headline")}           # good but spammy sources: never a headline
     resolve = _source_resolver(chs)
@@ -1469,6 +1483,7 @@ def news_items():
                     "source_id": sid, "image": a.get("image") or "", "kind": a.get("kind") or "yt", "daily": sid in daily_ids, "nohead": sid in nohead_ids,
                     "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
                     "released_time": len((a.get("published_at") or "")) >= 19, "minutes": a["_min"] if "_min" in a else _length_min(a),
+                    "lang": audio_lang(a, chmap.get(sid)),
                     "pf": (pl := vidsum_render.platform_links(a, a.get("kind") == "rss")),
                     "pfa": {k: ap for k, ap in ((k, vidsum_render._pf_app(k, u)) for k, u in pl.items()) if ap}})
     return out
@@ -1603,8 +1618,14 @@ def set_vprefs(uid, req):
     return p
 
 
-def request_lang(handler, qs=None):
-    """Language of this request: ?lang= first, then the signed-in user's saved choice, then the pawed_lang cookie, else Hebrew."""
+def viewer_country(handler):
+    """Two-letter country of the visitor from Cloudflare's CF-IPCountry header ('' when unknown, e.g. direct hits or Tor)."""
+    c = (handler.headers.get("CF-IPCountry") or "").strip().upper()
+    return c if len(c) == 2 and c.isalpha() and c not in ("XX", "T1") else ""
+
+
+def explicit_lang(handler, qs=None):
+    """The language the visitor chose themselves: ?lang=, the signed-in user's saved flag, the pawed_lang cookie. '' if never chosen."""
     q = ((qs or {}).get("lang") or [""])[0]
     if q in ("he", "en"):
         return q
@@ -1617,7 +1638,27 @@ def request_lang(handler, qs=None):
     except Exception:
         pass
     m = re.search(r"(?:^|;\s*)pawed_lang=(he|en)\b", handler.headers.get("Cookie") or "")
-    return m.group(1) if m else "he"
+    return m.group(1) if m else ""
+
+
+def default_lang(handler):
+    """No choice made yet: Hebrew for Israel (and when the country is unknown), English for the rest of the world."""
+    cc = viewer_country(handler)
+    return "en" if cc and cc != "IL" else "he"
+
+
+def request_lang(handler, qs=None):
+    return explicit_lang(handler, qs) or default_lang(handler)
+
+
+def show_il(handler, qs=None, user=None):
+    """Israeli (Hebrew-audio) content: shown to visitors in Israel or of unknown country, to admins, and to anyone who picked the Israeli flag."""
+    if user and user.get("admin"):
+        return True
+    cc = viewer_country(handler)
+    if not cc or cc == "IL":
+        return True
+    return explicit_lang(handler, qs) == "he"
 
 
 def _hidden_names():
@@ -2178,15 +2219,18 @@ SOURCES_PAGE = os.path.join(_ASSETS, "vidsum_sources.html")
 LOGS_PAGE = os.path.join(_ASSETS, "vidsum_logs.html")
 
 
-def _serve(handler, path):
+def _serve(handler, path, dflt=None):
     try:
         with open(path, "rb") as f:
-            handler._html(f.read(), "no-store")
+            html = f.read()
+        if dflt == "en":                 # visitors outside Israel open the English edition until they pick a flag
+            html = html.replace(b'l=m?m[1]:"he"', b'l=m?m[1]:"en"', 1)
+        handler._html(html, "no-store")
     except OSError:
         handler._json({"error": "page missing"}, 404)
 
 
-def sources_view(viewer=None):
+def sources_view(viewer=None, hide_he=False):
     hidden = _hidden_names()
     real_names = {_norm_key(c["name"]) for c in _load_ch()["channels"] if not c["id"].startswith("pending-")}
     vis = _visible_source_ids(viewer)
@@ -2199,6 +2243,8 @@ def sources_view(viewer=None):
             continue                                                   # a name-only placeholder next to the real source of the same name
         if vis is not None and owner is not None and not mine_c:      # other users' sources are private; the whole Pawed roster is always listed
             continue                                                   # (hidden ones too, so the viewer can switch them back on)
+        if hide_he and c.get("language") == "he":
+            continue                                                   # Israeli content stays out of the list for visitors outside Israel
         label = "Pawed" if owner is None else ("אנונימי" if owner in hidden else (c.get("owner_name") or "משתמש"))
         out.append({"id": c["id"], "name": c["name"], "language": c["language"], "url": c["url"],
                     "vertical": c["vertical"], "added": c.get("added", ""), "pending": c["id"].startswith("pending-"),
@@ -2254,6 +2300,7 @@ def add_source(req, user=None):
                 raise ValueError("this source is already in the table")
             d["channels"].append({"id": cid, "kind": "rss", "feed_url": info["feed_url"], "image": info["image"],
                                   "name": (name or info["name"])[:120], "url": url[:300], "language": req.get("language") if req.get("language") in LANGS else info["language"],
+                                  "lang_full": str(req.get("lang_full") or "")[:5],
                                   "vertical": vert, "vertical_auto": v_auto, "added": time.strftime("%Y-%m-%d %H:%M:%S"), "take_latest": 1,   # podcasts: 1 until transcription is server-side (Whisper on the Mac is serial)
                                   "owner_id": owner_id, "owner_name": owner_name})
             _save_ch(d)
@@ -2364,7 +2411,7 @@ def handle_get(handler, path, qs):
             handler._html(render_article(a, lang, pf), "no-store")
         return True
     if path in ("/vidsum", "/vidsum/"):
-        _serve(handler, NEWS_PAGE)
+        _serve(handler, NEWS_PAGE, default_lang(handler))
         return True
     if path in ("/vidsum/news", "/vidsum/news/"):            # old address of the portal
         handler.send_response(302)
@@ -2426,7 +2473,7 @@ def handle_get(handler, path, qs):
         _serve(handler, V1_PAGE)
         return True
     if path in ("/vidsum/sources", "/vidsum/sources/"):
-        _serve(handler, SOURCES_PAGE)
+        _serve(handler, SOURCES_PAGE, default_lang(handler))
         return True
     if path in ("/vidsum/logs", "/vidsum/logs/"):
         _serve(handler, LOGS_PAGE)
@@ -2454,7 +2501,7 @@ def handle_get(handler, path, qs):
                        "hidden_base": ([{"id": c["id"], "name": c["name"]} for c in _load_ch()["channels"]
                                         if c.get("owner_id") is None and c["id"] in get_vprefs(user["id"])["hiddenBase"]]
                                        if signed else []),
-                       "limit": MAX_USER_SOURCES, "verticals": TOPICS, "languages": LANGS, "sources": sources_view(user)})
+                       "limit": MAX_USER_SOURCES, "verticals": TOPICS, "languages": LANGS, "sources": sources_view(user, not show_il(handler, qs, user))})
         return True
     if path == "/api/vidsum/admin/stt-compare":
         import stt_test
@@ -2552,14 +2599,35 @@ def handle_get(handler, path, qs):
             return True
         import podscanner
         if path == "/api/vidsum/catalog/suggest":
-            handler._json({"ok": True, "pods": podscanner.catalog_suggest((qs.get("q") or [""])[0])})
+            pods = podscanner.catalog_suggest((qs.get("q") or [""])[0])
+            if not show_il(handler, qs, user):
+                pods = [p for p in pods if p["language"] != "he"]
+            handler._json({"ok": True, "pods": pods})
         elif path == "/api/vidsum/catalog/options":
             langs, ctry = podscanner.catalog_options()
-            handler._json({"ok": True, "languages": langs, "countries": ctry, "topics": TOPICS, "rules": podscanner.QUALITY})
+            if not show_il(handler, qs, user):
+                langs.pop("he", None)
+            handler._json({"ok": True, "languages": langs, "countries": ctry, "topics": TOPICS, "rules": podscanner.QUALITY,
+                           "default_strict": podscanner.DEFAULT_STRICT, "il": show_il(handler, qs, user)})
         elif path == "/api/vidsum/catalog/browse":
             g = lambda k: (qs.get(k) or [""])[0]
-            pods, total = podscanner.catalog_browse(g("language"), g("country"), g("topic"))
-            handler._json({"ok": True, "pods": pods, "total": total})
+            if g("language") == "he" and not show_il(handler, qs, user):
+                handler._json({"ok": True, "pods": [], "total": 0, "rules": podscanner.quality_for(g("strict") or podscanner.DEFAULT_STRICT)})
+                return True
+            st = g("strict")
+            pods, total = podscanner.catalog_browse(g("language"), g("country"), g("topic"), strict=(st if st != "" else None))
+            handler._json({"ok": True, "pods": pods, "total": total, "rules": podscanner.quality_for(st if st != "" else 10)})
+        elif path == "/api/vidsum/catalog/select":        # the generic layer: weights per section + languages + strictness
+            g = lambda k: (qs.get(k) or [""])[0]
+            try:
+                w = {t: max(0, min(10, int(v))) for t, v in json.loads(g("weights") or "{}").items() if t in TOPICS}
+            except (ValueError, AttributeError):
+                w = {}
+            langs = [x for x in g("langs").split(",") if x]
+            hide = () if show_il(handler, qs, user) else ("he",)
+            st = g("strict")
+            pods, counts = podscanner.catalog_select(w, langs, st if st != "" else None, podscanner.existing_source_name, hide)
+            handler._json({"ok": True, "pods": pods, "counts": counts, "rules": podscanner.quality_for(st if st != "" else podscanner.DEFAULT_STRICT)})
         else:
             return False
         return True
@@ -2603,6 +2671,8 @@ def handle_get(handler, path, qs):
         if vis is None and user and user.get("admin") and user.get("id") != "admin-token":
             owners = {c["id"]: c.get("owner_id") for c in _load_ch()["channels"]}        # an admin's homepage is the Pawed roster, not other users' private sources
             items = [i for i in items if not owners.get(i["source_id"]) and not i.get("submitted_by")]
+        if not show_il(handler, qs, user):                # outside Israel and no Israeli flag chosen: no Hebrew-audio content at all
+            items = [i for i in items if i.get("lang") != "he"]
         gone = removed_topics(user)
         if gone:                                         # a switched-off section loses its tab and every article filed under it
             items = [dict(i, topics=[t for t in i["topics"] if t not in gone]) for i in items if i["topic"] not in gone]
@@ -2934,7 +3004,7 @@ def handle_post(handler, path, req):
                     twin = podscanner.existing_source_name(p["name"])
                     if twin:
                         raise ValueError(f"already in the sources table as \"{twin}\"")
-                    req = {"url": p["feed"], "name": p["name"], "language": p["language"] if p["language"] in LANGS else "other",
+                    req = {"url": p["feed"], "name": p["name"], "lang_full": p["language"], "language": p["language"] if p["language"] in LANGS else "other",
                            "vertical": p["topic"] if p["topic"] in TOPICS else "תרבות"}
                 add_source(req, user)
             elif path in ("/api/vidsum/sources/remove", "/api/vidsum/sources/update"):
@@ -2973,7 +3043,7 @@ def handle_post(handler, path, req):
                     _save_ch(d)
             else:
                 return False
-            handler._json({"ok": True, "sources": sources_view(user), "hidden": sources_hidden_count(user)})
+            handler._json({"ok": True, "sources": sources_view(user, not show_il(handler, None, user)), "hidden": sources_hidden_count(user)})
         except PermissionError as e:
             handler._json({"ok": False, "error": str(e)}, 403)
         except Exception as e:

@@ -256,6 +256,17 @@
     .brand-wordmark { height:88px; width:auto; display:block; }
     @media (max-width:640px) { .masthead { grid-template-columns:1fr; min-height:0; padding-block:8px; } .masthead .brand { grid-column:1; } .masthead .masthead-actions { grid-column:1; grid-row:2; justify-self:center; margin-top:4px; } .brand-wordmark { height:56px; } }
   .grow .plus{background:#e6f9ed;color:#12823b;font-weight:800;font-size:12px;border-radius:999px;padding:1px 8px;margin-inline-start:6px}
+
+    .dial { margin:12px 0 4px; padding:10px 12px; border:1px solid #e3e3e3; border-radius:10px; background:#fafafa; }
+    .dial label { display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:4px; }
+    .dial input[type=range] { width:100%; accent-color:var(--red); }
+    .dial .dd { color:#777; font-size:12.5px; margin-top:4px; line-height:1.45; }
+    .dial .ends { display:flex; justify-content:space-between; font-size:11.5px; color:#999; }
+    .wgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px 18px; margin:6px 0 8px; }
+    .wgrid .w { display:grid; grid-template-columns:78px 1fr 26px; gap:8px; align-items:center; font-size:14px; font-weight:700; }
+    .wgrid .w input { accent-color:var(--red); width:100%; } .wgrid .w b { text-align:center; color:var(--red); }
+    .lgrid { display:flex; flex-wrap:wrap; gap:6px 14px; margin:6px 0; font-size:13.5px; } .lgrid label { display:inline-flex; gap:5px; align-items:center; cursor:pointer; }
+    .plist .tgrp { background:#f6f6f6; font-size:12.5px; font-weight:800; padding:5px 11px; color:#555; position:sticky; top:0; z-index:1; }
 </style>
 </head>
 <body>
@@ -276,7 +287,7 @@
     <section class="addp" id="addp" hidden>
       <h2>הוספת מקור</h2>
       <div class="quota" id="quota"></div>
-      <div class="tabs" id="tabs"><button data-t="ch" class="on">ערוץ לפי שם</button><button data-t="pick">בחירה לפי העדפה</button><button data-t="ep">פרק בודד</button></div>
+      <div class="tabs" id="tabs"><button data-t="ch" class="on">ערוץ לפי שם</button><button data-t="pick">בחירה לפי העדפה</button><button data-t="auto">בחירה אוטומטית</button><button data-t="ep">פרק בודד</button></div>
       <div class="pane" id="pane-ep">
         <p class="help">הדביקו קישור YouTube לפרק אחד והוא יסוכם ויופיע רק אצלכם.</p>
         <div class="row"><input type="text" id="ep_url" dir="ltr" placeholder="https://www.youtube.com/watch?v=..." style="flex:1;min-width:240px"><button class="go" id="ep_go">הוספת פרק</button></div>
@@ -287,9 +298,18 @@
         <div id="ch_picked"></div>
       </div>
       <div class="pane" id="pane-pick">
-        <p class="help">בחרו שפה, מדינה ונושא ותקבלו רשימת ערוצים איכותיים בלבד: יותר מ-50 פרקים, פרק אחרון לפני פחות מ-45 יום ודירוג גבוה (לפי מקומות בצ׳ארטים).</p>
+        <p class="help">בחרו שפה, מדינה ונושא ותקבלו רשימת ערוצים איכותיים. את רמת הקפדנות אפשר להוריד כדי לקבל גם ערוצים עם פחות פרקים, פרק אחרון ישן יותר ודירוג נמוך יותר.</p>
         <div class="row"><select id="pk_lang"></select><select id="pk_country"></select><select id="pk_topic"></select><button class="go" id="pk_go">הצג ערוצים</button></div>
+        <div class="dial" data-dial></div>
         <div id="pk_res"></div>
+      </div>
+      <div class="pane" id="pane-auto">
+        <p class="help">דרגו כמה כל נושא מעניין אתכם, בחרו שפות, ו-Pawed יציע לכם פודקאסטים בהתאם. אפשר לבטל כל הצעה לפני ההוספה.</p>
+        <div class="wgrid" id="au_w"></div>
+        <div class="lgrid" id="au_langs"></div>
+        <div class="dial" data-dial></div>
+        <div class="row"><button class="go" id="au_go">הציעו לי ערוצים</button></div>
+        <div id="au_res"></div>
       </div>
       <div id="addmsg" class="help" style="margin-top:10px"></div>
     </section>
@@ -409,7 +429,8 @@ function renderAddPanel(){
   if(!CATOPT) fetch('/api/vidsum/catalog/options').then(r=>r.json()).then(j=>{ if(!j.ok) return; CATOPT=j;
     $('pk_lang').innerHTML = Object.entries(j.languages).map(([k,n])=>'<option value="'+esc(k)+'"'+(k==='he'?' selected':'')+'>'+esc(LANG_NAMES[k]||k)+' ('+n+')</option>').join('');
     $('pk_country').innerHTML = '<option value="">כל המדינות</option>'+j.countries.map(c=>'<option value="'+esc(c.code)+'">'+esc(c.name)+' ('+c.n+')</option>').join('');
-    $('pk_topic').innerHTML = '<option value="">כל הנושאים</option>'+j.topics.map(t=>'<option>'+esc(t)+'</option>').join(''); }).catch(()=>{});
+    $('pk_topic').innerHTML = '<option value="">כל הנושאים</option>'+j.topics.map(t=>'<option>'+esc(t)+'</option>').join('');
+    if(j.default_strict!=null) STRICT=j.default_strict; renderDials(); renderAutoForm(); }).catch(()=>{});
 }
 function addSay(t, ok){ const m=$('addmsg'); m.textContent=t||''; m.style.color = ok===false?'#b9141c':ok?'#18723a':'#777'; }
 $('tabs').onclick = e => { const b=e.target.closest('button'); if(!b) return; document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b)); document.querySelectorAll('.addp .pane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+b.dataset.t)); addSay(''); };
@@ -435,15 +456,15 @@ $('ch_list').onclick = e => { const el=e.target.closest('.pod[data-id]'); if(!el
 document.addEventListener('click',e=>{ if(!e.target.closest('.ac')) $('ch_list').hidden=true; });
 async function addCatalog(ids, done){
   let added=0; const failed=[];
-  const nameOf = id => ((PK.find(p=>p.id===id)||(PICKED&&PICKED.id===id?PICKED:null)||{}).name)||id;
+  const nameOf = id => ((PK.find(p=>p.id===id)||PA.find(p=>p.id===id)||(PICKED&&PICKED.id===id?PICKED:null)||{}).name)||id;
   for(const id of ids){ try{ const j=await api('/api/vidsum/sources/add',{catalog_id:id}); D.sources=j.sources; D.hidden=j.hidden; added++; render(); }
     catch(e){ failed.push(nameOf(id)+' ('+e.message+')'); if(/up to \d+ sources/.test(e.message)) break; } }          // one bad feed must not stop the rest; only the quota ends the run
   addSay((added?('✓ נוספו '+added+' מקורות. התוכן החדש שלהם יופיע באתר בשעות הקרובות.'):'')+(failed.length?((added?' ':'')+'❌ לא נוספו: '+failed.join(' · ')):''), !!added && !failed.length);
-  if(done) done(); if(PK.length) renderPick();
+  if(done) done(); if(PK.length) renderPick(); if(PA.length) renderAuto();
 }
 // 3) pick by language / country / topic: quality channels only
 $('pk_go').onclick = async () => { $('pk_go').disabled=true; $('pk_res').innerHTML='<p class="help">מחפש…</p>'; SELPK=new Set();
-  try{ const q=new URLSearchParams({language:$('pk_lang').value,country:$('pk_country').value,topic:$('pk_topic').value}); const j=await (await fetch('/api/vidsum/catalog/browse?'+q)).json(); PK=j.pods||[]; PK._total=j.total||0; renderPick(); }
+  try{ const q=new URLSearchParams({language:$('pk_lang').value,country:$('pk_country').value,topic:$('pk_topic').value,strict:STRICT}); const j=await (await fetch('/api/vidsum/catalog/browse?'+q)).json(); PK=j.pods||[]; PK._total=j.total||0; renderPick(); }
   catch(e){ $('pk_res').innerHTML='<p class="help">שגיאה בטעינה</p>'; }
   $('pk_go').disabled=false; };
 function renderPick(){
@@ -456,6 +477,45 @@ function renderPick(){
   if(focusId){ const f=[...$('pk_res').querySelectorAll('input[data-id]')].find(x=>x.dataset.id===focusId); if(f&&!f.disabled) f.focus({preventScroll:true}); }
   $('pk_res').querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{ c.checked?SELPK.add(c.dataset.id):SELPK.delete(c.dataset.id); renderPick(); });
   $('pk_add').onclick=()=>{ const ids=[...SELPK]; $('pk_add').disabled=true; $('pk_add').textContent='מוסיף…'; addCatalog(ids,()=>{ SELPK=new Set(); renderPick(); }); };
+}
+
+
+// ---------- strictness dial (shared by the "pick by preference" and "automatic" tabs): 10 = the original strict rule, 0 = anything alive ----------
+let STRICT = 6;
+const rulesFor = v => { const t=v/10; return {eps:Math.round(3+t*48), days:Math.round(365-t*320), score:Math.round(t*50)}; };
+function dialDesc(v){ const r=rulesFor(v); return 'לפחות '+r.eps+' פרקים · פרק אחרון עד לפני '+r.days+' ימים · דירוג צ׳ארטים לפחות '+r.score; }
+function renderDials(){ document.querySelectorAll('[data-dial]').forEach(el=>{
+  el.innerHTML='<label><span>רמת קפדנות</span><span class="dv">'+STRICT+'/10</span></label><input type="range" min="0" max="10" step="1" value="'+STRICT+'"><div class="ends"><span>מקל</span><span>קפדני</span></div><div class="dd">'+dialDesc(STRICT)+'</div>';
+  el.querySelector('input').oninput=e=>{ STRICT=+e.target.value; document.querySelectorAll('[data-dial]').forEach(o=>{ const i=o.querySelector('input'); if(i!==e.target) i.value=STRICT; o.querySelector('.dv').textContent=STRICT+'/10'; o.querySelector('.dd').textContent=dialDesc(STRICT); }); };
+}); }
+// ---------- 4) automatic: section weights + languages + strictness -> a suggested list ----------
+let PA = [], SELAU = new Set(), WTS = {};
+function renderAutoForm(){
+  if(!CATOPT) return;
+  $('au_w').innerHTML = CATOPT.topics.map(t=>'<div class="w"><span>'+esc(t)+'</span><input type="range" min="0" max="10" step="1" value="'+(WTS[t]!=null?WTS[t]:5)+'" data-t="'+esc(t)+'"><b>'+(WTS[t]!=null?WTS[t]:5)+'</b></div>').join('');
+  $('au_w').querySelectorAll('input').forEach(i=>i.oninput=()=>{ WTS[i.dataset.t]=+i.value; i.nextElementSibling.textContent=i.value; });
+  CATOPT.topics.forEach(t=>{ if(WTS[t]==null) WTS[t]=5; });
+  $('au_langs').innerHTML = '<label><input type="checkbox" id="au_all" checked> כל השפות</label>'+Object.entries(CATOPT.languages).map(([k,n])=>'<label><input type="checkbox" class="aul" value="'+esc(k)+'" disabled> '+esc(LANG_NAMES[k]||k)+' ('+n+')</label>').join('');
+  $('au_all').onchange=()=>{ document.querySelectorAll('.aul').forEach(c=>{ c.disabled=$('au_all').checked; if($('au_all').checked) c.checked=false; }); };
+}
+$('au_go').onclick = async () => { $('au_go').disabled=true; $('au_res').innerHTML='<p class="help">מחפש…</p>'; SELAU=new Set();
+  try{ const langs=$('au_all').checked?[]:[...document.querySelectorAll('.aul:checked')].map(c=>c.value);
+    const q=new URLSearchParams({weights:JSON.stringify(WTS),langs:langs.join(','),strict:STRICT});
+    const j=await (await fetch('/api/vidsum/catalog/select?'+q)).json(); PA=j.pods||[]; PA._counts=j.counts||{};
+    PA.filter(p=>!inTable(p.name)).slice(0,quotaLeft()).forEach(p=>SELAU.add(p.id)); renderAuto(); }
+  catch(e){ $('au_res').innerHTML='<p class="help">שגיאה בטעינה</p>'; }
+  $('au_go').disabled=false; };
+function renderAuto(){
+  if(!PA.length){ $('au_res').innerHTML='<p class="help">לא נמצאו ערוצים לבחירה הזו. העלו משקל לנושא, הוסיפו שפות או הורידו את רמת הקפדנות.</p>'; return; }
+  const left=quotaLeft(), keepPage=window.scrollY, oldList=$('au_res').querySelector('.plist'), keepTop=oldList?oldList.scrollTop:0;
+  const groups = {}; PA.forEach(p=>(groups[p.topic]=groups[p.topic]||[]).push(p));
+  $('au_res').innerHTML='<p class="help" style="margin-top:10px">הצענו '+PA.length+' ערוצים. סימנו את הטובים ביותר, אפשר לבטל או להוסיף עד '+left+'.</p><div class="plist">'
+    +Object.entries(groups).map(([t,ps])=>'<div class="tgrp"><span>'+esc(t)+'</span> <span>· משקל '+ps[0].weight+'</span></div>'+ps.map(p=>{ const dup=inTable(p.name), dis=dup||(!SELAU.has(p.id)&&SELAU.size>=left);
+      return '<label class="pod'+(dis?' dis':'')+'"><input type="checkbox" data-id="'+esc(p.id)+'"'+(SELAU.has(p.id)?' checked':'')+(dis?' disabled':'')+'>'+podLine(p)+(dup?'<span class="tag">כבר ברשימה</span>':'')+'</label>'; }).join('')).join('')+'</div>'
+    +'<div class="tools"><button class="go" id="au_add"'+(SELAU.size?'':' disabled')+'>הוסף נבחרים ('+SELAU.size+')</button></div>';
+  const nl=$('au_res').querySelector('.plist'); if(nl) nl.scrollTop=keepTop; window.scrollTo(0,keepPage);
+  $('au_res').querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{ c.checked?SELAU.add(c.dataset.id):SELAU.delete(c.dataset.id); renderAuto(); });
+  $('au_add').onclick=()=>{ const ids=[...SELAU]; $('au_add').disabled=true; $('au_add').textContent='מוסיף…'; addCatalog(ids,()=>{ SELAU=new Set(); renderAuto(); }); };
 }
 
 // ---------- grouped lists: Pawed selection / my sources / (admin) external users ----------
@@ -539,7 +599,11 @@ load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעי�
     'הדביקו קישור YouTube לפרק אחד והוא יסוכם ויופיע רק אצלכם.':'Paste a YouTube link to one episode and it will be summarised and shown only to you.',
     'הוספת פרק':'Add episode','שם פודקאסט…':'Podcast name…',
     'הקלידו את שם הפודקאסט ובחרו מהרשימה. הכתובת, השפה והתחום ימולאו אוטומטית מהסריקה העולמית של Pawed.':'Type the podcast name and pick it from the list. The address, language and topic are filled in automatically from Pawed\'s worldwide scan.',
-    'בחרו שפה, מדינה ונושא ותקבלו רשימת ערוצים איכותיים בלבד: יותר מ-50 פרקים, פרק אחרון לפני פחות מ-45 יום ודירוג גבוה (לפי מקומות בצ׳ארטים).':'Choose a language, country and topic to get quality channels only: more than 50 episodes, a latest episode under 45 days old and a high chart ranking.',
+    'בחרו שפה, מדינה ונושא ותקבלו רשימת ערוצים איכותיים. את רמת הקפדנות אפשר להוריד כדי לקבל גם ערוצים עם פחות פרקים, פרק אחרון ישן יותר ודירוג נמוך יותר.':'Choose a language, country and topic to get a list of quality channels. Lower the strictness to also get channels with fewer episodes, an older latest episode and a lower rating.',
+    'בחירה אוטומטית':'Automatic','דרגו כמה כל נושא מעניין אתכם, בחרו שפות, ו-Pawed יציע לכם פודקאסטים בהתאם. אפשר לבטל כל הצעה לפני ההוספה.':'Rate how much each topic interests you, pick languages, and Pawed will suggest podcasts to match. You can untick any suggestion before adding.',
+    'הציעו לי ערוצים':'Suggest channels','רמת קפדנות':'Strictness','מקל':'Lenient','קפדני':'Strict','כל השפות':'All languages',
+    'לא נמצאו ערוצים לבחירה הזו. העלו משקל לנושא, הוסיפו שפות או הורידו את רמת הקפדנות.':'No channels found for this choice. Raise a topic weight, add languages or lower the strictness.',
+
     'הצג ערוצים':'Show channels','עריכה מתקדמת (מנהל): טבלת כל המקורות':'Advanced editing (admin): table of all resources',
     'שם הפודקאסט':'Podcast name','שפה':'Language','כתובת':'Address','תחום':'Topic','נוסף על ידי':'Added by','טוען…':'Loading…','שם':'Name',
     'שם (אופציונלי). אתר שחוסם קריאה? הזינו כאן את שם התוכנית':'Name (optional). Site blocks reading? Enter the show name here',
@@ -565,6 +629,8 @@ load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעי�
     'עברית':'Hebrew','פוליטיקה':'Politics','טכנולוגיה':'Technology','כלכלה':'Economy','ספורט':'Sports','תרבות':'Culture','לייפסטייל':'Lifestyle','בריאות':'Health'
   };
   const PAT = [
+    [/^לפחות (\d+) פרקים · פרק אחרון עד לפני (\d+) ימים · דירוג צ׳ארטים לפחות (\d+)$/, 'At least $1 episodes · latest episode within $2 days · chart score at least $3'],
+    [/^· ?משקל (\d+)$/, '· weight $1'], [/^הצענו (\d+) ערוצים\. סימנו את הטובים ביותר, אפשר לבטל או להוסיף עד (\d+)\.$/, 'We suggest $1 channels. The best are ticked; untick or add up to $2.'],
     [/^שלום (.*)$/, 'Hello $1'], [/^נותרו לכם (\d+) מתוך (\d+) מקורות\. מקורות שתוסיפו נראים רק לכם\.$/, 'You have $1 of $2 resources left. Resources you add are visible only to you.'],
     [/^מקורות שתוסיפו יוצגו לכולם$/, 'Resources you add are shown to everyone'], [/^לפני (\d+) ימים$/, '$1 days ago'], [/^(\d+) פרקים$/, '$1 episodes'], [/^פרק אחרון (.*)$/, 'Latest episode $1'],
     [/^· ?כל יום$/, '· every day'], [/^הכל \((\d+)\)$/, 'All ($1)'], [/^הוסף נבחרים \((\d+)\)$/, 'Add selected ($1)'],

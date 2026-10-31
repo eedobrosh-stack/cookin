@@ -357,6 +357,9 @@
     .im > .pf { position:absolute; inset-inline-start:8px; bottom:8px; filter:drop-shadow(0 1px 4px rgba(0,0,0,.5)); }
     .hero2-i .im > .pf, .cd.big .im > .pf { --s:40px; inset-inline-start:12px; bottom:12px; }
     .hero2-s li .pf, .tr small .pf { --s:18px; vertical-align:middle; margin-inline-start:8px; }
+
+    .im > .aflag { position:absolute; top:8px; inset-inline-end:8px; font-size:15px; line-height:1; background:rgba(0,0,0,.55); border-radius:6px; padding:3px 5px; box-shadow:0 1px 5px rgba(0,0,0,.35); }
+    .hero2-i .im > .aflag, .cd.big .im > .aflag { font-size:20px; top:12px; inset-inline-end:12px; padding:4px 7px; border-radius:8px; }
 </style>
 </head>
 <body>
@@ -468,7 +471,11 @@ function openPf(el){
 }
 document.addEventListener('click', e=>{ const el = e.target.closest('.pf'); if(!el) return; e.preventDefault(); e.stopPropagation(); openPf(el); }, true);
 document.addEventListener('keydown', e=>{ if(e.key!=='Enter') return; const el = e.target.closest && e.target.closest('.pf'); if(!el) return; e.preventDefault(); e.stopPropagation(); openPf(el); }, true);
-const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" data-img="'+esc(a.image||'')+'" style="background-image:'+tone(a)+'">'+pfi(a)+'</div>';
+// language spoken in the episode, as a flag in the corner of its preview
+const AFLAG = {he:'\u{1F1EE}\u{1F1F1}',en:'\u{1F1FA}\u{1F1F8}',es:'\u{1F1EA}\u{1F1F8}',fr:'\u{1F1EB}\u{1F1F7}',de:'\u{1F1E9}\u{1F1EA}',it:'\u{1F1EE}\u{1F1F9}',pt:'\u{1F1E7}\u{1F1F7}',nl:'\u{1F1F3}\u{1F1F1}',sv:'\u{1F1F8}\u{1F1EA}',no:'\u{1F1F3}\u{1F1F4}',pl:'\u{1F1F5}\u{1F1F1}',ru:'\u{1F1F7}\u{1F1FA}',tr:'\u{1F1F9}\u{1F1F7}',ja:'\u{1F1EF}\u{1F1F5}',ko:'\u{1F1F0}\u{1F1F7}',ar:'\u{1F1F8}\u{1F1E6}'};
+const ANAME = {he:['Hebrew','עברית'],en:['English','אנגלית'],es:['Spanish','ספרדית'],fr:['French','צרפתית'],de:['German','גרמנית'],it:['Italian','איטלקית'],pt:['Portuguese','פורטוגזית'],nl:['Dutch','הולנדית'],sv:['Swedish','שוודית'],no:['Norwegian','נורווגית'],pl:['Polish','פולנית'],ru:['Russian','רוסית'],tr:['Turkish','טורקית'],ja:['Japanese','יפנית'],ko:['Korean','קוריאנית'],ar:['Arabic','ערבית']};
+const afl = a => AFLAG[a.lang] ? '<span class="aflag" title="'+(EN?'Audio language: ':'שפת האודיו: ')+ANAME[a.lang][EN?0:1]+'">'+AFLAG[a.lang]+'</span>' : '';
+const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" data-img="'+esc(a.image||'')+'" style="background-image:'+tone(a)+'">'+pfi(a)+afl(a)+'</div>';
 const when2 = a => esc(rel(a));
 // an article can sit in up to 3 sections (a.topics, primary first); the home page groups by the primary one
 const inT = (a,t) => (a.topics||[a.topic]).includes(t);

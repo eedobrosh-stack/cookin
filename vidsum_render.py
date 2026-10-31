@@ -74,6 +74,7 @@ figcaption{font-size:12px;color:#888;padding-top:8px;font-style:italic}
 .body::after{content:"";display:block;clear:both}
 .hero{position:relative;display:block}
 .pico{position:absolute;inset:auto auto 14px 14px;display:flex;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45));transition:transform .12s}
+.aflag{position:absolute;inset:12px 12px auto auto;font-size:22px;line-height:1;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 7px;box-shadow:0 1px 6px rgba(0,0,0,.35)}
 .hero:hover .pico{transform:scale(1.08)}.pgen{border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center;font-size:19px;padding-inline-start:3px;box-sizing:border-box}.hero:hover .pgen{background:var(--red)}
 .watch{display:inline-block;margin:6px 0 30px;padding:11px 20px;background:var(--red);color:#fff;font-weight:700;font-size:15px}
 .watch:hover{background:var(--red-dark)}
@@ -231,6 +232,25 @@ function fallback(u){var t=document.createElement('textarea');t.value=u;t.style.
 b.onclick=function(){var u=b.dataset.url;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(u).catch(function(){fallback(u)})}else{fallback(u)}toast(b.dataset.ok)}})();</script>"""
 
 
+LANG_FLAGS = {"he": "\U0001F1EE\U0001F1F1", "en": "\U0001F1FA\U0001F1F8", "es": "\U0001F1EA\U0001F1F8", "fr": "\U0001F1EB\U0001F1F7", "de": "\U0001F1E9\U0001F1EA",
+              "it": "\U0001F1EE\U0001F1F9", "pt": "\U0001F1E7\U0001F1F7", "nl": "\U0001F1F3\U0001F1F1", "sv": "\U0001F1F8\U0001F1EA", "no": "\U0001F1F3\U0001F1F4",
+              "pl": "\U0001F1F5\U0001F1F1", "ru": "\U0001F1F7\U0001F1FA", "tr": "\U0001F1F9\U0001F1F7", "ja": "\U0001F1EF\U0001F1F5", "ko": "\U0001F1F0\U0001F1F7",
+              "ar": "\U0001F1F8\U0001F1E6"}
+LANG_NAMES = {"he": "Hebrew", "en": "English", "es": "Spanish", "fr": "French", "de": "German", "it": "Italian", "pt": "Portuguese", "nl": "Dutch", "sv": "Swedish",
+              "no": "Norwegian", "pl": "Polish", "ru": "Russian", "tr": "Turkish", "ja": "Japanese", "ko": "Korean", "ar": "Arabic"}
+LANG_NAMES_HE = {"he": "עברית", "en": "אנגלית", "es": "ספרדית", "fr": "צרפתית", "de": "גרמנית", "it": "איטלקית", "pt": "פורטוגזית", "nl": "הולנדית", "sv": "שוודית",
+                 "no": "נורווגית", "pl": "פולנית", "ru": "רוסית", "tr": "טורקית", "ja": "יפנית", "ko": "קוריאנית", "ar": "ערבית"}
+
+
+def audio_flag(code, he=True):
+    """small flag badge for the language spoken in the episode ('' when unknown)"""
+    f = LANG_FLAGS.get(code)
+    if not f:
+        return ""
+    name = (LANG_NAMES_HE if he else LANG_NAMES).get(code, code)
+    return f'<span class="aflag" title="{_html.escape(("שפת האודיו: " if he else "Audio language: ") + name)}">{f}</span>'
+
+
 def _ts_sec(ts):
     try:
         p = [int(x) for x in str(ts).split(":")]
@@ -343,7 +363,7 @@ def _overlay_en(a):
     return b, True
 
 
-def render(a, latest=(), base="", disclaimer="", lang="he", platform=""):
+def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio=""):
     """a: article dict. latest: [{slug,title,topic,vid,channel}] newest first. base: URL prefix ('' on the server)."""
     en = lang == "en"
     S = STR["en" if en else "he"]
@@ -394,7 +414,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform=""):
            f'<span>{e(fdate(a.get("published_at") or a.get("published") or ""))}</span><span>{mins} {S["read"]}</span>'
            f'<span class="share"><button type="button" class="copy" data-url="{e(SITE + "/vidsum/article/" + a["slug"])}" data-ok="{S["cp_ok"]}" title="{S["cp"]}" aria-label="{S["cp"]}">'
            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/></svg></button></span></div>',
-           f'<figure><a class="hero" href="{e(hero_url)}"{app_attr(hero_app)} target="_blank" rel="noopener" title="{e(hero_title)}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""><span class="pico">{_pf_svg(hero_k, 53)}</span></a>'
+           f'<figure><a class="hero" href="{e(hero_url)}"{app_attr(hero_app)} target="_blank" rel="noopener" title="{e(hero_title)}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""><span class="pico">{_pf_svg(hero_k, 53)}</span>{audio_flag(audio, not en)}</a>'
            f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())}{"" if rss else S["shot"]}</figcaption></figure>']
     icons = ""
     for k in ("youtube", "spotify", "apple", "rss"):

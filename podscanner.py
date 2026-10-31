@@ -590,23 +590,66 @@ def catalog_suggest(q, limit=8):
     return [_pub(r) for r in hits[:limit]]
 
 
-def catalog_quality(r):
-    return ((r["episodes"] or 0) >= QUALITY["min_episodes"] and r["days_since"] is not None and r["days_since"] <= QUALITY["max_days"]
-            and r["score"] >= QUALITY["min_score"])
+DEFAULT_STRICT = 6          # the dial opens here; 10 is the old "high quality" rule
 
 
-def catalog_browse(language="", country="", topic="", limit=30):
-    out = [r for r in _catalog() if catalog_quality(r) and (not language or r["language"] == language) and (not country or country in r["geo_codes"])
+def quality_for(strict):
+    """Thresholds for a strictness dial 0..10. 10 = the original rule (>50 episodes, last episode <=45 days, chart score >=50).
+    Lower values relax all three together: fewer total episodes, older last episode, lower chart score."""
+    try:
+        t = max(0.0, min(10.0, float(strict))) / 10
+    except (TypeError, ValueError):
+        t = DEFAULT_STRICT / 10
+    return {"min_episodes": round(3 + t * (QUALITY["min_episodes"] - 3)), "max_days": round(365 - t * (365 - QUALITY["max_days"])),
+            "min_score": round(t * QUALITY["min_score"])}
+
+
+def catalog_quality(r, q=None):
+    q = q or QUALITY
+    return ((r["episodes"] or 0) >= q["min_episodes"] and r["days_since"] is not None and r["days_since"] <= q["max_days"]
+            and r["score"] >= q["min_score"])
+
+
+def catalog_browse(language="", country="", topic="", limit=30, strict=None):
+    q = QUALITY if strict is None else quality_for(strict)
+    out = [r for r in _catalog() if catalog_quality(r, q) and (not language or r["language"] == language) and (not country or country in r["geo_codes"])
            and (not topic or r["topic"] == topic)]
     out.sort(key=lambda r: -r["score"])
     return [_pub(r) for r in out[:limit]], len(out)
 
 
+MAX_PER_TOPIC = 8           # a weight of 10 asks for up to this many podcasts in a section; 5 -> 4, 1 -> 1
+
+
+def catalog_select(weights, languages=(), strict=None, exclude=lambda name: False, hide_langs=()):
+    """The generic layer: {topic: weight 0..10} + languages (empty = all) + strictness -> podcasts per topic, best first.
+    Podcasts already in the sources table (exclude(name)) are left out. -> (pods, counts)"""
+    q = quality_for(DEFAULT_STRICT if strict is None else strict)
+    langs = set(languages or ())
+    by_topic = {}
+    for r in _catalog():
+        w = weights.get(r["topic"], 0)
+        if w <= 0 or not catalog_quality(r, q) or r["language"] in hide_langs or (langs and r["language"] not in langs):
+            continue
+        if exclude(r["name"]):
+            continue
+        by_topic.setdefault(r["topic"], []).append(r)
+    pods, counts = [], {}
+    for t, rows in by_topic.items():
+        rows.sort(key=lambda r: (-r["score"], r["days_since"] if r["days_since"] is not None else 9999))
+        n = max(1, round(weights[t] / 10 * MAX_PER_TOPIC))
+        counts[t] = {"available": len(rows), "picked": min(n, len(rows))}
+        pods += [dict(_pub(r), weight=weights[t]) for r in rows[:n]]
+    pods.sort(key=lambda p: (-p["weight"], -p["score"]))
+    return pods, counts
+
+
 def catalog_options():
     """languages / countries that actually have quality pods, for the pickers"""
     langs, ctry = {}, {}
+    loose = quality_for(0)
     for r in _catalog():
-        if catalog_quality(r):
+        if catalog_quality(r, loose):
             langs[r["language"]] = langs.get(r["language"], 0) + 1
             for c in r["geo_codes"]:
                 if c in COUNTRIES:
