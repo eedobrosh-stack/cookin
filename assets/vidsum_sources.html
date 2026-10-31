@@ -416,13 +416,13 @@ $('n_add').onclick = async () => {
 
 // ---------- add-source panel ----------
 const LANG_NAMES = {he:'עברית',en:'English',es:'Español',de:'Deutsch',fr:'Français',pt:'Português',nl:'Nederlands',sv:'Svenska',ja:'日本語',it:'Italiano',ru:'Русский',pl:'Polski',tr:'Türkçe',ko:'한국어',ar:'العربية',no:'Norsk'};
-const langName = k => LANG_NAMES[k] || (CATOPT && CATOPT.names && CATOPT.names[k]) || k;
+const langName = k => (window.LANG==='en' && CATOPT && CATOPT.names_en && CATOPT.names_en[k]) || LANG_NAMES[k] || (CATOPT && CATOPT.names && CATOPT.names[k]) || k;
 const normN = s => String(s||'').replace(/[^\p{L}\p{N}]/gu,'').toLowerCase();
 let CATOPT = null, PICKED = null, PK = [], SELPK = new Set();
 const mineCount = () => D.sources.filter(s=>s.mine).length;
 const quotaLeft = () => D.admin ? 999 : Math.max(0, D.limit - mineCount());
 const inTable = name => { const k=normN(name); return k.length>=3 && D.sources.some(s=>{ const o=normN(s.name); return o && (o.includes(k)||k.includes(o)); }); };
-function podLine(p){ const days = p.days_since==null?'':(p.days_since===0?'היום':'לפני '+p.days_since+' ימים');
+function podLine(p){ const days = p.days_since==null?'':(p.days_since===0?'היום':p.days_since===1?'אתמול':'לפני '+p.days_since+' ימים');
   return '<img loading="lazy" referrerpolicy="no-referrer" src="'+esc(p.image)+'" alt=""><div><b>'+esc(p.name)+'</b><small>'+esc((p.hosts||[]).join(', '))+(p.hosts&&p.hosts.length?' · ':'')+esc(langName(p.language))+' · '+(p.episodes||0)+' פרקים'+(days?' · פרק אחרון '+days:'')+'</small></div>'; }
 function renderAddPanel(){
   const ok = !!D.me || D.admin; $('addp').hidden = !ok; if(!ok) return;
@@ -601,7 +601,8 @@ load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעי�
     'הוספת פרק':'Add episode','שם פודקאסט…':'Podcast name…',
     'הקלידו את שם הפודקאסט ובחרו מהרשימה. הכתובת, השפה והתחום ימולאו אוטומטית מהסריקה העולמית של Pawed.':'Type the podcast name and pick it from the list. The address, language and topic are filled in automatically from Pawed\'s worldwide scan.',
     'בחרו שפה, מדינה ונושא ותקבלו רשימת ערוצים איכותיים. את רמת הקפדנות אפשר להוריד כדי לקבל גם ערוצים עם פחות פרקים, פרק אחרון ישן יותר ודירוג נמוך יותר.':'Choose a language, country and topic to get a list of quality channels. Lower the strictness to also get channels with fewer episodes, an older latest episode and a lower rating.',
-    'בחירה אוטומטית':'Automatic','דרגו כמה כל נושא מעניין אתכם, בחרו שפות, ו-Pawed יציע לכם פודקאסטים בהתאם. אפשר לבטל כל הצעה לפני ההוספה.':'Rate how much each topic interests you, pick languages, and Pawed will suggest podcasts to match. You can untick any suggestion before adding.',
+    'בחירה אוטומטית':'Automatic','דירגתם פרקים ממקור זה בלייק':'You gave episodes from this resource a thumbs up','מחיקה':'Delete','שלום':'Hello','הפלטפורמה המועדפת להאזנה':'Preferred listening platform','נגן RSS':'RSS player','אתמול':'yesterday',
+    'הפלטפורמה שתבחרו תופיע על תמונת הפרק ותפתח את האפליקציה שלה. האחרות יופיעו כלחצנים מתחת. פרקי פודקאסט ללא וידאו ביוטיוב יציגו את הנגן הזמין.':'The platform you choose appears on the episode image and opens its app. The others appear as buttons below. Podcast episodes without a YouTube video show the available player.','דרגו כמה כל נושא מעניין אתכם, בחרו שפות, ו-Pawed יציע לכם פודקאסטים בהתאם. אפשר לבטל כל הצעה לפני ההוספה.':'Rate how much each topic interests you, pick languages, and Pawed will suggest podcasts to match. You can untick any suggestion before adding.',
     'הציעו לי ערוצים':'Suggest channels','רמת קפדנות':'Strictness','מקל':'Lenient','קפדני':'Strict','כל השפות':'All languages',
     'לא נמצאו ערוצים לבחירה הזו. העלו משקל לנושא, הוסיפו שפות או הורידו את רמת הקפדנות.':'No channels found for this choice. Raise a topic weight, add languages or lower the strictness.',
 
@@ -630,6 +631,8 @@ load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעי�
     'עברית':'Hebrew','פוליטיקה':'Politics','טכנולוגיה':'Technology','כלכלה':'Economy','ספורט':'Sports','תרבות':'Culture','לייפסטייל':'Lifestyle','בריאות':'Health'
   };
   const PAT = [
+    [/^(.*) · (\d+) פרקים · פרק אחרון לפני (\d+) ימים$/, '$1 · $2 episodes · latest episode $3 days ago'], [/^(.*) · (\d+) פרקים · פרק אחרון היום$/, '$1 · $2 episodes · latest episode today'], [/^(.*) · (\d+) פרקים · פרק אחרון אתמול$/, '$1 · $2 episodes · latest episode yesterday'],
+    [/^(.*) · (\d+) פרקים$/, '$1 · $2 episodes'],
     [/^לפחות (\d+) פרקים · פרק אחרון עד לפני (\d+) ימים · דירוג צ׳ארטים לפחות (\d+)$/, 'At least $1 episodes · latest episode within $2 days · chart score at least $3'],
     [/^· ?משקל (\d+)$/, '· weight $1'], [/^הצענו (\d+) ערוצים\. סימנו את הטובים ביותר, אפשר לבטל או להוסיף עד (\d+)\.$/, 'We suggest $1 channels. The best are ticked; untick or add up to $2.'],
     [/^שלום (.*)$/, 'Hello $1'], [/^נותרו לכם (\d+) מתוך (\d+) מקורות\. מקורות שתוסיפו נראים רק לכם\.$/, 'You have $1 of $2 resources left. Resources you add are visible only to you.'],

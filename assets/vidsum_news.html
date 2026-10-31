@@ -365,7 +365,7 @@
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live" data-i="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles" data-i="all">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources" data-i="sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a><a class="admin-only" href="/podscanner">PodScanner</a></div><span class="langsw"><a data-l="en" title="English">🇺🇸</a><a data-l="he" title="עברית">🇮🇱</a></span></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live" data-i="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles" data-i="all">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources" data-i="sources">מקורות</a><a class="admin-only" href="/vidsum/logs" data-i="log">יומן</a><a class="admin-only" href="/podscanner">PodScanner</a></div><span class="langsw"><a data-l="en" title="English">🇺🇸</a><a data-l="he" title="עברית">🇮🇱</a></span></div></div>
   <header class="masthead">
     <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
     <div class="masthead-actions"><div class="cta" id="cta" hidden><a class="cta-btn" href="/auth/login?next=%2Fvidsum" data-i="cta1">התחברו והוסיפו את הפודקאסטים שלכם</a><div class="cta-sub"><b data-i="cta2">התחברו ל-Pawed והתאימו את הפודים שלכם</b><br><span data-i="cta3">הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</span></div></div></div>
@@ -405,7 +405,7 @@ const tone = a => TONES[[...a.vid].reduce((x,c)=>x+c.charCodeAt(0),0) % TONES.le
 // ---- English edition: LANG comes from the pawed_lang cookie (set by the flags / the server for signed-in users) ----
 const EN = LANG==='en';
 const I18N = {
-  live:['● מתעדכן אוטומטית','● Updating automatically'], all:['כל הסיכומים','All summaries'], sources:['מקורות','Resources'],
+  live:['● מתעדכן אוטומטית','● Updating automatically'], log:['יומן','Log'], all:['כל הסיכומים','All summaries'], sources:['מקורות','Resources'],
   cta1:['התחברו והוסיפו את הפודקאסטים שלכם','Sign in and add your podcasts'], cta2:['התחברו ל-Pawed והתאימו את הפודים שלכם','Sign in to Pawed and tailor your pods'],
   cta3:['הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕','Add a channel by name or YouTube link, and remove existing ones with ✕'],
   loading:['טוען…','Loading…'], foot:['Pawed · פורטל חדשות המבוסס על סיכומי וידאו','Pawed · a news portal built on video and podcast summaries'],
@@ -430,7 +430,7 @@ const TOPIC_EN = {'פוליטיקה':'Politics','טכנולוגיה':'Technology
 const TN = x => EN ? (TOPIC_EN[x]||x) : x;     // display name of a section (the Hebrew name stays the internal key everywhere)
 const LV_CATS_EN = {Music:'Music', Comedy:'Stand-up & comedy', Dance:'Dance', Festival:'Festivals', Art:'Art'};
 function applyStatic(){ document.querySelectorAll('[data-i]').forEach(el=>{ const k=el.dataset.i; if(I18N[k]) el.textContent=t(k); });
-  const sl=document.querySelector('.langsw'); if(sl) sl.querySelectorAll('a').forEach(a=>a.classList.toggle('on', a.dataset.l===(EN?'en':'he')));
+  const sl=document.querySelector('.langsw'); if(sl) sl.querySelectorAll('a').forEach(a=>{ a.classList.toggle('on', a.dataset.l===(EN?'en':'he')); if(EN && a.dataset.l==='he') a.title='Hebrew'; });
   document.querySelector('meta[name=description]').content = EN ? 'News from video and podcast summaries' : 'חדשות מתוך סיכומי וידאו ופודקאסטים'; }
 function setLang(l){ document.cookie='pawed_lang='+l+';path=/;max-age=31536000;samesite=lax';
   const done=()=>location.reload(); try{ fetch('/api/vidsum/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(done,done); }catch(e){ done(); } }

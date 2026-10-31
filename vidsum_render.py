@@ -390,6 +390,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
                   for t in TOPICS)
     share_url = urllib.parse.quote(f'{SITE}/vidsum/article/{a["slug"]}', safe="")
     share_txt = urllib.parse.quote(a["title"], safe="")
+    he_title = "Hebrew" if en else "עברית"
     pl = platform_links(a, rss)
     hero_k = platform if platform in pl else ("youtube" if "youtube" in pl else ("rss" if "rss" in pl else "gen"))      # no choice yet: YouTube, as before
     hero_url = pl.get(hero_k) or a["url"]
@@ -399,7 +400,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(fdate(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">{S["live"]}</span>'
            f'<a class="admin-only" href="{base}/vidsum/articles">{S["all"]}</a><a class="auth-only" href="{base}/vidsum/sources">{S["sources"]}</a><a class="admin-only" href="{base}/vidsum/logs">{S["log"]}</a></div>'
-           f'<span class="langsw"><a data-l="en" class="{"on" if en else ""}" title="English">🇺🇸</a><a data-l="he" class="{"" if en else "on"}" title="עברית">🇮🇱</a></span></div></div>'
+           f'<span class="langsw"><a data-l="en" class="{"on" if en else ""}" title="English">🇺🇸</a><a data-l="he" class="{"" if en else "on"}" title="{he_title}">🇮🇱</a></span></div></div>'
            f'<header class="masthead"><a class="brand" href="{base}/"><img class="brand-wordmark" src="{base}/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a></header>'
            f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">{S["main"]}</a>{nav}</nav></div>',
            '<div class="page"><article class="he">' if en and not translated else '<div class="page"><article>',
