@@ -73,8 +73,8 @@ figcaption{font-size:12px;color:#888;padding-top:8px;font-style:italic}
 .pull cite{display:block;margin-top:8px;font-size:12px;color:var(--acc);opacity:.8;font-style:italic;font-family:Georgia,serif;line-height:1.4}
 .body::after{content:"";display:block;clear:both}
 .hero{position:relative;display:block}
-.hero::after{content:"▶";position:absolute;inset:auto auto 14px 14px;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center;font-size:16px;padding-inline-start:3px}
-.hero:hover::after{background:var(--red)}
+.pico{position:absolute;inset:auto auto 14px 14px;display:flex;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45));transition:transform .12s}
+.hero:hover .pico{transform:scale(1.08)}.pgen{border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center;font-size:24px;padding-inline-start:4px;box-sizing:border-box}.hero:hover .pgen{background:var(--red)}
 .watch{display:inline-block;margin:6px 0 30px;padding:11px 20px;background:var(--red);color:#fff;font-weight:700;font-size:15px}
 .watch:hover{background:var(--red-dark)}
 .disclaimer{font-size:13px;color:#888;border-top:1px solid var(--line);padding-top:14px;margin-top:10px}
@@ -175,6 +175,48 @@ location.href=a.dataset.app;
 setTimeout(function(){removeEventListener('blur',gone);document.removeEventListener('visibilitychange',vis);if(!left)window.open(w,'_blank','noopener')},1300)})});</script>"""
 
 
+def _pf_svg(k, n):
+    """platform logo, n px tall"""
+    if k == "spotify":
+        return (f'<svg viewBox="0 0 24 24" width="{n}" height="{n}"><circle cx="12" cy="12" r="12" fill="#1ED760"/>'
+                '<path d="M5.4 9.2c4.2-1.2 9.2-.8 13 1.4M6.2 12.6c3.5-1 7.6-.7 10.7 1.1M7 15.8c2.8-.8 5.9-.5 8.4.9" fill="none" stroke="#000" stroke-width="1.7" stroke-linecap="round"/></svg>')
+    if k == "apple":
+        return (f'<svg viewBox="0 0 24 24" width="{n}" height="{n}"><defs><linearGradient id="apg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F452FF"/><stop offset="1" stop-color="#832BC1"/></linearGradient></defs>'
+                '<rect width="24" height="24" rx="5.5" fill="url(#apg)"/><circle cx="12" cy="10" r="2" fill="#fff"/>'
+                '<path d="M12 13.2c-1 0-1.6.7-1.5 1.6l.4 3.4c.1.8.5 1.3 1.1 1.3s1-.5 1.1-1.3l.4-3.4c.1-.9-.5-1.6-1.5-1.6z" fill="#fff"/>'
+                '<path d="M7.6 12.2a4.7 4.7 0 117.5-.4M5.9 12.6a6.5 6.5 0 1112.2-.2" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>')
+    if k == "youtube":
+        return (f'<svg viewBox="0 0 24 24" width="{n}" height="{n}"><rect x="0" y="4" width="24" height="16" rx="4.5" fill="#FF0000"/>'
+                '<path d="M9.7 8.6v6.8l5.9-3.4z" fill="#fff"/></svg>')
+    return f'<span class="pgen" style="width:{n}px;height:{n}px">\u25b6</span>'
+
+
+def _pf_app(k, url):
+    """URL that opens the native app (None when there is none worth trying)"""
+    m = re.search(r"open\.spotify\.com/episode/([A-Za-z0-9]{22})", url) if k == "spotify" else None
+    if m:
+        return f"spotify:episode:{m.group(1)}"
+    if k == "apple" and url.startswith("https://podcasts.apple.com/"):
+        return "podcasts://" + url[len("https://"):]
+    return None
+
+
+def app_attr(u):
+    return f' data-app="{_html.escape(u)}"' if u else ""
+
+
+def platform_links(a, rss):
+    """{platform: url} for the platforms this episode is on"""
+    lk = a.get("links") or {}
+    d = {}
+    if not rss and a.get("url"):
+        d["youtube"] = a["url"]
+    for k in ("spotify", "apple"):
+        if lk.get(k):
+            d[k] = lk[k]
+    return d
+
+
 def _ts_sec(ts):
     try:
         p = [int(x) for x in str(ts).split(":")]
@@ -224,7 +266,7 @@ STR = {
            "also": "האזנה גם ב:", "on": "האזנה ב-", "key": "עיקרי הדברים", "full_pod": "האזנה לפרק המלא ↗", "full_yt": "צפייה בשיחה המלאה ביוטיוב ↗",
            "more": "כתבות נוספות", "new": "הכי חדש", "bytopic": "לפי נושא", "stories": "כתבות",
            "foot": "Pawed · פורטל חדשות המבוסס על סיכומי וידאו", "wait": "",
-           "rq": "האם הסיכום עזר לך?", "r_login": "דירוג והסרת תוכן דורשים התחברות", "r_signin": "התחברות עם Google", "r_cancel": "ביטול",
+           "wt": "צפייה ב-YouTube", "rq": "האם הסיכום עזר לך?", "r_login": "דירוג והסרת תוכן דורשים התחברות", "r_signin": "התחברות עם Google", "r_cancel": "ביטול",
            "r_rm": "להסיר את «{n}» מהמקורות שלך?", "r_rm_sub": "הפרקים שלו לא יופיעו יותר אצלך. אפשר להחזיר אותו בעמוד המקורות.", "r_yes": "כן, להסיר",
            "r_up": "נוסף +1 ל-{n}", "r_off": "הדירוג בוטל", "r_done": "«{n}» הוסר מהמקורות שלך", "r_err": "משהו השתבש, נסו שוב"},
     "en": {"main": "Home", "live": "● Updating automatically", "all": "All summaries", "sources": "Resources", "log": "Log", "by": "By", "desk": "Pawed Desk",
@@ -232,7 +274,7 @@ STR = {
            "also": "Also listen on:", "on": "Listen on ", "key": "Key points", "full_pod": "Listen to the full episode ↗", "full_yt": "Watch the full conversation on YouTube ↗",
            "more": "More stories", "new": "Latest", "bytopic": "By topic", "stories": "stories",
            "foot": "Pawed · a news portal built on video and podcast summaries",
-           "rq": "Was this summary useful?", "r_login": "Rating and removing content require signing in", "r_signin": "Sign in with Google", "r_cancel": "Cancel",
+           "wt": "Watch on YouTube", "rq": "Was this summary useful?", "r_login": "Rating and removing content require signing in", "r_signin": "Sign in with Google", "r_cancel": "Cancel",
            "r_rm": "Remove \u201c{n}\u201d from your resources?", "r_rm_sub": "Its episodes will no longer show up for you. You can bring it back on the Resources page.", "r_yes": "Yes, remove",
            "r_up": "+1 for {n}", "r_off": "Rating removed", "r_done": "\u201c{n}\u201d removed from your resources", "r_err": "Something went wrong, try again",
            "wait": "The English version of this story is being prepared. It will appear here automatically in a few minutes."},
@@ -287,7 +329,7 @@ def _overlay_en(a):
     return b, True
 
 
-def render(a, latest=(), base="", disclaimer="", lang="he"):
+def render(a, latest=(), base="", disclaimer="", lang="he", platform=""):
     """a: article dict. latest: [{slug,title,topic,vid,channel}] newest first. base: URL prefix ('' on the server)."""
     en = lang == "en"
     S = STR["en" if en else "he"]
@@ -318,6 +360,11 @@ def render(a, latest=(), base="", disclaimer="", lang="he"):
                   for t in TOPICS)
     share_url = urllib.parse.quote(f'{SITE}/vidsum/article/{a["slug"]}', safe="")
     share_txt = urllib.parse.quote(a["title"], safe="")
+    pl = platform_links(a, rss)
+    hero_k = platform if platform in pl else ("youtube" if "youtube" in pl else "gen")      # no choice yet: YouTube, as before
+    hero_url = pl.get(hero_k) or a["url"]
+    hero_app = _pf_app(hero_k, hero_url)
+    hero_title = {"youtube": S["wt"], "spotify": S["on"] + "Spotify", "apple": S["on"] + "Apple Podcasts"}.get(hero_k, S["ls_pod"] if rss else S["ls_yt"])
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(fdate(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">{S["live"]}</span>'
            f'<a class="admin-only" href="{base}/vidsum/articles">{S["all"]}</a><a class="auth-only" href="{base}/vidsum/sources">{S["sources"]}</a><a class="admin-only" href="{base}/vidsum/logs">{S["log"]}</a></div>'
@@ -333,22 +380,14 @@ def render(a, latest=(), base="", disclaimer="", lang="he"):
            f'<span class="share"><a href="https://wa.me/?text={share_txt}%20{share_url}" target="_blank" rel="noopener" title="WhatsApp">W</a>'
            f'<a href="https://www.facebook.com/sharer/sharer.php?u={share_url}" target="_blank" rel="noopener" title="Facebook">f</a>'
            f'<a href="https://twitter.com/intent/tweet?url={share_url}&amp;text={share_txt}" target="_blank" rel="noopener" title="X">X</a></span></div>',
-           f'<figure><a class="hero" href="{e(a["url"])}" target="_blank" rel="noopener" title="{S["ls_pod"] if rss else S["ls_yt"]}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""></a>'
+           f'<figure><a class="hero" href="{e(hero_url)}"{app_attr(hero_app)} target="_blank" rel="noopener" title="{e(hero_title)}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""><span class="pico">{_pf_svg(hero_k, 66)}</span></a>'
            f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())}{"" if rss else S["shot"]}</figcaption></figure>']
-    lk = a.get("links") or {}
     icons = ""
-    if lk.get("spotify"):
-        _m = re.search(r"open\.spotify\.com/episode/([A-Za-z0-9]{22})", lk["spotify"])
-        _app = f' data-app="spotify:episode:{_m.group(1)}"' if _m else ""
-        icons += (f'<a class="listen-ic" href="{e(lk["spotify"])}"{_app} target="_blank" rel="noopener" title="{S["on"]}Spotify" aria-label="Spotify">'
-                  '<svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="12" r="12" fill="#1ED760"/>'
-                  '<path d="M5.4 9.2c4.2-1.2 9.2-.8 13 1.4M6.2 12.6c3.5-1 7.6-.7 10.7 1.1M7 15.8c2.8-.8 5.9-.5 8.4.9" fill="none" stroke="#000" stroke-width="1.7" stroke-linecap="round"/></svg></a>')
-    if lk.get("apple"):
-        icons += (f'<a class="listen-ic" href="{e(lk["apple"])}" target="_blank" rel="noopener" title="{S["on"]}Apple Podcasts" aria-label="Apple Podcasts">'
-                  '<svg viewBox="0 0 24 24" width="30" height="30"><defs><linearGradient id="apg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F452FF"/><stop offset="1" stop-color="#832BC1"/></linearGradient></defs>'
-                  '<rect width="24" height="24" rx="5.5" fill="url(#apg)"/><circle cx="12" cy="10" r="2" fill="#fff"/>'
-                  '<path d="M12 13.2c-1 0-1.6.7-1.5 1.6l.4 3.4c.1.8.5 1.3 1.1 1.3s1-.5 1.1-1.3l.4-3.4c.1-.9-.5-1.6-1.5-1.6z" fill="#fff"/>'
-                  '<path d="M7.6 12.2a4.7 4.7 0 117.5-.4M5.9 12.6a6.5 6.5 0 1112.2-.2" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg></a>')
+    for k in ("youtube", "spotify", "apple"):
+        if k == hero_k or k not in pl:
+            continue
+        t = {"youtube": S["wt"], "spotify": S["on"] + "Spotify", "apple": S["on"] + "Apple Podcasts"}[k]
+        icons += (f'<a class="listen-ic" href="{e(pl[k])}"{app_attr(_pf_app(k, pl[k]))} target="_blank" rel="noopener" title="{e(t)}" aria-label="{e(t)}">{_pf_svg(k, 45)}</a>')
     if icons:
         out.append(f'<div class="listen"><span>{S["also"]}</span>{icons}</div>')
     if a.get("key_points"):

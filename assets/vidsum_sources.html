@@ -183,6 +183,14 @@
     .acct .who { display:flex; align-items:center; gap:8px; }
     .acct .who img { width:30px; height:30px; border-radius:50%; }
     .acct .hint { color:#777; font-size:13px; }
+    .plat { margin:0 0 18px; padding:12px 14px; border:1px solid #e3e3e3; border-radius:12px; background:#fff; }
+    .plat b { display:block; margin-bottom:8px; font-size:15px; }
+    .plat small { display:block; color:#777; font-size:12.5px; margin-top:8px; }
+    .plat .opts { display:flex; gap:10px; flex-wrap:wrap; }
+    .plat label { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border:1.5px solid #ddd; border-radius:999px; cursor:pointer; font-weight:700; font-size:14px; }
+    .plat label.on { border-color:#e3222b; background:#fff0f0; }
+    .plat input { display:none; }
+    .plat svg { width:24px; height:24px; }
     .gbtn { display:inline-flex; align-items:center; gap:10px; background:#fff; border:1px solid #cfcfcf; border-radius:4px; padding:10px 18px; font-weight:700; font-size:15px; color:#222; }
     .gbtn:hover { box-shadow:0 1px 4px rgba(0,0,0,.18); }
     .ghost { border:1px solid #cfcfcf; background:#fff; border-radius:999px; padding:6px 14px; font-size:13px; cursor:pointer; }
@@ -262,6 +270,7 @@
     <p class="lead-in">פודקאסטים וערוצי יוטיוב ש-Pawed מסכם. הוסיפו מקורות משלכם (הם נראים רק לכם) ובחרו אילו מהמקורות של Pawed יופיעו אצלכם.</p>
 
     <div class="acct" id="acct"></div>
+    <div class="plat" id="plat" hidden></div>
 
 
     <section class="addp" id="addp" hidden>
@@ -336,11 +345,24 @@ function renderAcct(){
     $('acct').innerHTML = '<a class="gbtn" href="/auth/login?next='+encodeURIComponent('/vidsum/sources')+'"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 010-9.4l-7.9-6.1a24 24 0 000 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.5-4.9 2.4-8.2 2.4-6.3 0-11.6-4-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg> התחברו והוסיפו את הפודקאסטים שלכם</a><span class="hint"><b>התחברו ל-Pawed והתאימו את הפודים שלכם:</b> הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</span>';
   }
 }
+const PLAT_SVG = {
+  youtube:'<svg viewBox="0 0 24 24"><rect y="4" width="24" height="16" rx="4.5" fill="#F00"/><path d="M9.7 8.6v6.8l5.9-3.4z" fill="#fff"/></svg>',
+  spotify:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#1ED760"/><path d="M5.4 9.2c4.2-1.2 9.2-.8 13 1.4M6.2 12.6c3.5-1 7.6-.7 10.7 1.1M7 15.8c2.8-.8 5.9-.5 8.4.9" fill="none" stroke="#000" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  apple:'<svg viewBox="0 0 24 24"><defs><linearGradient id="apq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F452FF"/><stop offset="1" stop-color="#832BC1"/></linearGradient></defs><rect width="24" height="24" rx="5.5" fill="url(#apq)"/><circle cx="12" cy="10" r="2" fill="#fff"/><path d="M12 13.2c-1 0-1.6.7-1.5 1.6l.4 3.4c.1.8.5 1.3 1.1 1.3s1-.5 1.1-1.3l.4-3.4c.1-.9-.5-1.6-1.5-1.6z" fill="#fff"/><path d="M7.6 12.2a4.7 4.7 0 117.5-.4M5.9 12.6a6.5 6.5 0 1112.2-.2" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>'
+};
+function renderPlat(){
+  const el = $('plat'); el.hidden = !(D.me && !D.admin) && !D.me; if(!D.me){ el.hidden = true; return; }
+  const cur = (D.prefs && D.prefs.platform) || 'youtube', names = {youtube:'YouTube', spotify:'Spotify', apple:'Apple Podcasts'};
+  el.hidden = false;
+  el.innerHTML = '<b>הפלטפורמה המועדפת להאזנה</b><div class="opts">' + ['youtube','spotify','apple'].map(k=>'<label class="'+(k===cur?'on':'')+'"><input type="radio" name="plat" value="'+k+'"'+(k===cur?' checked':'')+'>'+PLAT_SVG[k]+names[k]+'</label>').join('')
+    + '</div><small>הפלטפורמה שתבחרו תופיע על תמונת הפרק ותפתח את האפליקציה שלה. שתי האחרות יופיעו כלחצנים מתחת.</small>';
+  el.querySelectorAll('input').forEach(i=>i.onchange=()=>savePrefs({platform:i.value}));
+}
 async function savePrefs(p){
   try{ const j = await api('/api/vidsum/prefs',p); D.prefs = j.prefs; await load(); msg('נשמר','ok'); }catch(e){ msg('❌ '+e.message,'err'); }
 }
 function render(){
-  renderAcct(); $('adv').hidden = !D.admin; renderLists();
+  renderAcct(); renderPlat(); $('adv').hidden = !D.admin; renderLists();
   const signed = !!D.me, canAdd = signed || D.admin;
   const rows = D.sources.map(s => '<tr><td class="name" data-l="שם">'+esc(s.name)+(s.kind==='rss'?' <span class="daily" style="background:#e6edfb;color:#1d3f9a">פודקאסט RSS</span>':'')+'</td>'
     +'<td data-l="שפה">'+(s.can_edit?'<select data-id="'+esc(s.id)+'" data-f="language">'+opts(D.languages,s.language)+'</select>':esc(D.languages[s.language]||s.language))+'</td>'

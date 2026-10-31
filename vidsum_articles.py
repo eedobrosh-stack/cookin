@@ -1294,9 +1294,9 @@ import vidsum_feeds
 DISCLAIMER = "הדברים המובאים הם של המרואיינים ולא נבדקו. הכתבה נערכה אוטומטית מתוך תמלול של השיחה."
 
 
-def render_article(a, lang="he"):
+def render_article(a, lang="he", platform=""):
     if a.get("blocks"):
-        return vidsum_render.render(a, news_items(), base="", disclaimer=a.get("disclaimer") or DISCLAIMER, lang=lang)
+        return vidsum_render.render(a, news_items(), base="", disclaimer=a.get("disclaimer") or DISCLAIMER, lang=lang, platform=platform)
     return article_html(a)
 
 
@@ -1498,7 +1498,8 @@ def _vdb():
     c = multiuser.db()
     c.execute("CREATE TABLE IF NOT EXISTS vidsum_prefs(user_id TEXT PRIMARY KEY, hide_base INTEGER DEFAULT 0, "
               "hide_name INTEGER DEFAULT 0, muted TEXT DEFAULT '[]')")
-    for ddl in ("ALTER TABLE vidsum_prefs ADD COLUMN hidden_base TEXT DEFAULT '[]'", "ALTER TABLE vidsum_prefs ADD COLUMN lang TEXT DEFAULT ''"):
+    for ddl in ("ALTER TABLE vidsum_prefs ADD COLUMN hidden_base TEXT DEFAULT '[]'", "ALTER TABLE vidsum_prefs ADD COLUMN lang TEXT DEFAULT ''",
+                "ALTER TABLE vidsum_prefs ADD COLUMN platform TEXT DEFAULT ''"):
         try:
             c.execute(ddl)
         except Exception:
@@ -1558,7 +1559,7 @@ def get_vprefs(uid):
     with _vdb() as c:
         r = c.execute("SELECT * FROM vidsum_prefs WHERE user_id=?", (uid,)).fetchone()
     if not r:
-        return {"hideBase": False, "hideName": False, "muted": [], "hiddenBase": [], "lang": ""}
+        return {"hideBase": False, "hideName": False, "muted": [], "hiddenBase": [], "lang": "", "platform": ""}
     try:
         muted = json.loads(r["muted"] or "[]")
     except ValueError:
@@ -1571,7 +1572,11 @@ def get_vprefs(uid):
         lang = r["lang"] or ""
     except (IndexError, KeyError):
         lang = ""
-    return {"hideBase": bool(r["hide_base"]), "hideName": bool(r["hide_name"]), "muted": muted, "hiddenBase": hidden_base, "lang": lang}
+    try:
+        platform = r["platform"] or ""
+    except (IndexError, KeyError):
+        platform = ""
+    return {"hideBase": bool(r["hide_base"]), "hideName": bool(r["hide_name"]), "muted": muted, "hiddenBase": hidden_base, "lang": lang, "platform": platform}
 
 
 def set_vprefs(uid, req):
@@ -1586,11 +1591,13 @@ def set_vprefs(uid, req):
         p["hiddenBase"] = [str(x)[:80] for x in req["hiddenBase"]][:300]
     if req.get("lang") in ("he", "en"):
         p["lang"] = req["lang"]
+    if req.get("platform") in ("youtube", "spotify", "apple"):
+        p["platform"] = req["platform"]
     with _vdb() as c:
-        c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted,hidden_base,lang) VALUES(?,?,?,?,?,?) "
+        c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted,hidden_base,lang,platform) VALUES(?,?,?,?,?,?,?) "
                   "ON CONFLICT(user_id) DO UPDATE SET hide_base=excluded.hide_base, hide_name=excluded.hide_name, muted=excluded.muted, "
-                  "hidden_base=excluded.hidden_base, lang=excluded.lang",
-                  (uid, int(p["hideBase"]), int(p["hideName"]), json.dumps(p["muted"]), json.dumps(p["hiddenBase"]), p.get("lang") or ""))
+                  "hidden_base=excluded.hidden_base, lang=excluded.lang, platform=excluded.platform",
+                  (uid, int(p["hideBase"]), int(p["hideName"]), json.dumps(p["muted"]), json.dumps(p["hiddenBase"]), p.get("lang") or "", p.get("platform") or ""))
     return p
 
 
@@ -2345,7 +2352,14 @@ def handle_get(handler, path, qs):
             if lang == "en" and a.get("blocks") and not a.get("en"):
                 import vidsum_translate
                 vidsum_translate.want(a["slug"])                       # not translated yet: do this one next
-            handler._html(render_article(a, lang), "no-store")
+            pf = ""
+            try:
+                u = current_user(handler)
+                if u and u.get("id") != "admin-token":
+                    pf = get_vprefs(u["id"]).get("platform") or ""
+            except Exception:
+                pass
+            handler._html(render_article(a, lang, pf), "no-store")
         return True
     if path in ("/vidsum", "/vidsum/"):
         _serve(handler, NEWS_PAGE)
