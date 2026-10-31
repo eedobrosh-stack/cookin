@@ -251,8 +251,7 @@ CSS = """
 :root{--red:#e3222b;--ink:#222;--muted:#666;--line:#e3e3e3}
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#f7f5fb;color:var(--ink);line-height:1.6}
 .top{border-top:4px solid var(--red);background:#fff;border-bottom:1px solid var(--line)}
-.top-in{max-width:820px;margin:auto;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;direction:ltr}
-html[dir=ltr] .top-in>a:first-child{order:3}html[dir=rtl] .top nav{direction:rtl}
+.top-in{max-width:820px;margin:auto;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .top img{height:35px;display:block}.top nav{display:flex;gap:16px;font-size:14px;flex-wrap:wrap}.top a{color:var(--ink);text-decoration:none;font-weight:700}.top a:hover{color:var(--red)}
 .langsw{display:inline-flex;gap:8px}.langsw a{font-size:20px;opacity:.45;cursor:pointer;text-decoration:none}.langsw a.on{opacity:1}
 main{max-width:820px;margin:26px auto 60px;padding:0 22px}

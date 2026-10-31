@@ -338,12 +338,10 @@
     .fit::after { content:""; position:absolute; inset:0; background:var(--img) center/contain no-repeat; }
     .fit > * { z-index:2; }
 
-    /* wordmark logo (paw included): top right on LTR pages, top left on RTL pages; 20% smaller than before */
-    .masthead { display:flex !important; direction:ltr; align-items:center; justify-content:space-between; height:auto !important; min-height:84px; padding-block:6px; }
-    html[dir=ltr] .masthead .brand { order:2; }
-    html[dir=rtl] .masthead .masthead-actions { direction:rtl; } html[dir=ltr] .masthead .masthead-actions { direction:ltr; }
+    /* wordmark logo (paw included): at the start side of the page, so top right on RTL (Hebrew) and top left on LTR pages; 20% smaller than before */
+    .masthead { display:flex !important; align-items:center; justify-content:space-between; height:auto !important; min-height:84px; padding-block:6px; }
     .brand-wordmark { height:70px; width:auto; display:block; }
-    @media (max-width:640px) { .masthead { display:grid !important; grid-template-columns:1fr; min-height:0; padding-block:8px; } .masthead .brand { grid-row:1; justify-self:start; order:0; } html[dir=ltr] .masthead .brand { justify-self:end; } .masthead .masthead-actions { grid-row:2; justify-self:center; margin-top:4px; } .brand-wordmark { height:45px; } }
+    @media (max-width:640px) { .masthead { display:grid !important; grid-template-columns:1fr; min-height:0; padding-block:8px; } .masthead .brand { grid-row:1; justify-self:start; } .masthead .masthead-actions { grid-row:2; justify-self:center; margin-top:4px; } .brand-wordmark { height:45px; } }
 
 
     /* no holes: a lone banner tile, or an odd last card in a two-column block, spans the full width */
