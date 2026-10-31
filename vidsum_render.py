@@ -188,6 +188,9 @@ def _pf_svg(k, n):
     if k == "youtube":
         return (f'<svg viewBox="0 0 24 24" width="{n}" height="{n}"><rect x="0" y="4" width="24" height="16" rx="4.5" fill="#FF0000"/>'
                 '<path d="M9.7 8.6v6.8l5.9-3.4z" fill="#fff"/></svg>')
+    if k == "rss":
+        return (f'<svg viewBox="0 0 24 24" width="{n}" height="{n}"><rect width="24" height="24" rx="5.5" fill="#F26522"/><circle cx="7" cy="17" r="1.9" fill="#fff"/>'
+                '<path d="M5.2 11.2a7.6 7.6 0 017.6 7.6M5.2 6.2a12.6 12.6 0 0112.6 12.6" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/></svg>')
     return f'<span class="pgen" style="width:{n}px;height:{n}px">\u25b6</span>'
 
 
@@ -211,9 +214,13 @@ def platform_links(a, rss):
     d = {}
     if not rss and a.get("url"):
         d["youtube"] = a["url"]
+    elif lk.get("youtube"):                       # a podcast episode whose video version the finder located
+        d["youtube"] = lk["youtube"]
     for k in ("spotify", "apple"):
         if lk.get(k):
             d[k] = lk[k]
+    if rss and a.get("url"):
+        d["rss"] = a["url"]                       # the episode on the podcast's own site / feed
     return d
 
 
@@ -266,7 +273,7 @@ STR = {
            "also": "האזנה גם ב:", "on": "האזנה ב-", "key": "עיקרי הדברים", "full_pod": "האזנה לפרק המלא ↗", "full_yt": "צפייה בשיחה המלאה ביוטיוב ↗",
            "more": "כתבות נוספות", "new": "הכי חדש", "bytopic": "לפי נושא", "stories": "כתבות",
            "foot": "Pawed · פורטל חדשות המבוסס על סיכומי וידאו", "wait": "",
-           "wt": "צפייה ב-YouTube", "rq": "האם הסיכום עזר לך?", "r_login": "דירוג והסרת תוכן דורשים התחברות", "r_signin": "התחברות עם Google", "r_cancel": "ביטול",
+           "wt": "צפייה ב-YouTube", "wr": "האזנה בנגן הפודקאסט", "rq": "האם הסיכום עזר לך?", "r_login": "דירוג והסרת תוכן דורשים התחברות", "r_signin": "התחברות עם Google", "r_cancel": "ביטול",
            "r_rm": "להסיר את «{n}» מהמקורות שלך?", "r_rm_sub": "הפרקים שלו לא יופיעו יותר אצלך. אפשר להחזיר אותו בעמוד המקורות.", "r_yes": "כן, להסיר",
            "r_up": "נוסף +1 ל-{n}", "r_off": "הדירוג בוטל", "r_done": "«{n}» הוסר מהמקורות שלך", "r_err": "משהו השתבש, נסו שוב"},
     "en": {"main": "Home", "live": "● Updating automatically", "all": "All summaries", "sources": "Resources", "log": "Log", "by": "By", "desk": "Pawed Desk",
@@ -274,7 +281,7 @@ STR = {
            "also": "Also listen on:", "on": "Listen on ", "key": "Key points", "full_pod": "Listen to the full episode ↗", "full_yt": "Watch the full conversation on YouTube ↗",
            "more": "More stories", "new": "Latest", "bytopic": "By topic", "stories": "stories",
            "foot": "Pawed · a news portal built on video and podcast summaries",
-           "wt": "Watch on YouTube", "rq": "Was this summary useful?", "r_login": "Rating and removing content require signing in", "r_signin": "Sign in with Google", "r_cancel": "Cancel",
+           "wt": "Watch on YouTube", "wr": "Listen in the podcast player", "rq": "Was this summary useful?", "r_login": "Rating and removing content require signing in", "r_signin": "Sign in with Google", "r_cancel": "Cancel",
            "r_rm": "Remove \u201c{n}\u201d from your resources?", "r_rm_sub": "Its episodes will no longer show up for you. You can bring it back on the Resources page.", "r_yes": "Yes, remove",
            "r_up": "+1 for {n}", "r_off": "Rating removed", "r_done": "\u201c{n}\u201d removed from your resources", "r_err": "Something went wrong, try again",
            "wait": "The English version of this story is being prepared. It will appear here automatically in a few minutes."},
@@ -361,10 +368,11 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform=""):
     share_url = urllib.parse.quote(f'{SITE}/vidsum/article/{a["slug"]}', safe="")
     share_txt = urllib.parse.quote(a["title"], safe="")
     pl = platform_links(a, rss)
-    hero_k = platform if platform in pl else ("youtube" if "youtube" in pl else "gen")      # no choice yet: YouTube, as before
+    hero_k = platform if platform in pl else ("youtube" if "youtube" in pl else ("rss" if "rss" in pl else "gen"))      # no choice yet: YouTube, as before
     hero_url = pl.get(hero_k) or a["url"]
     hero_app = _pf_app(hero_k, hero_url)
-    hero_title = {"youtube": S["wt"], "spotify": S["on"] + "Spotify", "apple": S["on"] + "Apple Podcasts"}.get(hero_k, S["ls_pod"] if rss else S["ls_yt"])
+    pf_titles = {"youtube": S["wt"], "spotify": S["on"] + "Spotify", "apple": S["on"] + "Apple Podcasts", "rss": S["wr"]}
+    hero_title = pf_titles.get(hero_k, S["ls_pod"] if rss else S["ls_yt"])
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(fdate(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">{S["live"]}</span>'
            f'<a class="admin-only" href="{base}/vidsum/articles">{S["all"]}</a><a class="auth-only" href="{base}/vidsum/sources">{S["sources"]}</a><a class="admin-only" href="{base}/vidsum/logs">{S["log"]}</a></div>'
@@ -383,10 +391,10 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform=""):
            f'<figure><a class="hero" href="{e(hero_url)}"{app_attr(hero_app)} target="_blank" rel="noopener" title="{e(hero_title)}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""><span class="pico">{_pf_svg(hero_k, 66)}</span></a>'
            f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())}{"" if rss else S["shot"]}</figcaption></figure>']
     icons = ""
-    for k in ("youtube", "spotify", "apple"):
+    for k in ("youtube", "spotify", "apple", "rss"):
         if k == hero_k or k not in pl:
             continue
-        t = {"youtube": S["wt"], "spotify": S["on"] + "Spotify", "apple": S["on"] + "Apple Podcasts"}[k]
+        t = pf_titles[k]
         icons += (f'<a class="listen-ic" href="{e(pl[k])}"{app_attr(_pf_app(k, pl[k]))} target="_blank" rel="noopener" title="{e(t)}" aria-label="{e(t)}">{_pf_svg(k, 45)}</a>')
     if icons:
         out.append(f'<div class="listen"><span>{S["also"]}</span>{icons}</div>')

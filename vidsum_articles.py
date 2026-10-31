@@ -1591,7 +1591,7 @@ def set_vprefs(uid, req):
         p["hiddenBase"] = [str(x)[:80] for x in req["hiddenBase"]][:300]
     if req.get("lang") in ("he", "en"):
         p["lang"] = req["lang"]
-    if req.get("platform") in ("youtube", "spotify", "apple"):
+    if req.get("platform") in ("youtube", "spotify", "apple", "rss"):
         p["platform"] = req["platform"]
     with _vdb() as c:
         c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted,hidden_base,lang,platform) VALUES(?,?,?,?,?,?,?) "
@@ -2637,8 +2637,21 @@ def handle_get(handler, path, qs):
             lim = int((qs.get("limit") or ["20"])[0])
             today = time.strftime("%Y-%m-%d")
             todo = []
+            need_yt = (qs.get("need") or [""])[0] == "youtube"
+            old3 = time.strftime("%Y-%m-%d", time.localtime(time.time() - 3 * 86400))
+            old30 = time.strftime("%Y-%m-%d", time.localtime(time.time() - 30 * 86400))
             for a in sorted(_articles(), key=lambda x: x.get("published_at") or x.get("created") or "", reverse=True):
                 lk = a.get("links") or {}
+                if need_yt:                       # podcast episodes still without a YouTube video: retry every 3 days for a month
+                    if a.get("kind") != "rss" or lk.get("youtube") or not a.get("vid"):
+                        continue
+                    if (a.get("published") or a.get("created") or "")[:10] < old30 or (lk.get("yt_checked") or "") >= old3:
+                        continue
+                    todo.append({"slug": a["slug"], "vid": a["vid"], "channel": a.get("channel", ""), "title": a.get("src_title") or a.get("title", ""),
+                                 "published": (a.get("published") or a.get("created") or "")[:10], "duration": a.get("duration") or 0})
+                    if len(todo) >= lim:
+                        break
+                    continue
                 if not a.get("vid") or (lk.get("apple") and lk.get("spotify")):
                     continue
                 if lk.get("checked") and lk["checked"] >= time.strftime("%Y-%m-%d", time.localtime(time.time() - 3 * 86400)):
@@ -2812,12 +2825,12 @@ def handle_post(handler, path, req):
             except Exception:
                 handler._json({"ok": False, "error": "no such article"}, 404)
                 return True
-            lk = {k: str(v)[:400] for k, v in (req.get("links") or {}).items() if k in ("apple", "spotify", "checked") and v}
-            for k in ("apple", "spotify"):                     # never overwrite a link we already have with nothing
+            lk = {k: str(v)[:400] for k, v in (req.get("links") or {}).items() if k in ("apple", "spotify", "youtube", "checked", "yt_checked") and v}
+            for k in ("apple", "spotify", "youtube", "checked", "yt_checked"):     # never overwrite what we already have with nothing
                 if not lk.get(k) and (a.get("links") or {}).get(k):
                     lk[k] = a["links"][k]
-            ok_host = {"apple": "https://podcasts.apple.com/", "spotify": "https://open.spotify.com/"}
-            lk = {k: v for k, v in lk.items() if k == "checked" or v.startswith(ok_host[k])}
+            ok_host = {"apple": "https://podcasts.apple.com/", "spotify": "https://open.spotify.com/", "youtube": "https://www.youtube.com/watch?v="}
+            lk = {k: v for k, v in lk.items() if k in ("checked", "yt_checked") or v.startswith(ok_host[k])}
             a["links"] = lk
             _write_article(a)
             handler._json({"ok": True, "links": lk})
