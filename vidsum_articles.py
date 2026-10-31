@@ -1506,6 +1506,54 @@ def _vdb():
     return c
 
 
+def _rdb():
+    c = multiuser.db()
+    c.execute("CREATE TABLE IF NOT EXISTS vidsum_ratings(user_id TEXT NOT NULL, slug TEXT NOT NULL, source_id TEXT DEFAULT '', "
+              "rating INTEGER NOT NULL, ts TEXT DEFAULT '', PRIMARY KEY(user_id, slug))")
+    return c
+
+
+def get_rating(uid, slug):
+    with _rdb() as c:
+        r = c.execute("SELECT rating FROM vidsum_ratings WHERE user_id=? AND slug=?", (uid, slug)).fetchone()
+    return int(r["rating"]) if r else 0
+
+
+def source_plus(uid):
+    """{source_id: number of articles of that source the user gave a thumbs up}. The meaning of the score comes later."""
+    if not uid:
+        return {}
+    with _rdb() as c:
+        return {r["source_id"]: r["n"] for r in c.execute(
+            "SELECT source_id, COUNT(*) n FROM vidsum_ratings WHERE user_id=? AND rating=1 AND source_id<>'' GROUP BY source_id", (uid,)).fetchall()}
+
+
+def rate_article(uid, slug, rating, remove_source=False):
+    """rating 1 = thumbs up (toggles off when sent again), -1 = thumbs down; remove_source switches the article's podcast off for this user."""
+    a = next((x for x in _articles() if x.get("slug") == slug), None)
+    if not a:
+        raise ValueError("unknown article")
+    sid = str(a.get("source_id") or "")
+    cur = get_rating(uid, slug)
+    new = 0 if (rating == 1 and cur == 1) else rating
+    removed = None
+    if remove_source:
+        ch = next((c for c in _load_ch()["channels"] if c["id"] == sid), None)
+        if not ch:
+            raise ValueError("this episode is not tied to a podcast in your list")
+        p = get_vprefs(uid)
+        if sid not in p["hiddenBase"]:                       # same switch-off the Sources page uses, so it can be turned back on there
+            set_vprefs(uid, {"hiddenBase": p["hiddenBase"] + [sid]})
+        removed = ch["name"]
+    with _rdb() as c:
+        if new == 0:
+            c.execute("DELETE FROM vidsum_ratings WHERE user_id=? AND slug=?", (uid, slug))
+        else:
+            c.execute("INSERT OR REPLACE INTO vidsum_ratings(user_id,slug,source_id,rating,ts) VALUES(?,?,?,?,?)",
+                      (uid, slug, sid, new, time.strftime("%Y-%m-%d %H:%M:%S")))
+    return {"rating": new, "removed": removed, "plus": source_plus(uid).get(sid, 0)}
+
+
 def get_vprefs(uid):
     with _vdb() as c:
         r = c.execute("SELECT * FROM vidsum_prefs WHERE user_id=?", (uid,)).fetchone()
@@ -2134,6 +2182,7 @@ def sources_view(viewer=None):
     real_names = {_norm_key(c["name"]) for c in _load_ch()["channels"] if not c["id"].startswith("pending-")}
     vis = _visible_source_ids(viewer)
     out = []
+    plus = source_plus(viewer["id"]) if viewer and viewer.get("id") != "admin-token" else {}
     for c in _load_ch()["channels"]:
         owner = c.get("owner_id")
         mine_c = bool(viewer and owner and owner == viewer.get("id"))
@@ -2145,7 +2194,7 @@ def sources_view(viewer=None):
         out.append({"id": c["id"], "name": c["name"], "language": c["language"], "url": c["url"],
                     "vertical": c["vertical"], "added": c.get("added", ""), "pending": c["id"].startswith("pending-"),
                     "daily": c.get("cadence") == "daily", "pub_days": c.get("pub_days") or [], "owner_id": owner, "owner_label": label, "mine": bool(viewer and owner and owner == viewer.get("id")),
-                    "base": owner is None, "kind": c.get("kind") or "yt", "no_headline": bool(c.get("no_headline")), "can_edit": _can_edit_source(c, viewer)})
+                    "plus": plus.get(c["id"], 0), "base": owner is None, "kind": c.get("kind") or "yt", "no_headline": bool(c.get("no_headline")), "can_edit": _can_edit_source(c, viewer)})
     return out
 
 
@@ -2512,6 +2561,11 @@ def handle_get(handler, path, qs):
         user = current_user(handler)
         handler._json({"signed": bool(user), "admin": bool(user and user.get("admin"))})
         return True
+    if path == "/api/vidsum/rating":
+        user = current_user(handler)
+        ok = bool(user and user.get("id") != "admin-token")
+        handler._json({"signed": ok, "rating": get_rating(user["id"], (qs.get("slug") or [""])[0]) if ok else 0})
+        return True
     if path == "/api/vidsum/news":
         user = current_user(handler)
         as_id = (qs.get("as") or [""])[0]
@@ -2816,6 +2870,17 @@ def handle_post(handler, path, req):
         if l in ("he", "en") and user and user.get("id") != "admin-token":
             set_vprefs(user["id"], {"lang": l})
         handler._json({"ok": l in ("he", "en"), "lang": l})
+        return True
+    if path == "/api/vidsum/rate":
+        user = current_user(handler)
+        if not user or user.get("id") == "admin-token":
+            handler._json({"ok": False, "error": "login"}, 401)
+            return True
+        try:
+            rating = 1 if int(req.get("rating") or 0) > 0 else -1
+            handler._json({"ok": True, **rate_article(user["id"], str(req.get("slug") or ""), rating, bool(req.get("remove_source")))})
+        except ValueError as e:
+            handler._json({"ok": False, "error": str(e)}, 400)
         return True
     if path == "/api/vidsum/prefs":
         user = current_user(handler)

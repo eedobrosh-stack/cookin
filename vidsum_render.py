@@ -4,6 +4,7 @@ article dict:
   title, standfirst, topic, channel, vid, url, published (YYYY-MM-DD), duration (sec),
   key_points [str], blocks [{"type": "h2"|"p"|"quote"|"list", "text", "ts", "speaker", "items"}]
 """
+import json
 import os
 import re
 import html as _html
@@ -141,6 +142,31 @@ document.querySelectorAll('img[data-vid]').forEach(fix);})();</script>"""
 PAW_JS += "<script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>"
 
 
+RATE_CSS = (".rate{display:flex;align-items:center;gap:12px;margin:26px 0 8px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:15px;font-weight:700}"
+            ".rate button{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font-size:21px;cursor:pointer;transition:transform .12s,background .12s}"
+            ".rate button:hover{transform:scale(1.1)}.rate button.on{background:#1ED760;border-color:#1ED760}.rate button.on.dn{background:#e3222b;border-color:#e3222b}"
+            "#rmodal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px}"
+            "#rmodal .card{background:#fff;border-radius:14px;max-width:360px;width:100%;padding:22px 20px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.3);font-size:16px;line-height:1.45}"
+            "#rmodal .card small{display:block;color:#666;font-size:13px;margin-top:6px}#rmodal .row{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}"
+            "#rmodal .row a,#rmodal .row button{border-radius:999px;padding:10px 18px;font-size:14px;font-weight:800;cursor:pointer;text-decoration:none;border:1.5px solid #ccc;background:#fff;color:#2a211b}"
+            "#rmodal .pri{background:#e3222b!important;border-color:#e3222b!important;color:#fff!important}"
+            "#rmodal .pulse{animation:rpulse 1.4s ease-in-out infinite}@keyframes rpulse{0%,100%{box-shadow:0 0 0 0 rgba(227,34,43,.55)}50%{box-shadow:0 0 0 12px rgba(227,34,43,0)}}"
+            "#rtoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:210;background:#2a211b;color:#fff;border-radius:999px;padding:10px 18px;font-size:14px;font-weight:700;box-shadow:0 6px 22px rgba(0,0,0,.3)}")
+RATE_JS = """<script>(function(){var R=document.querySelector('.rate');if(!R)return;var T=JSON.parse(R.dataset.t),slug=R.dataset.slug,name=R.dataset.name,up=R.querySelector('.up'),dn=R.querySelector('.dn');
+function f(s){return s.replace('{n}',name)}
+function toast(m){var o=document.getElementById('rtoast');if(o)o.remove();var t=document.createElement('div');t.id='rtoast';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},3500)}
+function modal(html,btns){var m=document.createElement('div');m.id='rmodal';m.innerHTML='<div class="card">'+html+'<div class="row"></div></div>';var row=m.querySelector('.row');
+btns.forEach(function(b){var e=document.createElement(b.href?'a':'button');e.textContent=b.t;e.className=(b.pri?'pri ':'')+(b.pulse?'pulse':'');if(b.href)e.href=b.href;e.onclick=function(){if(b.fn)b.fn();if(!b.href)m.remove()};row.appendChild(e)});
+m.onclick=function(e){if(e.target===m)m.remove()};document.body.appendChild(m)}
+function login(){modal('<b>'+T.r_login+'</b>',[{t:T.r_signin,href:'/auth/login?next='+encodeURIComponent(location.pathname+location.search),pri:1,pulse:1},{t:T.r_cancel}])}
+function post(body){return fetch('/api/vidsum/rate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({slug:slug},body))}).then(function(r){return r.json().then(function(j){j._s=r.status;return j})})}
+function mark(v){up.classList.toggle('on',v===1);dn.classList.toggle('on',v===-1)}
+var signed=false;
+fetch('/api/vidsum/rating?slug='+encodeURIComponent(slug),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){signed=!!j.signed;if(signed)mark(j.rating)}).catch(function(){});
+up.onclick=function(){if(!signed)return login();post({rating:1}).then(function(j){if(j._s===401){signed=false;return login()}if(!j.ok)return toast(T.r_err);mark(j.rating);toast(j.rating===1?f(T.r_up):T.r_off)}).catch(function(){toast(T.r_err)})};
+dn.onclick=function(){if(!signed)return login();modal('<b>'+f(T.r_rm)+'</b><small>'+T.r_rm_sub+'</small>',[{t:T.r_yes,pri:1,fn:function(){post({rating:-1,remove_source:true}).then(function(j){if(j._s===401){signed=false;return login()}if(!j.ok)return toast(j.error||T.r_err);mark(-1);toast(f(T.r_done))}).catch(function(){toast(T.r_err)})}},{t:T.r_cancel}])}})();</script>"""
+
+
 def _ts_sec(ts):
     try:
         p = [int(x) for x in str(ts).split(":")]
@@ -189,12 +215,18 @@ STR = {
            "from": "מתוך", "read": "דק׳ קריאה", "ls_pod": "האזנה לפרק", "ls_yt": "צפייה בסרטון ביוטיוב", "shot": " · צילום מסך מתוך הסרטון",
            "also": "האזנה גם ב:", "on": "האזנה ב-", "key": "עיקרי הדברים", "full_pod": "האזנה לפרק המלא ↗", "full_yt": "צפייה בשיחה המלאה ביוטיוב ↗",
            "more": "כתבות נוספות", "new": "הכי חדש", "bytopic": "לפי נושא", "stories": "כתבות",
-           "foot": "Pawed · פורטל חדשות המבוסס על סיכומי וידאו", "wait": ""},
+           "foot": "Pawed · פורטל חדשות המבוסס על סיכומי וידאו", "wait": "",
+           "rq": "האם הסיכום עזר לך?", "r_login": "דירוג והסרת תוכן דורשים התחברות", "r_signin": "התחברות עם Google", "r_cancel": "ביטול",
+           "r_rm": "להסיר את «{n}» מהמקורות שלך?", "r_rm_sub": "הפרקים שלו לא יופיעו יותר אצלך. אפשר להחזיר אותו בעמוד המקורות.", "r_yes": "כן, להסיר",
+           "r_up": "נוסף +1 ל-{n}", "r_off": "הדירוג בוטל", "r_done": "«{n}» הוסר מהמקורות שלך", "r_err": "משהו השתבש, נסו שוב"},
     "en": {"main": "Home", "live": "● Updating automatically", "all": "All summaries", "sources": "Resources", "log": "Log", "by": "By", "desk": "Pawed Desk",
            "from": "From", "read": "min read", "ls_pod": "Listen to the episode", "ls_yt": "Watch the video on YouTube", "shot": " · Screenshot from the video",
            "also": "Also listen on:", "on": "Listen on ", "key": "Key points", "full_pod": "Listen to the full episode ↗", "full_yt": "Watch the full conversation on YouTube ↗",
            "more": "More stories", "new": "Latest", "bytopic": "By topic", "stories": "stories",
            "foot": "Pawed · a news portal built on video and podcast summaries",
+           "rq": "Was this summary useful?", "r_login": "Rating and removing content require signing in", "r_signin": "Sign in with Google", "r_cancel": "Cancel",
+           "r_rm": "Remove \u201c{n}\u201d from your resources?", "r_rm_sub": "Its episodes will no longer show up for you. You can bring it back on the Resources page.", "r_yes": "Yes, remove",
+           "r_up": "+1 for {n}", "r_off": "Rating removed", "r_done": "\u201c{n}\u201d removed from your resources", "r_err": "Something went wrong, try again",
            "wait": "The English version of this story is being prepared. It will appear here automatically in a few minutes."},
 }
 EN_DISCLAIMER = "The views expressed are those of the interviewees and have not been verified. This article was compiled automatically from a transcript of the conversation."
@@ -326,6 +358,9 @@ def render(a, latest=(), base="", disclaimer="", lang="he"):
         elif t == "list":
             out.append('<ul class="l">' + "".join(f"<li>{e(i)}</li>" for i in b["items"]) + "</ul>")
     out.append("</div>")
+    rate_t = e(json.dumps({k: v for k, v in S.items() if k.startswith("r_")}, ensure_ascii=False), quote=True)
+    out.append(f'<div class="rate" data-slug="{e(a["slug"])}" data-name="{e(a.get("channel", "").strip())}" data-t="{rate_t}"><span>{S["rq"]}</span>'
+               '<button class="up" aria-label="thumbs up" title="\U0001F44D">\U0001F44D</button><button class="dn" aria-label="thumbs down" title="\U0001F44E">\U0001F44E</button></div>')
     out.append(f'<a class="watch" href="{e(a["url"])}" target="_blank" rel="noopener">{S["full_pod"] if rss else S["full_yt"]}</a>')
     if disclaimer:
         out.append(f'<p class="disclaimer">{e(disclaimer)}</p>')
@@ -353,4 +388,4 @@ def render(a, latest=(), base="", disclaimer="", lang="he"):
             f'<meta name="description" content="{desc}"><link rel="canonical" href="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}">'
             f'<meta property="og:url" content="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}"><meta property="og:title" content="{e(a["title"])}">'
             f'<meta property="og:description" content="{desc}"><meta property="og:image" content="{e(a.get("image")) if rss and a.get("image") else "https://i.ytimg.com/vi/" + e(a["vid"]) + "/maxresdefault.jpg"}">'
-            f'<style>{CSS}{LANG_CSS}{LTR_CSS if en else ""}</style>{refresh}</head><body style="{_theme(a["topic"])}">{"".join(out)}{PAW_JS}{LANG_JS}</body></html>')
+            f'<style>{CSS}{LANG_CSS}{RATE_CSS}{LTR_CSS if en else ""}</style>{refresh}</head><body style="{_theme(a["topic"])}">{"".join(out)}{PAW_JS}{LANG_JS}{RATE_JS}</body></html>')

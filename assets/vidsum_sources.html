@@ -247,7 +247,8 @@
     .masthead .masthead-actions { grid-column:3; grid-row:1; justify-self:end; }
     .brand-wordmark { height:88px; width:auto; display:block; }
     @media (max-width:640px) { .masthead { grid-template-columns:1fr; min-height:0; padding-block:8px; } .masthead .brand { grid-column:1; } .masthead .masthead-actions { grid-column:1; grid-row:2; justify-self:center; margin-top:4px; } .brand-wordmark { height:56px; } }
-  </style>
+  .grow .plus{background:#e6f9ed;color:#12823b;font-weight:800;font-size:12px;border-radius:999px;padding:1px 8px;margin-inline-start:6px}
+</style>
 </head>
 <body>
   <div class="topline"></div>
@@ -449,7 +450,7 @@ function renderGroups(el, list, o){
     + (list.length ? (checks?'<label class="gall"><input type="checkbox" data-all="'+o.key+'"'+(allOn?' checked':'')+'> הכל ('+list.length+')</label>':'')
     + groupBy(list).map(([cat,items])=>{ const k=o.key+'|'+cat, open=OPEN.has(k), on=items.filter(s=>SEL.has(s.id)).length;
       return '<div class="grp"><div class="ghead"><button class="gtog" data-tog="'+esc(k)+'">'+(open?'−':'+')+'</button>'+(checks?'<input type="checkbox" data-grp="'+esc(k)+'"'+(on===items.length?' checked':'')+'>':'')+'<span>'+esc(cat)+'</span><small>'+(checks?on+'/':'')+items.length+'</small></div>'
-        +'<div class="gbody"'+(open?'':' hidden')+'>'+items.map(s=>'<div class="grow">'+(checks?'<input type="checkbox" data-id="'+esc(s.id)+'"'+(SEL.has(s.id)?' checked':'')+'>':'')+'<span>'+esc(s.name)+'</span><span class="l">'+esc(D.languages[s.language]||s.language)+'</span>'+(o.remove?'<button class="x" data-rm="'+esc(s.id)+'" data-name="'+esc(s.name)+'" title="מחיקה">✕</button>':'')+'</div>').join('')+'</div></div>'; }).join('')
+        +'<div class="gbody"'+(open?'':' hidden')+'>'+items.map(s=>'<div class="grow">'+(checks?'<input type="checkbox" data-id="'+esc(s.id)+'"'+(SEL.has(s.id)?' checked':'')+'>':'')+'<span>'+esc(s.name)+'</span>'+(s.plus>0?'<span class="plus" title="דירגתם פרקים ממקור זה בלייק">+'+s.plus+'</span>':'')+'<span class="l">'+esc(D.languages[s.language]||s.language)+'</span>'+(o.remove?'<button class="x" data-rm="'+esc(s.id)+'" data-name="'+esc(s.name)+'" title="מחיקה">✕</button>':'')+'</div>').join('')+'</div></div>'; }).join('')
     + (checks?'<div class="gsave"><button class="go" data-save="'+o.key+'"'+(DIRTY?'':' disabled')+'>שמירה</button><span class="st" id="st-'+o.key+'"></span></div>':'')
     : '<p class="sub">'+(o.empty||'אין מקורות.')+'</p>');
   el.querySelectorAll('input[data-grp]').forEach(c=>{ const cat=c.dataset.grp.split('|')[1], it=list.filter(s=>(s.vertical||'אחר')===cat), on=it.filter(s=>SEL.has(s.id)).length; c.indeterminate = on>0 && on<it.length; });
