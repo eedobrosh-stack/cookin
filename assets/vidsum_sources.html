@@ -249,12 +249,12 @@
     .ucard .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; } .ucard .chip { background:#f2f2f2; border-radius:999px; padding:3px 11px; font-size:13px; } .ucard .chip.off { opacity:.5; text-decoration:line-through; }
     details#adv { margin:22px 0; } details#adv summary { cursor:pointer; font-weight:700; padding:8px 0; color:#555; }
 
-    /* wordmark logo, centred on every page */
-    .masthead { display:grid !important; grid-template-columns:1fr auto 1fr; align-items:center; height:auto !important; min-height:104px; padding-block:6px; }
-    .masthead .brand { grid-column:2; grid-row:1; justify-self:center; }
-    .masthead .masthead-actions { grid-column:3; grid-row:1; justify-self:end; }
-    .brand-wordmark { height:88px; width:auto; display:block; }
-    @media (max-width:640px) { .masthead { grid-template-columns:1fr; min-height:0; padding-block:8px; } .masthead .brand { grid-column:1; } .masthead .masthead-actions { grid-column:1; grid-row:2; justify-self:center; margin-top:4px; } .brand-wordmark { height:56px; } }
+    /* wordmark logo (paw included): top right on LTR pages, top left on RTL pages; 20% smaller than before */
+    .masthead { display:flex !important; direction:ltr; align-items:center; justify-content:space-between; height:auto !important; min-height:84px; padding-block:6px; }
+    html[dir=ltr] .masthead .brand { order:2; }
+    html[dir=rtl] .masthead .masthead-actions { direction:rtl; } html[dir=ltr] .masthead .masthead-actions { direction:ltr; }
+    .brand-wordmark { height:70px; width:auto; display:block; }
+    @media (max-width:640px) { .masthead { display:grid !important; grid-template-columns:1fr; min-height:0; padding-block:8px; } .masthead .brand { grid-row:1; justify-self:start; order:0; } html[dir=ltr] .masthead .brand { justify-self:end; } .masthead .masthead-actions { grid-row:2; justify-self:center; margin-top:4px; } .brand-wordmark { height:45px; } }
   .grow .plus{background:#e6f9ed;color:#12823b;font-weight:800;font-size:12px;border-radius:999px;padding:1px 8px;margin-inline-start:6px}
 
     .dial { margin:12px 0 4px; padding:10px 12px; border:1px solid #e3e3e3; border-radius:10px; background:#fafafa; }
