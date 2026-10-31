@@ -73,9 +73,9 @@ figcaption{font-size:12px;color:#888;padding-top:8px;font-style:italic}
 .pull cite{display:block;margin-top:8px;font-size:12px;color:var(--acc);opacity:.8;font-style:italic;font-family:Georgia,serif;line-height:1.4}
 .body::after{content:"";display:block;clear:both}
 .hero{position:relative;display:block}
-.pico{position:absolute;inset:auto auto 14px 14px;display:flex;align-items:center;gap:8px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45));transition:transform .12s}
-.aflag{font-size:26px;line-height:1;background:rgba(0,0,0,.55);border-radius:8px;padding:5px 8px;box-shadow:0 1px 6px rgba(0,0,0,.35)}
-.hero:hover .pico{transform:scale(1.08)}.pgen{border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center;font-size:19px;padding-inline-start:3px;box-sizing:border-box}.hero:hover .pgen{background:var(--red)}
+.pico{position:absolute;inset:auto auto 14px 14px;display:flex;direction:ltr;align-items:center;gap:8px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45));transition:transform .12s}
+.aflag{width:40px;height:40px;display:grid;place-items:center;font-size:25px;line-height:1;background:rgba(0,0,0,.55);border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.35)}
+.hero:hover .pico{transform:scale(1.08)}.pgen{border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center;font-size:15px;padding-inline-start:3px;box-sizing:border-box}.hero:hover .pgen{background:var(--red)}
 .watch{display:inline-block;margin:6px 0 30px;padding:11px 20px;background:var(--red);color:#fff;font-weight:700;font-size:15px}
 .watch:hover{background:var(--red-dark)}
 .disclaimer{font-size:13px;color:#888;border-top:1px solid var(--line);padding-top:14px;margin-top:10px}
@@ -410,7 +410,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
            f'<span>{e(fdate(a.get("published_at") or a.get("published") or ""))}</span><span>{mins} {S["read"]}</span>'
            f'<span class="share"><button type="button" class="copy" data-url="{e(SITE + "/vidsum/article/" + a["slug"])}" data-ok="{S["cp_ok"]}" title="{S["cp"]}" aria-label="{S["cp"]}">'
            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/></svg></button></span></div>',
-           f'<figure><a class="hero" href="{e(hero_url)}"{app_attr(hero_app)} target="_blank" rel="noopener" title="{e(hero_title)}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""><span class="pico">{_pf_svg(hero_k, 53)}{audio_flag(audio, not en)}</span></a>'
+           f'<figure><a class="hero" href="{e(hero_url)}"{app_attr(hero_app)} target="_blank" rel="noopener" title="{e(hero_title)}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""><span class="pico">{_pf_svg(hero_k, 40)}{audio_flag(audio, not en)}</span></a>'
            f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())}{"" if rss else S["shot"]}</figcaption></figure>']
     icons = ""
     for k in ("youtube", "spotify", "apple", "rss"):

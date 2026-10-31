@@ -354,14 +354,13 @@
     .pf { display:inline-flex; cursor:pointer; --s:28px; transition:transform .12s; }
     .pf svg { width:var(--s); height:var(--s); display:block; }
     .pf:hover { transform:scale(1.12); }
-    .im > .pfbar { position:absolute; left:8px; bottom:8px; direction:ltr; display:flex; align-items:center; gap:6px; }
-    .pfbar .pf { filter:drop-shadow(0 1px 4px rgba(0,0,0,.5)); }
-    .hero2-i .im > .pfbar, .cd.big .im > .pfbar { left:12px; bottom:12px; gap:8px; }
-    .hero2-i .im .pf, .cd.big .im .pf { --s:40px; }
-    .hero2-s li .pf, .tr small .pf { --s:18px; vertical-align:middle; margin-inline-start:8px; }
+    .im > .pfbar { --bs:24px; position:absolute; left:8px; bottom:8px; direction:ltr; display:flex; align-items:center; gap:6px; }
+    .pfbar .pf { --s:var(--bs); filter:drop-shadow(0 1px 4px rgba(0,0,0,.5)); }
+    .hero2-i .im > .pfbar, .cd.big .im > .pfbar { --bs:32px; left:12px; bottom:12px; gap:8px; }
+        .hero2-s li .pf, .tr small .pf { --s:18px; vertical-align:middle; margin-inline-start:8px; }
 
-    .pfbar .aflag { font-size:15px; line-height:1; background:rgba(0,0,0,.55); border-radius:6px; padding:3px 5px; box-shadow:0 1px 5px rgba(0,0,0,.35); }
-    .hero2-i .pfbar .aflag, .cd.big .pfbar .aflag { font-size:22px; padding:4px 7px; border-radius:8px; }
+    /* the flag is a square exactly the size of the platform icon next to it */
+    .pfbar .aflag { width:var(--bs); height:var(--bs); display:grid; place-items:center; font-size:calc(var(--bs) * .62); line-height:1; background:rgba(0,0,0,.55); border-radius:calc(var(--bs) * .24); box-shadow:0 1px 5px rgba(0,0,0,.35); }
 </style>
 </head>
 <body>
