@@ -480,7 +480,7 @@ def fill_defaults(d):
 
 
 # ------------------------------------------------------------------ run
-def run_scan(countries=None, genres=None, limit=100, classify_cap=600, force_enrich=False, skip_charts=False):
+def run_scan(countries=None, genres=None, limit=100, classify_cap=600, force_enrich=False, skip_charts=False, enrich_max_age=3):
     if STATUS["running"]:
         return False
     countries = [c for c in (countries or list(COUNTRIES)) if c in COUNTRIES]
@@ -495,7 +495,7 @@ def run_scan(countries=None, genres=None, limit=100, classify_cap=600, force_enr
             stage_lookup(d)
             with LOCK:
                 _save(d)
-            stage_enrich(d, force=force_enrich)
+            stage_enrich(d, force=force_enrich, max_age_days=enrich_max_age)       # a large enrich_max_age touches only shows never enriched (the full refresh runs the 512 MB instance out of memory)
             with LOCK:
                 _save(d)
             stage_classify(d, classify_cap)
@@ -811,7 +811,7 @@ def handle_post(handler, path, req):
         return True
     if path == "/api/podscanner/scan":
         ok = run_scan(req.get("countries"), req.get("genres"), int(req.get("limit") or 100), int(req.get("classify_cap") or 600),
-                      bool(req.get("force_enrich")), bool(req.get("skip_charts")))
+                      bool(req.get("force_enrich")), bool(req.get("skip_charts")), int(req.get("enrich_max_age") or 3))
         handler._json({"ok": ok, "error": None if ok else "a scan is already running", "status": STATUS})
         return True
     if path == "/api/podscanner/judge":
