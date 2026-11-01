@@ -33,7 +33,7 @@ COUNTRIES = {
     "ae": ("United Arab Emirates", "ar"),
 }
 GENRES = {1301: "Arts", 1303: "Comedy", 1304: "Education", 1305: "Kids & Family", 1307: "Health & Fitness", 1309: "TV & Film",
-          1310: "Music", 1311: "News", 1314: "Religion & Spirituality", 1315: "Science", 1316: "Sports", 1318: "Technology",
+          1310: "Music", 1311: "News", 1545: "Sports", 1314: "Religion & Spirituality", 1315: "Science", 1316: "Sports", 1318: "Technology",
           1321: "Business", 1324: "Society & Culture", 1488: "True Crime", 1489: "News", 1502: "Leisure", 1511: "Government",
           1512: "History"}
 # Apple genre -> Pawed section, used until/unless the model classifies the pod
@@ -367,7 +367,7 @@ def _prevet_for_classify(p, st):
     """cheap gate before spending model calls: active, enough episodes, wanted language"""
     ds = days_since(p)
     return (ds is not None and ds <= st["max_days_since"] and (p.get("episodes") or 0) >= st["min_episodes"]
-            and (not p.get("language") or p["language"] in st["languages"]))
+            and (not p.get("language") or p["language"] in st["languages"] or p["language"] in st.get("classify_languages", ())))
 
 
 # ------------------------------------------------------------------ step 4: LunaRoute classification
@@ -838,7 +838,7 @@ def handle_post(handler, path, req):
             for k in ("max_days_since", "min_episodes", "max_gap_days"):
                 if k in req:
                     st[k] = max(0, int(req[k]))
-            for k in ("languages", "topics", "block_genres"):
+            for k in ("languages", "topics", "block_genres", "classify_languages"):
                 if isinstance(req.get(k), list):
                     st[k] = [str(x) for x in req[k]][:40]
             revet_all(d)
