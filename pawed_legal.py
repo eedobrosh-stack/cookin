@@ -8,6 +8,8 @@ import html as _html
 import json
 import re
 import threading
+
+import pawed_i18n
 import time
 
 import multiuser
@@ -125,7 +127,7 @@ PRIVACY = {
 <li><b>When you visit:</b> your IP address and basic request details (browser, pages) are handled by our hosting and security providers to deliver and protect the site. We use the country that your IP address maps to, at the moment of the request, to choose your default language and which content to show. We do not save it with your profile.</li>
 <li><b>If you sign in with Google:</b> your Google account ID, name, email address and profile picture link. We never receive your Google password.</li>
 <li><b>Your choices and activity:</b> languages, preferred listening platform, sources you add or hide, episodes you submit, thumbs up or down ratings, and whether your name is hidden.</li>
-<li><b>Cookies and local storage:</b> a session cookie that keeps you signed in, a language cookie (pawed_lang), and a small browser flag that remembers a dismissed hint. These are needed for the site to work.</li>
+<li><b>Cookies and local storage:</b> a session cookie that keeps you signed in, a language cookie (pawed_lang), a region cookie (pawed_geo, only if you open a page with ?geo=), and a small browser flag that remembers a dismissed hint. These are needed for the site to work.</li>
 <li><b>Analytics:</b> Pawed uses Google Analytics 4. It sets cookies and collects usage data such as pages viewed, device type, approximate location and referrer, so we can understand how the site is used. If you are in the EU, the UK or Switzerland, analytics loads only after you click Accept in the banner, and you can <a href="#" class="cc">reset your choice</a> at any time. See Google's own policy for how it handles that data.</li>
 </ul>
 
@@ -177,7 +179,7 @@ PRIVACY = {
 <li><b>בעת ביקור:</b> כתובת ה-IP ופרטי בקשה בסיסיים (דפדפן, דפים) מטופלים על ידי ספקי האחסון והאבטחה שלנו כדי להעביר ולהגן על האתר. אנו משתמשים במדינה שכתובת ה-IP שלכם מתאימה לה, ברגע הבקשה, כדי לבחור שפת ברירת מחדל ואילו תכנים להציג. איננו שומרים אותה בפרופיל שלכם.</li>
 <li><b>אם נכנסתם עם Google:</b> מזהה חשבון Google, שם, כתובת דוא"ל וקישור לתמונת הפרופיל. איננו מקבלים את הסיסמה שלכם ל-Google.</li>
 <li><b>הבחירות והפעילות שלכם:</b> שפות, פלטפורמת האזנה מועדפת, מקורות שהוספתם או הסתרתם, פרקים שהגשתם, דירוגי אגודל למעלה או למטה, והאם שמכם מוסתר.</li>
-<li><b>עוגיות ואחסון מקומי:</b> עוגיית התחברות ששומרת אתכם מחוברים, עוגיית שפה (pawed_lang), ודגל קטן בדפדפן שזוכר רמז שנסגר. אלה נדרשים לתפקוד האתר.</li>
+<li><b>עוגיות ואחסון מקומי:</b> עוגיית התחברות ששומרת אתכם מחוברים, עוגיית שפה (pawed_lang), עוגיית אזור (pawed_geo, רק אם פותחים דף עם ?geo=), ודגל קטן בדפדפן שזוכר רמז שנסגר. אלה נדרשים לתפקוד האתר.</li>
 <li><b>אנליטיקה:</b> Pawed משתמש ב-Google Analytics 4. הוא מציב עוגיות ואוסף נתוני שימוש כמו דפים שנצפו, סוג מכשיר, מיקום משוער ומקור הגעה, כדי שנבין איך משתמשים באתר. אם אתם באיחוד האירופי, בבריטניה או בשווייץ, האנליטיקה נטענת רק לאחר שלחצתם על אישור בבאנר, ואפשר <a href="#" class="cc">לאפס את הבחירה</a> בכל עת. ראו את מדיניות Google לגבי הטיפול בנתונים אלה.</li>
 </ul>
 
@@ -267,34 +269,41 @@ footer{max-width:820px;margin:0 auto 40px;padding:0 22px;color:var(--muted);font
 """
 
 
-def _page(title, body, lang, extra_js=""):
+def _page(title, body, lang, extra_js="", ui=None):
     he = lang == "he"
-    nav = (f'<a href="/vidsum">{"ראשי" if he else "Home"}</a><a href="/vidsum/terms">{"תנאי שימוש" if he else "Terms"}</a>'
-           f'<a href="/vidsum/privacy">{"פרטיות" if he else "Privacy"}</a><a href="/vidsum/takedown">{"הסרה ופניות" if he else "Takedown"}</a>')
-    sw = ('<span class="langsw"><a data-l="en" class="%s" title="%s">\U0001F1FA\U0001F1F8</a><a data-l="he" class="%s" title="%s">\U0001F1EE\U0001F1F1</a></span>'
-          % ("" if he else "on", "English", "on" if he else "", "עברית" if he else "Hebrew"))
-    js = ("<script>document.querySelectorAll('.langsw a').forEach(function(a){a.onclick=function(e){e.preventDefault();var l=a.dataset.l;"
-          "document.cookie='pawed_lang='+l+';path=/;max-age=31536000;samesite=lax';"
-          "try{fetch('/api/vidsum/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).finally(function(){location.reload()});}"
-          "catch(x){location.reload()}};});</script>")
-    return (f'<!doctype html><html lang="{lang}" dir="{"rtl" if he else "ltr"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    ui = ui or lang
+    L = lambda k: pawed_i18n.lookup(k, ui) or k                 # chrome in the visitor's UI language, the legal text itself in English or Hebrew
+    nav = (f'<a href="/vidsum">{"ראשי" if he else L("Home")}</a><a href="/vidsum/terms">{"תנאי שימוש" if he else L("Terms")}</a>'
+           f'<a href="/vidsum/privacy">{"פרטיות" if he else L("Privacy")}</a><a href="/vidsum/takedown">{"הסרה ופניות" if he else L("Takedown")}</a>')
+    if ui not in ("he", "en"):
+        body = f'<p class="small">{L("The full text is available in English and Hebrew.")}</p>' + body
+    sw = '<span class="langsw"></span>'
+    js = '<script src="/vidsum/i18n.js"></script>'
+    return (f'<!doctype html><html lang="{ui}" dir="{"rtl" if he else "ltr"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<title>{_html.escape(title)} | Pawed</title><meta name="robots" content="index,follow"><style>{CSS}</style></head><body>'
             f'<div class="top"><div class="top-in"><a href="/"><img src="/vidsum/pawed-wordmark.png" alt="Pawed"></a><nav>{nav}</nav>{sw}</div></div>'
             f'<main><div class="card">{body}</div></main>'
             f'<footer>Pawed · {SITE}</footer>{js}{extra_js}</body></html>')
 
 
+def _l(lang):
+    return lang if lang == "he" else "en"
+
+
 def render_terms(lang):
-    return _page("תנאי שימוש" if lang == "he" else "Terms of use", TERMS[lang], lang)
+    ui, lang = lang, _l(lang)
+    return _page("תנאי שימוש" if lang == "he" else "Terms of use", TERMS[lang], lang, ui=ui)
 
 
 def render_privacy(lang):
+    ui, lang = lang, _l(lang)
     js = ("<script>document.querySelectorAll('a.cc').forEach(function(a){a.onclick=function(e){e.preventDefault();"
           "document.cookie='pawed_consent=;path=/;max-age=0;samesite=lax';location.reload()}});</script>")
-    return _page("מדיניות פרטיות" if lang == "he" else "Privacy policy", PRIVACY[lang], lang, js)
+    return _page("מדיניות פרטיות" if lang == "he" else "Privacy policy", PRIVACY[lang], lang, js, ui=ui)
 
 
 def render_takedown(lang):
+    ui, lang = lang, _l(lang)
     f = FORM[lang]
     he = lang == "he"
     e = _html.escape
@@ -323,7 +332,7 @@ def render_takedown(lang):
           "if(j.ok){m.className='msg ok';m.textContent=T.ok+' '+j.ref+'. '+T.ok2;f.reset();}else{m.className='msg err';m.textContent=j.error||T.err;}"
           "b.disabled=false;b.textContent=T.send}).catch(function(){m.className='msg err';m.textContent=T.err;b.disabled=false;b.textContent=T.send})};})();</script>"
           % json.dumps({k: f[k] for k in ("sending", "send", "ok", "ok2", "err")}, ensure_ascii=False))
-    return _page(f["title"], body, lang, js)
+    return _page(f["title"], body, lang, js, ui=ui)
 
 
 # ------------------------------------------------------------------ takedown requests: storage + rate limit

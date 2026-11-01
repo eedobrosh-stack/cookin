@@ -15,6 +15,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 import multiuser
 import cands
 import vidsum_articles
+import geo_suites
 import podscanner
 
 # Category landing pages: /salads serves the gallery with the Salads category
@@ -456,6 +457,12 @@ CONSENT_COUNTRIES = {"AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
 CONSENT_TEXT = {
     "en": ("We use Google Analytics to understand how the site is used. It sets cookies only if you accept.", "Accept", "Decline", "Privacy policy"),
     "he": ("אנו משתמשים ב-Google Analytics כדי להבין איך משתמשים באתר. הוא מציב עוגיות רק אם תסכימו.", "אישור", "דחייה", "מדיניות פרטיות"),
+    "de": ("Wir nutzen Google Analytics, um zu verstehen, wie die Seite genutzt wird. Cookies werden nur gesetzt, wenn Sie zustimmen.", "Akzeptieren", "Ablehnen", "Datenschutz"),
+    "fr": ("Nous utilisons Google Analytics pour comprendre l'usage du site. Il ne dépose de cookies que si vous acceptez.", "Accepter", "Refuser", "Politique de confidentialité"),
+    "it": ("Usiamo Google Analytics per capire come viene usato il sito. Imposta cookie solo se accetti.", "Accetta", "Rifiuta", "Informativa sulla privacy"),
+    "es": ("Usamos Google Analytics para entender cómo se usa el sitio. Solo instala cookies si aceptas.", "Aceptar", "Rechazar", "Política de privacidad"),
+    "pt": ("Usamos o Google Analytics para entender como o site é usado. Ele só define cookies se você aceitar.", "Aceitar", "Recusar", "Política de privacidade"),
+    "nl": ("We gebruiken Google Analytics om te begrijpen hoe de site wordt gebruikt. Het plaatst alleen cookies als je accepteert.", "Accepteren", "Weigeren", "Privacybeleid"),
 }
 
 
@@ -725,8 +732,10 @@ class Handler(SimpleHTTPRequestHandler):
         if st == "no":
             return body
         if st == "ask":
-            m = re.search(r"(?:^|;\s*)pawed_lang=(he|en)\b", self.headers.get("Cookie") or "")
-            snip = consent_banner(m.group(1) if m else "en", self._is_pawed_host()).encode("utf-8")
+            m = re.search(r"(?:^|;\s*)pawed_lang=(he|en|de|fr|it|es|pt|nl)\b", self.headers.get("Cookie") or "")
+            cc = (self.headers.get("CF-IPCountry") or "").strip().upper()
+            geo_lang = geo_suites.GEOS[geo_suites.CC2SLUG[cc]][4] if cc in geo_suites.CC2SLUG else "en"     # no choice yet: the visitor's country language
+            snip = consent_banner(m.group(1) if m else geo_lang, self._is_pawed_host()).encode("utf-8")
             i = body.rfind(b"</body>")
             return body[:i] + snip + body[i:] if i != -1 else body + snip
         snip = (PAWED_GA_SNIPPET if self._is_pawed_host() else GA_SNIPPET).encode("utf-8")

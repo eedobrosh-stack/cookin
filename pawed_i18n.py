@@ -1,0 +1,236 @@
+"""UI translations for Pawed: one table keyed by the English UI string, six target languages.
+
+Hebrew and English stay in the pages themselves (he is the source, en the first translation). Every other language is looked up here
+by the English text, so a string missing from the table simply shows in English. The same table feeds the browser (/vidsum/i18n.js)
+and the server-rendered article pages.
+"""
+import json
+
+ORDER = ("de", "fr", "it", "es", "pt", "nl")               # the order of every tuple below
+UI_LANGS = ("he", "en") + ORDER
+NATIVE = {"he": "עברית", "en": "English", "de": "Deutsch", "fr": "Français", "it": "Italiano", "es": "Español", "pt": "Português", "nl": "Nederlands"}
+LOCALE = {"he": "he-IL", "en": "en-US", "de": "de-DE", "fr": "fr-FR", "it": "it-IT", "es": "es-ES", "pt": "pt-BR", "nl": "nl-NL"}
+
+T = {
+    "● Updating automatically": ("● Aktualisiert sich automatisch", "● Mise à jour automatique", "● Aggiornamento automatico", "● Se actualiza automáticamente", "● Atualiza automaticamente", "● Wordt automatisch bijgewerkt"),
+    "Log": ("Protokoll", "Journal", "Registro", "Registro", "Registro", "Logboek"),
+    "Terms": ("Nutzungsbedingungen", "Conditions d'utilisation", "Termini d'uso", "Términos de uso", "Termos de uso", "Gebruiksvoorwaarden"),
+    "Privacy": ("Datenschutz", "Confidentialité", "Privacy", "Privacidad", "Privacidade", "Privacy"),
+    "Takedown": ("Entfernung & Anfragen", "Retrait et demandes", "Rimozione e richieste", "Retirada y solicitudes", "Remoção e solicitações", "Verwijdering en verzoeken"),
+    "All summaries": ("Alle Zusammenfassungen", "Tous les résumés", "Tutti i riassunti", "Todos los resúmenes", "Todos os resumos", "Alle samenvattingen"),
+    "Resources": ("Quellen", "Sources", "Fonti", "Fuentes", "Fontes", "Bronnen"),
+    "Sign in and add your podcasts": ("Melden Sie sich an und fügen Sie Ihre Podcasts hinzu", "Connectez-vous et ajoutez vos podcasts", "Accedi e aggiungi i tuoi podcast", "Inicia sesión y añade tus podcasts", "Entre e adicione seus podcasts", "Log in en voeg je podcasts toe"),
+    "Sign in to Pawed and tailor your pods": ("Melden Sie sich bei Pawed an und passen Sie Ihre Podcasts an", "Connectez-vous à Pawed et personnalisez vos podcasts", "Accedi a Pawed e personalizza i tuoi podcast", "Inicia sesión en Pawed y personaliza tus podcasts", "Entre no Pawed e personalize seus podcasts", "Log in bij Pawed en stel je podcasts samen"),
+    "Sign in to Pawed and tailor your pods:": ("Melden Sie sich bei Pawed an und passen Sie Ihre Podcasts an:", "Connectez-vous à Pawed et personnalisez vos podcasts :", "Accedi a Pawed e personalizza i tuoi podcast:", "Inicia sesión en Pawed y personaliza tus podcasts:", "Entre no Pawed e personalize seus podcasts:", "Log in bij Pawed en stel je podcasts samen:"),
+    "Add a channel by name or YouTube link, and remove existing ones with ✕": ("Fügen Sie einen Kanal per Name oder YouTube-Link hinzu und entfernen Sie vorhandene mit ✕", "Ajoutez une chaîne par nom ou lien YouTube, et retirez les existantes avec ✕", "Aggiungi un canale per nome o link YouTube e rimuovi quelli esistenti con ✕", "Añade un canal por nombre o enlace de YouTube y quita los existentes con ✕", "Adicione um canal por nome ou link do YouTube e remova os existentes com ✕", "Voeg een kanaal toe op naam of YouTube-link en verwijder bestaande met ✕"),
+    "Loading…": ("Lädt…", "Chargement…", "Caricamento…", "Cargando…", "Carregando…", "Laden…"),
+    "Pawed · a news portal built on video and podcast summaries": ("Pawed · ein Nachrichtenportal auf Basis von Video- und Podcast-Zusammenfassungen", "Pawed · un portail d'actualités fondé sur des résumés de vidéos et de podcasts", "Pawed · un portale di notizie basato su riassunti di video e podcast", "Pawed · un portal de noticias basado en resúmenes de vídeos y podcasts", "Pawed · um portal de notícias baseado em resumos de vídeos e podcasts", "Pawed · een nieuwsportaal op basis van samenvattingen van video's en podcasts"),
+    "Today": ("Heute", "Aujourd'hui", "Oggi", "Hoy", "Hoje", "Vandaag"),
+    "Yesterday": ("Gestern", "Hier", "Ieri", "Ayer", "Ontem", "Gisteren"),
+    "yesterday": ("gestern", "hier", "ieri", "ayer", "ontem", "gisteren"),
+    "Today at ": ("Heute um ", "Aujourd'hui à ", "Oggi alle ", "Hoy a las ", "Hoje às ", "Vandaag om "),
+    "Summary ": ("Zusammenfassung ", "Résumé ", "Riassunto ", "Resumen ", "Resumo ", "Samenvatting "),
+    " min": (" Min.", " min", " min", " min", " min", " min"),
+    "Home": ("Startseite", "Accueil", "Home", "Inicio", "Início", "Home"),
+    "More in ": ("Mehr in ", "Plus dans ", "Altro in ", "Más en ", "Mais em ", "Meer in "),
+    "More from every topic": ("Mehr aus allen Themen", "Plus de tous les sujets", "Altro da tutti gli argomenti", "Más de todos los temas", "Mais de todos os temas", "Meer uit alle onderwerpen"),
+    "Keep reading": ("Weiterlesen", "Continuer la lecture", "Continua a leggere", "Seguir leyendo", "Continuar lendo", "Lees verder"),
+    " · another round": (" · noch eine Runde", " · un nouveau tour", " · un altro giro", " · otra ronda", " · mais uma rodada", " · nog een ronde"),
+    "Back to top": ("Nach oben", "Haut de page", "Torna su", "Volver arriba", "Voltar ao topo", "Terug naar boven"),
+    "No summaries in this section yet. They will appear here automatically.": ("In diesem Bereich gibt es noch keine Zusammenfassungen. Sie erscheinen hier automatisch.", "Aucun résumé dans cette rubrique pour l'instant. Ils apparaîtront ici automatiquement.", "Non ci sono ancora riassunti in questa sezione. Appariranno qui automaticamente.", "Aún no hay resúmenes en esta sección. Aparecerán aquí automáticamente.", "Ainda não há resumos nesta seção. Eles aparecerão aqui automaticamente.", "Nog geen samenvattingen in deze rubriek. Ze verschijnen hier automatisch."),
+    "Live Shows": ("Live-Shows", "Spectacles", "Spettacoli dal vivo", "Espectáculos", "Shows ao vivo", "Liveshows"),
+    "Cooking": ("Kochen", "Cuisine", "In cucina", "Cocina", "Cozinha", "Koken"),
+    "Hello ": ("Hallo ", "Bonjour ", "Ciao ", "Hola ", "Olá ", "Hallo "),
+    "Hello": ("Hallo", "Bonjour", "Ciao", "Hola", "Olá", "Hallo"),
+    " · personalised view": (" · persönliche Ansicht", " · vue personnalisée", " · vista personalizzata", " · vista personalizada", " · visualização personalizada", " · persoonlijke weergave"),
+    "Failed to load": ("Laden fehlgeschlagen", "Échec du chargement", "Caricamento non riuscito", "Error al cargar", "Falha ao carregar", "Laden mislukt"),
+    "Add your podcast channels here": ("Fügen Sie hier Ihre Podcast-Kanäle hinzu", "Ajoutez ici vos chaînes de podcasts", "Aggiungi qui i tuoi canali podcast", "Añade aquí tus canales de podcasts", "Adicione aqui seus canais de podcast", "Voeg hier je podcastkanalen toe"),
+    "Resources | Pawed": ("Quellen | Pawed", "Sources | Pawed", "Fonti | Pawed", "Fuentes | Pawed", "Fontes | Pawed", "Bronnen | Pawed"),
+    "News from video and podcast summaries": ("Nachrichten aus Video- und Podcast-Zusammenfassungen", "L'actualité à partir de résumés de vidéos et de podcasts", "Notizie dai riassunti di video e podcast", "Noticias a partir de resúmenes de vídeos y podcasts", "Notícias a partir de resumos de vídeos e podcasts", "Nieuws uit samenvattingen van video's en podcasts"),
+    "← Back to the home page": ("← Zurück zur Startseite", "← Retour à l'accueil", "← Torna alla home page", "← Volver a la página de inicio", "← Voltar à página inicial", "← Terug naar de homepage"),
+    "Podcasts and YouTube channels that Pawed summarises. Add your own resources (only you can see them) and choose which of Pawed's resources appear for you.": ("Podcasts und YouTube-Kanäle, die Pawed zusammenfasst. Fügen Sie eigene Quellen hinzu (nur Sie sehen sie) und wählen Sie, welche Pawed-Quellen bei Ihnen erscheinen.", "Les podcasts et chaînes YouTube que Pawed résume. Ajoutez vos propres sources (vous seul les voyez) et choisissez lesquelles de celles de Pawed s'affichent chez vous.", "Podcast e canali YouTube che Pawed riassume. Aggiungi le tue fonti (solo tu le vedi) e scegli quali fonti di Pawed mostrare.", "Podcasts y canales de YouTube que Pawed resume. Añade tus propias fuentes (solo tú las ves) y elige cuáles de las de Pawed aparecen.", "Podcasts e canais do YouTube que o Pawed resume. Adicione suas próprias fontes (só você as vê) e escolha quais fontes do Pawed aparecem para você.", "Podcasts en YouTube-kanalen die Pawed samenvat. Voeg je eigen bronnen toe (alleen jij ziet ze) en kies welke bronnen van Pawed bij jou verschijnen."),
+    "Add a resource": ("Quelle hinzufügen", "Ajouter une source", "Aggiungi una fonte", "Añadir una fuente", "Adicionar uma fonte", "Bron toevoegen"),
+    "Channel by name": ("Kanal nach Name", "Chaîne par nom", "Canale per nome", "Canal por nombre", "Canal por nome", "Kanaal op naam"),
+    "Pick by preference": ("Nach Vorlieben wählen", "Choisir selon vos préférences", "Scegli per preferenza", "Elegir por preferencias", "Escolher por preferência", "Kiezen op voorkeur"),
+    "Single episode": ("Einzelne Folge", "Épisode unique", "Singolo episodio", "Episodio individual", "Episódio único", "Enkele aflevering"),
+    "Paste a YouTube link to one episode and it will be summarised and shown only to you.": ("Fügen Sie den YouTube-Link zu einer Folge ein. Sie wird zusammengefasst und nur Ihnen angezeigt.", "Collez le lien YouTube d'un épisode : il sera résumé et visible uniquement par vous.", "Incolla il link YouTube di un episodio: verrà riassunto e mostrato solo a te.", "Pega el enlace de YouTube de un episodio y se resumirá y se mostrará solo a ti.", "Cole o link do YouTube de um episódio e ele será resumido e mostrado só para você.", "Plak de YouTube-link van één aflevering en die wordt samengevat en alleen aan jou getoond."),
+    "Add episode": ("Folge hinzufügen", "Ajouter l'épisode", "Aggiungi episodio", "Añadir episodio", "Adicionar episódio", "Aflevering toevoegen"),
+    "Podcast name…": ("Podcast-Name…", "Nom du podcast…", "Nome del podcast…", "Nombre del podcast…", "Nome do podcast…", "Naam van de podcast…"),
+    "Type the podcast name and pick it from the list. The address, language and topic are filled in automatically from Pawed's worldwide scan.": ("Geben Sie den Podcast-Namen ein und wählen Sie ihn aus der Liste. Adresse, Sprache und Thema werden automatisch aus Paweds weltweitem Scan übernommen.", "Saisissez le nom du podcast et choisissez-le dans la liste. L'adresse, la langue et le sujet sont remplis automatiquement à partir de l'analyse mondiale de Pawed.", "Digita il nome del podcast e sceglilo dall'elenco. Indirizzo, lingua e argomento vengono compilati automaticamente dalla scansione mondiale di Pawed.", "Escribe el nombre del podcast y elígelo de la lista. La dirección, el idioma y el tema se rellenan automáticamente con el rastreo mundial de Pawed.", "Digite o nome do podcast e escolha na lista. O endereço, o idioma e o tema são preenchidos automaticamente pela varredura mundial do Pawed.", "Typ de naam van de podcast en kies hem uit de lijst. Adres, taal en onderwerp worden automatisch ingevuld uit Paweds wereldwijde scan."),
+    "Choose a language, country and topic to get a list of quality channels. Lower the strictness to also get channels with fewer episodes, an older latest episode and a lower rating.": ("Wählen Sie Sprache, Land und Thema, um eine Liste hochwertiger Kanäle zu erhalten. Senken Sie die Strenge, um auch Kanäle mit weniger Folgen, älterer letzter Folge und niedrigerer Bewertung zu sehen.", "Choisissez une langue, un pays et un sujet pour obtenir une liste de chaînes de qualité. Baissez la rigueur pour inclure aussi des chaînes avec moins d'épisodes, un dernier épisode plus ancien et une note plus basse.", "Scegli lingua, paese e argomento per ottenere un elenco di canali di qualità. Abbassa il rigore per includere anche canali con meno episodi, ultimo episodio più vecchio e punteggio più basso.", "Elige idioma, país y tema para obtener una lista de canales de calidad. Baja el rigor para incluir también canales con menos episodios, un último episodio más antiguo y una puntuación más baja.", "Escolha idioma, país e tema para obter uma lista de canais de qualidade. Reduza o rigor para incluir também canais com menos episódios, último episódio mais antigo e nota mais baixa.", "Kies taal, land en onderwerp voor een lijst kwaliteitskanalen. Verlaag de strengheid om ook kanalen met minder afleveringen, een oudere laatste aflevering en een lagere score te krijgen."),
+    "Automatic": ("Automatisch", "Automatique", "Automatico", "Automático", "Automático", "Automatisch"),
+    "You gave episodes from this resource a thumbs up": ("Sie haben Folgen dieser Quelle mit „Daumen hoch“ bewertet", "Vous avez mis un pouce vers le haut aux épisodes de cette source", "Hai dato un pollice in su agli episodi di questa fonte", "Diste un «me gusta» a episodios de esta fuente", "Você deu um joinha a episódios desta fonte", "Je gaf afleveringen van deze bron een duim omhoog"),
+    "Delete": ("Löschen", "Supprimer", "Elimina", "Eliminar", "Excluir", "Verwijderen"),
+    "Preferred listening platform": ("Bevorzugte Hörplattform", "Plateforme d'écoute préférée", "Piattaforma di ascolto preferita", "Plataforma de escucha preferida", "Plataforma de escuta preferida", "Favoriete luisterplatform"),
+    "RSS player": ("RSS-Player", "Lecteur RSS", "Lettore RSS", "Reproductor RSS", "Player RSS", "RSS-speler"),
+    "The platform you choose appears on the episode image and opens its app. The others appear as buttons below. Podcast episodes without a YouTube video show the available player.": ("Die gewählte Plattform erscheint auf dem Folgenbild und öffnet ihre App. Die anderen erscheinen als Schaltflächen darunter. Podcast-Folgen ohne YouTube-Video zeigen den verfügbaren Player.", "La plateforme choisie apparaît sur l'image de l'épisode et ouvre son application. Les autres apparaissent en boutons dessous. Les épisodes sans vidéo YouTube affichent le lecteur disponible.", "La piattaforma scelta appare sull'immagine dell'episodio e apre la sua app. Le altre compaiono come pulsanti sotto. Gli episodi senza video YouTube mostrano il lettore disponibile.", "La plataforma elegida aparece en la imagen del episodio y abre su aplicación. Las demás aparecen como botones debajo. Los episodios sin vídeo de YouTube muestran el reproductor disponible.", "A plataforma escolhida aparece na imagem do episódio e abre o aplicativo dela. As outras aparecem como botões abaixo. Episódios sem vídeo no YouTube mostram o player disponível.", "Het gekozen platform verschijnt op de afbeelding van de aflevering en opent de bijbehorende app. De andere staan als knoppen eronder. Afleveringen zonder YouTube-video tonen de beschikbare speler."),
+    "Rate how much each topic interests you, pick languages, and Pawed will suggest podcasts to match. You can untick any suggestion before adding.": ("Bewerten Sie, wie sehr Sie jedes Thema interessiert, wählen Sie Sprachen, und Pawed schlägt passende Podcasts vor. Vor dem Hinzufügen können Sie jeden Vorschlag abwählen.", "Notez l'intérêt que vous portez à chaque sujet, choisissez les langues, et Pawed vous proposera des podcasts adaptés. Vous pouvez décocher toute suggestion avant d'ajouter.", "Indica quanto ti interessa ogni argomento, scegli le lingue e Pawed ti suggerirà podcast adatti. Prima di aggiungere puoi deselezionare qualsiasi suggerimento.", "Indica cuánto te interesa cada tema, elige idiomas y Pawed te sugerirá podcasts a tu medida. Puedes desmarcar cualquier sugerencia antes de añadir.", "Indique o quanto cada tema interessa a você, escolha idiomas e o Pawed sugerirá podcasts sob medida. Você pode desmarcar qualquer sugestão antes de adicionar.", "Geef aan hoe interessant je elk onderwerp vindt, kies talen, en Pawed stelt passende podcasts voor. Je kunt elke suggestie uitvinken voor je toevoegt."),
+    "Suggest channels": ("Kanäle vorschlagen", "Suggérer des chaînes", "Suggerisci canali", "Sugerir canales", "Sugerir canais", "Kanalen voorstellen"),
+    "Strictness": ("Strenge", "Rigueur", "Rigore", "Rigor", "Rigor", "Strengheid"),
+    "Lenient": ("Locker", "Souple", "Flessibile", "Flexible", "Flexível", "Soepel"),
+    "Strict": ("Streng", "Strict", "Rigoroso", "Estricto", "Rigoroso", "Streng"),
+    "All languages": ("Alle Sprachen", "Toutes les langues", "Tutte le lingue", "Todos los idiomas", "Todos os idiomas", "Alle talen"),
+    "No channels found for this choice. Raise a topic weight, add languages or lower the strictness.": ("Für diese Auswahl wurden keine Kanäle gefunden. Erhöhen Sie ein Themengewicht, fügen Sie Sprachen hinzu oder senken Sie die Strenge.", "Aucune chaîne trouvée pour ce choix. Augmentez le poids d'un sujet, ajoutez des langues ou baissez la rigueur.", "Nessun canale trovato per questa scelta. Aumenta il peso di un argomento, aggiungi lingue o abbassa il rigore.", "No se encontraron canales para esta selección. Sube el peso de un tema, añade idiomas o baja el rigor.", "Nenhum canal encontrado para esta escolha. Aumente o peso de um tema, adicione idiomas ou reduza o rigor.", "Geen kanalen gevonden voor deze keuze. Verhoog het gewicht van een onderwerp, voeg talen toe of verlaag de strengheid."),
+    "Show channels": ("Kanäle anzeigen", "Afficher les chaînes", "Mostra canali", "Mostrar canales", "Mostrar canais", "Kanalen tonen"),
+    "Podcast name": ("Podcast-Name", "Nom du podcast", "Nome del podcast", "Nombre del podcast", "Nome do podcast", "Naam van de podcast"),
+    "Language": ("Sprache", "Langue", "Lingua", "Idioma", "Idioma", "Taal"),
+    "Address": ("Adresse", "Adresse", "Indirizzo", "Dirección", "Endereço", "Adres"),
+    "Topic": ("Thema", "Sujet", "Argomento", "Tema", "Tema", "Onderwerp"),
+    "Name": ("Name", "Nom", "Nome", "Nombre", "Nome", "Naam"),
+    "Name (optional). Site blocks reading? Enter the show name here": ("Name (optional). Seite blockiert das Lesen? Geben Sie hier den Sendungsnamen ein", "Nom (facultatif). Le site bloque la lecture ? Saisissez ici le nom de l'émission", "Nome (facoltativo). Il sito blocca la lettura? Inserisci qui il nome del programma", "Nombre (opcional). ¿El sitio bloquea la lectura? Escribe aquí el nombre del programa", "Nome (opcional). O site bloqueia a leitura? Digite aqui o nome do programa", "Naam (optioneel). Blokkeert de site het lezen? Voer hier de naam van het programma in"),
+    "YouTube, a podcast page (e.g. mako) or RSS · empty = search by name on Apple Podcasts": ("YouTube, eine Podcast-Seite (z. B. mako) oder RSS · leer = Suche nach Name bei Apple Podcasts", "YouTube, une page de podcast (p. ex. mako) ou RSS · vide = recherche par nom sur Apple Podcasts", "YouTube, una pagina podcast (es. mako) o RSS · vuoto = cerca per nome su Apple Podcasts", "YouTube, una página de podcast (p. ej. mako) o RSS · vacío = buscar por nombre en Apple Podcasts", "YouTube, uma página de podcast (p. ex. mako) ou RSS · vazio = buscar pelo nome no Apple Podcasts", "YouTube, een podcastpagina (bijv. mako) of RSS · leeg = zoeken op naam in Apple Podcasts"),
+    "Add": ("Hinzufügen", "Ajouter", "Aggiungi", "Añadir", "Adicionar", "Toevoegen"),
+    "Error": ("Fehler", "Erreur", "Errore", "Error", "Erro", "Fout"),
+    "Saved": ("Gespeichert", "Enregistré", "Salvato", "Guardado", "Salvo", "Opgeslagen"),
+    "Sign out": ("Abmelden", "Se déconnecter", "Esci", "Cerrar sesión", "Sair", "Uitloggen"),
+    "RSS podcast": ("RSS-Podcast", "Podcast RSS", "Podcast RSS", "Podcast RSS", "Podcast RSS", "RSS-podcast"),
+    "Waiting for an address": ("Wartet auf eine Adresse", "En attente d'une adresse", "In attesa di un indirizzo", "Esperando una dirección", "Aguardando um endereço", "Wacht op een adres"),
+    "Waiting for a YouTube address": ("Wartet auf eine YouTube-Adresse", "En attente d'une adresse YouTube", "In attesa di un indirizzo YouTube", "Esperando una dirección de YouTube", "Aguardando um endereço do YouTube", "Wacht op een YouTube-adres"),
+    "Save": ("Speichern", "Enregistrer", "Salva", "Guardar", "Salvar", "Opslaan"),
+    "Me": ("Ich", "Moi", "Io", "Yo", "Eu", "Ik"),
+    "Remove": ("Entfernen", "Retirer", "Rimuovi", "Quitar", "Remover", "Verwijderen"),
+    "Hide": ("Ausblenden", "Masquer", "Nascondi", "Ocultar", "Ocultar", "Verbergen"),
+    "Remove the channel from my view": ("Kanal aus meiner Ansicht entfernen", "Retirer la chaîne de mon affichage", "Rimuovi il canale dalla mia vista", "Quitar el canal de mi vista", "Remover o canal da minha visualização", "Kanaal uit mijn weergave verwijderen"),
+    "Anonymous": ("Anonym", "Anonyme", "Anonimo", "Anónimo", "Anônimo", "Anoniem"),
+    "Enter a YouTube address": ("Geben Sie eine YouTube-Adresse ein", "Saisissez une adresse YouTube", "Inserisci un indirizzo YouTube", "Introduce una dirección de YouTube", "Digite um endereço do YouTube", "Voer een YouTube-adres in"),
+    "Enter a podcast name or a YouTube address": ("Geben Sie einen Podcast-Namen oder eine YouTube-Adresse ein", "Saisissez un nom de podcast ou une adresse YouTube", "Inserisci il nome di un podcast o un indirizzo YouTube", "Introduce el nombre de un podcast o una dirección de YouTube", "Digite o nome de um podcast ou um endereço do YouTube", "Voer een podcastnaam of een YouTube-adres in"),
+    "Resource removed": ("Quelle entfernt", "Source retirée", "Fonte rimossa", "Fuente eliminada", "Fonte removida", "Bron verwijderd"),
+    "Resource added": ("Quelle hinzugefügt", "Source ajoutée", "Fonte aggiunta", "Fuente añadida", "Fonte adicionada", "Bron toegevoegd"),
+    "The name was added, it will start once a YouTube address is attached": ("Der Name wurde hinzugefügt und wird aktiv, sobald eine YouTube-Adresse angehängt ist", "Le nom a été ajouté ; il démarrera dès qu'une adresse YouTube sera associée", "Il nome è stato aggiunto e partirà quando verrà collegato un indirizzo YouTube", "Se añadió el nombre; empezará cuando se asocie una dirección de YouTube", "O nome foi adicionado e começará quando um endereço do YouTube for vinculado", "De naam is toegevoegd en start zodra er een YouTube-adres is gekoppeld"),
+    "Paste a YouTube link": ("YouTube-Link einfügen", "Collez un lien YouTube", "Incolla un link YouTube", "Pega un enlace de YouTube", "Cole um link do YouTube", "Plak een YouTube-link"),
+    "Sending…": ("Wird gesendet…", "Envoi…", "Invio…", "Enviando…", "Enviando…", "Verzenden…"),
+    "This is not a YouTube link": ("Das ist kein YouTube-Link", "Ce n'est pas un lien YouTube", "Questo non è un link YouTube", "Este no es un enlace de YouTube", "Este não é um link do YouTube", "Dit is geen YouTube-link"),
+    "This episode already exists in Pawed": ("Diese Folge gibt es bei Pawed bereits", "Cet épisode existe déjà dans Pawed", "Questo episodio esiste già in Pawed", "Este episodio ya existe en Pawed", "Este episódio já existe no Pawed", "Deze aflevering bestaat al in Pawed"),
+    "✓ Added to the queue. The story will appear on the site in the next few hours.": ("✓ Zur Warteschlange hinzugefügt. Der Beitrag erscheint in den nächsten Stunden auf der Seite.", "✓ Ajouté à la file d'attente. L'article apparaîtra sur le site dans les prochaines heures.", "✓ Aggiunto alla coda. L'articolo apparirà sul sito nelle prossime ore.", "✓ Añadido a la cola. La noticia aparecerá en el sitio en las próximas horas.", "✓ Adicionado à fila. A matéria aparecerá no site nas próximas horas.", "✓ Aan de wachtrij toegevoegd. Het artikel verschijnt de komende uren op de site."),
+    "Network error": ("Netzwerkfehler", "Erreur réseau", "Errore di rete", "Error de red", "Erro de rede", "Netwerkfout"),
+    "Not found in the scan. Try another name.": ("Im Scan nicht gefunden. Versuchen Sie einen anderen Namen.", "Introuvable dans l'analyse. Essayez un autre nom.", "Non trovato nella scansione. Prova un altro nome.", "No se encontró en el rastreo. Prueba con otro nombre.", "Não encontrado na varredura. Tente outro nome.", "Niet gevonden in de scan. Probeer een andere naam."),
+    "Already in the list": ("Bereits in der Liste", "Déjà dans la liste", "Già nell'elenco", "Ya está en la lista", "Já está na lista", "Staat al in de lijst"),
+    "Add to resources": ("Zu den Quellen hinzufügen", "Ajouter aux sources", "Aggiungi alle fonti", "Añadir a las fuentes", "Adicionar às fontes", "Aan bronnen toevoegen"),
+    "Searching…": ("Suche läuft…", "Recherche…", "Ricerca…", "Buscando…", "Buscando…", "Zoeken…"),
+    "No quality channels found for this choice. Try another language, country or topic.": ("Für diese Auswahl wurden keine hochwertigen Kanäle gefunden. Versuchen Sie eine andere Sprache, ein anderes Land oder Thema.", "Aucune chaîne de qualité trouvée pour ce choix. Essayez une autre langue, un autre pays ou un autre sujet.", "Nessun canale di qualità trovato per questa scelta. Prova un'altra lingua, paese o argomento.", "No se encontraron canales de calidad para esta selección. Prueba con otro idioma, país o tema.", "Nenhum canal de qualidade encontrado para esta escolha. Tente outro idioma, país ou tema.", "Geen kwaliteitskanalen gevonden voor deze keuze. Probeer een andere taal, een ander land of onderwerp."),
+    "Adding…": ("Wird hinzugefügt…", "Ajout…", "Aggiunta…", "Añadiendo…", "Adicionando…", "Toevoegen…"),
+    "All countries": ("Alle Länder", "Tous les pays", "Tutti i paesi", "Todos los países", "Todos os países", "Alle landen"),
+    "All topics": ("Alle Themen", "Tous les sujets", "Tutti gli argomenti", "Todos los temas", "Todos os temas", "Alle onderwerpen"),
+    "Automatic (from the content)": ("Automatisch (nach Inhalt)", "Automatique (selon le contenu)", "Automatico (dal contenuto)", "Automático (según el contenido)", "Automático (pelo conteúdo)", "Automatisch (op basis van de inhoud)"),
+    "Other": ("Andere", "Autre", "Altro", "Otro", "Outro", "Overig"),
+    "No resources.": ("Keine Quellen.", "Aucune source.", "Nessuna fonte.", "Sin fuentes.", "Nenhuma fonte.", "Geen bronnen."),
+    "Tick the categories and channels that should appear on your home page. \"All\" is the same as \"show Pawed's resources\".": ("Haken Sie die Kategorien und Kanäle an, die auf Ihrer Startseite erscheinen sollen. „Alle“ entspricht „Pawed-Quellen anzeigen“.", "Cochez les catégories et chaînes à afficher sur votre page d'accueil. « Tout » équivaut à « afficher les sources de Pawed ».", "Seleziona le categorie e i canali da mostrare nella tua home page. «Tutti» equivale a «mostra le fonti di Pawed».", "Marca las categorías y canales que deben aparecer en tu página de inicio. «Todo» equivale a «mostrar las fuentes de Pawed».", "Marque as categorias e os canais que devem aparecer na sua página inicial. “Tudo” equivale a “mostrar as fontes do Pawed”.", "Vink de categorieën en kanalen aan die op je homepage moeten staan. „Alles” is hetzelfde als „toon de bronnen van Pawed”."),
+    "Pawed's selection": ("Paweds Auswahl", "La sélection de Pawed", "La selezione di Pawed", "La selección de Pawed", "A seleção do Pawed", "De selectie van Pawed"),
+    "The resources Pawed follows.": ("Die Quellen, denen Pawed folgt.", "Les sources que Pawed suit.", "Le fonti che Pawed segue.", "Las fuentes que sigue Pawed.", "As fontes que o Pawed acompanha.", "De bronnen die Pawed volgt."),
+    "My resources": ("Meine Quellen", "Mes sources", "Le mie fonti", "Mis fuentes", "Minhas fontes", "Mijn bronnen"),
+    "Resources you add are visible only to you. Tick what to show and delete what you do not need.": ("Von Ihnen hinzugefügte Quellen sind nur für Sie sichtbar. Haken Sie an, was angezeigt werden soll, und löschen Sie, was Sie nicht brauchen.", "Les sources que vous ajoutez ne sont visibles que par vous. Cochez ce qu'il faut afficher et supprimez ce dont vous n'avez pas besoin.", "Le fonti che aggiungi sono visibili solo a te. Seleziona cosa mostrare ed elimina ciò che non ti serve.", "Las fuentes que añadas solo las ves tú. Marca lo que quieres mostrar y elimina lo que no necesites.", "As fontes que você adiciona só ficam visíveis para você. Marque o que mostrar e exclua o que não precisar.", "Bronnen die je toevoegt zijn alleen voor jou zichtbaar. Vink aan wat je wilt tonen en verwijder wat je niet nodig hebt."),
+    "You have not added any resources yet. Start with the form above.": ("Sie haben noch keine Quellen hinzugefügt. Beginnen Sie mit dem Formular oben.", "Vous n'avez pas encore ajouté de sources. Commencez par le formulaire ci-dessus.", "Non hai ancora aggiunto fonti. Inizia dal modulo qui sopra.", "Aún no has añadido fuentes. Empieza con el formulario de arriba.", "Você ainda não adicionou fontes. Comece pelo formulário acima.", "Je hebt nog geen bronnen toegevoegd. Begin met het formulier hierboven."),
+    "Saved ✓ the choice will apply on the home page": ("Gespeichert ✓ die Auswahl gilt auf der Startseite", "Enregistré ✓ le choix s'appliquera sur la page d'accueil", "Salvato ✓ la scelta verrà applicata alla home page", "Guardado ✓ la selección se aplicará en la página de inicio", "Salvo ✓ a escolha será aplicada na página inicial", "Opgeslagen ✓ de keuze geldt op de homepage"),
+    "Hebrew": ("Hebräisch", "Hébreu", "Ebraico", "Hebreo", "Hebraico", "Hebreeuws"),
+    "Politics": ("Politik", "Politique", "Politica", "Política", "Política", "Politiek"),
+    "Technology": ("Technologie", "Technologie", "Tecnologia", "Tecnología", "Tecnologia", "Technologie"),
+    "Economy": ("Wirtschaft", "Économie", "Economia", "Economía", "Economia", "Economie"),
+    "Sports": ("Sport", "Sport", "Sport", "Deportes", "Esportes", "Sport"),
+    "Culture": ("Kultur", "Culture", "Cultura", "Cultura", "Cultura", "Cultuur"),
+    "Lifestyle": ("Lifestyle", "Style de vie", "Lifestyle", "Estilo de vida", "Estilo de vida", "Lifestyle"),
+    "Health": ("Gesundheit", "Santé", "Salute", "Salud", "Saúde", "Gezondheid"),
+    "The full text is available in English and Hebrew.": ("Der vollständige Text ist auf Englisch und Hebräisch verfügbar.", "Le texte complet est disponible en anglais et en hébreu.", "Il testo completo è disponibile in inglese e in ebraico.", "El texto completo está disponible en inglés y hebreo.", "O texto completo está disponível em inglês e hebraico.", "De volledige tekst is beschikbaar in het Engels en Hebreeuws."),
+    # article page chrome (server-rendered)
+    "By": ("Von", "Par", "Di", "Por", "Por", "Door"),
+    "Pawed Desk": ("Pawed-Redaktion", "Rédaction Pawed", "Redazione Pawed", "Redacción de Pawed", "Redação do Pawed", "Pawed-redactie"),
+    "From": ("Aus", "Issu de", "Da", "De", "De", "Uit"),
+    "min read": ("Min. Lesezeit", "min de lecture", "min di lettura", "min de lectura", "min de leitura", "min leestijd"),
+    "Listen to the episode": ("Folge anhören", "Écouter l'épisode", "Ascolta l'episodio", "Escuchar el episodio", "Ouvir o episódio", "Luister naar de aflevering"),
+    "Watch the video on YouTube": ("Video auf YouTube ansehen", "Regarder la vidéo sur YouTube", "Guarda il video su YouTube", "Ver el vídeo en YouTube", "Assistir ao vídeo no YouTube", "Bekijk de video op YouTube"),
+    " · Screenshot from the video": (" · Screenshot aus dem Video", " · Capture d'écran de la vidéo", " · Schermata dal video", " · Captura del vídeo", " · Captura de tela do vídeo", " · Screenshot uit de video"),
+    "Also listen on:": ("Auch anhören auf:", "Écouter aussi sur :", "Ascolta anche su:", "Escuchar también en:", "Ouça também em:", "Luister ook op:"),
+    "Listen on ": ("Anhören auf ", "Écouter sur ", "Ascolta su ", "Escuchar en ", "Ouvir no ", "Luister op "),
+    "Key points": ("Kernpunkte", "Points clés", "Punti chiave", "Puntos clave", "Pontos principais", "Belangrijkste punten"),
+    "Listen to the full episode ↗": ("Ganze Folge anhören ↗", "Écouter l'épisode complet ↗", "Ascolta l'episodio completo ↗", "Escuchar el episodio completo ↗", "Ouvir o episódio completo ↗", "Luister naar de hele aflevering ↗"),
+    "Watch the full conversation on YouTube ↗": ("Das ganze Gespräch auf YouTube ansehen ↗", "Regarder l'entretien complet sur YouTube ↗", "Guarda la conversazione completa su YouTube ↗", "Ver la conversación completa en YouTube ↗", "Assistir à conversa completa no YouTube ↗", "Bekijk het volledige gesprek op YouTube ↗"),
+    "More stories": ("Weitere Beiträge", "Autres articles", "Altri articoli", "Más noticias", "Mais matérias", "Meer artikelen"),
+    "Latest": ("Neueste", "À la une", "Ultime", "Lo último", "Mais recentes", "Nieuwste"),
+    "By topic": ("Nach Thema", "Par sujet", "Per argomento", "Por tema", "Por tema", "Per onderwerp"),
+    "stories": ("Beiträge", "articles", "articoli", "noticias", "matérias", "artikelen"),
+    "Copy link": ("Link kopieren", "Copier le lien", "Copia link", "Copiar enlace", "Copiar link", "Link kopiëren"),
+    "Link copied": ("Link kopiert", "Lien copié", "Link copiato", "Enlace copiado", "Link copiado", "Link gekopieerd"),
+    "Watch on YouTube": ("Auf YouTube ansehen", "Regarder sur YouTube", "Guarda su YouTube", "Ver en YouTube", "Assistir no YouTube", "Bekijk op YouTube"),
+    "Listen in the podcast player": ("Im Podcast-Player anhören", "Écouter dans le lecteur de podcasts", "Ascolta nel lettore podcast", "Escuchar en el reproductor de podcasts", "Ouvir no player de podcast", "Luister in de podcastspeler"),
+    "Was this summary useful?": ("War diese Zusammenfassung hilfreich?", "Ce résumé vous a-t-il été utile ?", "Questo riassunto ti è stato utile?", "¿Te ha resultado útil este resumen?", "Este resumo foi útil?", "Was deze samenvatting nuttig?"),
+    "Rating and removing content require signing in": ("Zum Bewerten und Entfernen von Inhalten ist eine Anmeldung nötig", "Pour noter et retirer du contenu, il faut se connecter", "Per valutare e rimuovere contenuti è necessario accedere", "Para valorar y quitar contenido hay que iniciar sesión", "Para avaliar e remover conteúdo é preciso entrar", "Beoordelen en content verwijderen vereist inloggen"),
+    "Sign in with Google": ("Mit Google anmelden", "Se connecter avec Google", "Accedi con Google", "Iniciar sesión con Google", "Entrar com o Google", "Inloggen met Google"),
+    "Cancel": ("Abbrechen", "Annuler", "Annulla", "Cancelar", "Cancelar", "Annuleren"),
+    "Remove “{n}” from your resources?": ("„{n}“ aus Ihren Quellen entfernen?", "Retirer « {n} » de vos sources ?", "Rimuovere «{n}» dalle tue fonti?", "¿Quitar «{n}» de tus fuentes?", "Remover “{n}” das suas fontes?", "„{n}” uit je bronnen verwijderen?"),
+    "Its episodes will no longer show up for you. You can bring it back on the Resources page.": ("Seine Folgen erscheinen bei Ihnen nicht mehr. Auf der Quellenseite können Sie es zurückholen.", "Ses épisodes n'apparaîtront plus chez vous. Vous pouvez le remettre depuis la page Sources.", "I suoi episodi non compariranno più per te. Puoi riaggiungerlo dalla pagina Fonti.", "Sus episodios dejarán de aparecer. Puedes recuperarla en la página de Fuentes.", "Os episódios dele não aparecerão mais para você. Você pode trazê-lo de volta na página Fontes.", "Zijn afleveringen verschijnen niet meer bij jou. Je kunt hem terugzetten op de pagina Bronnen."),
+    "Yes, remove": ("Ja, entfernen", "Oui, retirer", "Sì, rimuovi", "Sí, quitar", "Sim, remover", "Ja, verwijderen"),
+    "+1 for {n}": ("+1 für {n}", "+1 pour {n}", "+1 per {n}", "+1 para {n}", "+1 para {n}", "+1 voor {n}"),
+    "Rating removed": ("Bewertung entfernt", "Note retirée", "Valutazione rimossa", "Valoración eliminada", "Avaliação removida", "Beoordeling verwijderd"),
+    "“{n}” removed from your resources": ("„{n}“ aus Ihren Quellen entfernt", "« {n} » retiré de vos sources", "«{n}» rimossa dalle tue fonti", "«{n}» eliminada de tus fuentes", "“{n}” removida das suas fontes", "„{n}” uit je bronnen verwijderd"),
+    "Something went wrong, try again": ("Etwas ist schiefgelaufen, bitte erneut versuchen", "Une erreur s'est produite, réessayez", "Qualcosa è andato storto, riprova", "Algo salió mal, inténtalo de nuevo", "Algo deu errado, tente novamente", "Er ging iets mis, probeer het opnieuw"),
+    "The English version of this story is being prepared. It will appear here automatically in a few minutes.": ("Die Übersetzung dieses Beitrags wird vorbereitet. Sie erscheint in wenigen Minuten automatisch hier.", "La traduction de cet article est en préparation. Elle apparaîtra ici automatiquement dans quelques minutes.", "La traduzione di questo articolo è in preparazione. Apparirà qui automaticamente tra pochi minuti.", "La traducción de esta noticia se está preparando. Aparecerá aquí automáticamente en unos minutos.", "A tradução desta matéria está sendo preparada. Ela aparecerá aqui automaticamente em alguns minutos.", "De vertaling van dit artikel wordt voorbereid. Ze verschijnt over enkele minuten automatisch hier."),
+}
+
+# patterns run on the English text after the Hebrew->English pass: (regex, (de, fr, it, es, pt, nl)); $1.. are the captured groups
+P = [
+    (r"^(.*) · (\d+) episodes · latest episode (\d+) days ago$", ("$1 · $2 Folgen · letzte Folge vor $3 Tagen", "$1 · $2 épisodes · dernier épisode il y a $3 jours", "$1 · $2 episodi · ultimo episodio $3 giorni fa", "$1 · $2 episodios · último episodio hace $3 días", "$1 · $2 episódios · último episódio há $3 dias", "$1 · $2 afleveringen · laatste aflevering $3 dagen geleden")),
+    (r"^(.*) · (\d+) episodes · latest episode today$", ("$1 · $2 Folgen · letzte Folge heute", "$1 · $2 épisodes · dernier épisode aujourd'hui", "$1 · $2 episodi · ultimo episodio oggi", "$1 · $2 episodios · último episodio hoy", "$1 · $2 episódios · último episódio hoje", "$1 · $2 afleveringen · laatste aflevering vandaag")),
+    (r"^(.*) · (\d+) episodes · latest episode yesterday$", ("$1 · $2 Folgen · letzte Folge gestern", "$1 · $2 épisodes · dernier épisode hier", "$1 · $2 episodi · ultimo episodio ieri", "$1 · $2 episodios · último episodio ayer", "$1 · $2 episódios · último episódio ontem", "$1 · $2 afleveringen · laatste aflevering gisteren")),
+    (r"^(.*) · (\d+) episodes$", ("$1 · $2 Folgen", "$1 · $2 épisodes", "$1 · $2 episodi", "$1 · $2 episodios", "$1 · $2 episódios", "$1 · $2 afleveringen")),
+    (r"^At least (\d+) episodes · latest episode within (\d+) days · chart score at least (\d+)$", ("Mindestens $1 Folgen · letzte Folge innerhalb von $2 Tagen · Chart-Wert mindestens $3", "Au moins $1 épisodes · dernier épisode datant de moins de $2 jours · score au classement d'au moins $3", "Almeno $1 episodi · ultimo episodio entro $2 giorni · punteggio in classifica almeno $3", "Al menos $1 episodios · último episodio de hace menos de $2 días · puntuación en listas de al menos $3", "Pelo menos $1 episódios · último episódio nos últimos $2 dias · pontuação nas paradas de pelo menos $3", "Minstens $1 afleveringen · laatste aflevering binnen $2 dagen · hitlijstscore minstens $3")),
+    (r"^· weight (\d+)$", ("· Gewicht $1", "· poids $1", "· peso $1", "· peso $1", "· peso $1", "· gewicht $1")),
+    (r"^We suggest (\d+) channels\. The best are ticked; untick or add up to (\d+)\.$", ("Wir schlagen $1 Kanäle vor. Die besten sind angehakt; abwählen oder bis zu $2 hinzufügen.", "Nous proposons $1 chaînes. Les meilleures sont cochées ; décochez ou ajoutez jusqu'à $2.", "Ti proponiamo $1 canali. I migliori sono selezionati; deseleziona o aggiungine fino a $2.", "Te sugerimos $1 canales. Los mejores están marcados; desmarca o añade hasta $2.", "Sugerimos $1 canais. Os melhores estão marcados; desmarque ou adicione até $2.", "We stellen $1 kanalen voor. De beste zijn aangevinkt; vink uit of voeg er tot $2 toe.")),
+    (r"^Hello (.*)$", ("Hallo $1", "Bonjour $1", "Ciao $1", "Hola $1", "Olá $1", "Hallo $1")),
+    (r"^You have (\d+) of (\d+) resources left\. Resources you add are visible only to you\.$", ("Sie haben noch $1 von $2 Quellen übrig. Von Ihnen hinzugefügte Quellen sind nur für Sie sichtbar.", "Il vous reste $1 sources sur $2. Les sources que vous ajoutez ne sont visibles que par vous.", "Ti restano $1 fonti su $2. Le fonti che aggiungi sono visibili solo a te.", "Te quedan $1 de $2 fuentes. Las fuentes que añadas solo las ves tú.", "Restam $1 de $2 fontes. As fontes que você adiciona só ficam visíveis para você.", "Je hebt nog $1 van $2 bronnen over. Bronnen die je toevoegt zijn alleen voor jou zichtbaar.")),
+    (r"^(\d+) days ago$", ("vor $1 Tagen", "il y a $1 jours", "$1 giorni fa", "hace $1 días", "há $1 dias", "$1 dagen geleden")),
+    (r"^(\d+) episodes$", ("$1 Folgen", "$1 épisodes", "$1 episodi", "$1 episodios", "$1 episódios", "$1 afleveringen")),
+    (r"^Latest episode (.*)$", ("Letzte Folge $1", "Dernier épisode $1", "Ultimo episodio $1", "Último episodio $1", "Último episódio $1", "Laatste aflevering $1")),
+    (r"^· every day$", ("· täglich", "· tous les jours", "· ogni giorno", "· todos los días", "· todos os dias", "· elke dag")),
+    (r"^All \((\d+)\)$", ("Alle ($1)", "Tout ($1)", "Tutti ($1)", "Todo ($1)", "Tudo ($1)", "Alles ($1)")),
+    (r"^Add selected \((\d+)\)$", ("Ausgewählte hinzufügen ($1)", "Ajouter la sélection ($1)", "Aggiungi selezionati ($1)", "Añadir seleccionados ($1)", "Adicionar selecionados ($1)", "Geselecteerde toevoegen ($1)")),
+    (r"^(✓ )?Added (\d+) resources\. Their new content will appear on the site in the next few hours\.$", ("$1$2 Quellen hinzugefügt. Ihre neuen Inhalte erscheinen in den nächsten Stunden auf der Seite.", "$1$2 sources ajoutées. Leur nouveau contenu apparaîtra sur le site dans les prochaines heures.", "$1$2 fonti aggiunte. I loro nuovi contenuti appariranno sul sito nelle prossime ore.", "$1$2 fuentes añadidas. Su nuevo contenido aparecerá en el sitio en las próximas horas.", "$1$2 fontes adicionadas. O novo conteúdo delas aparecerá no site nas próximas horas.", "$1$2 bronnen toegevoegd. Hun nieuwe content verschijnt de komende uren op de site.")),
+    (r"^❌ Not added: (.*)$", ("❌ Nicht hinzugefügt: $1", "❌ Non ajouté : $1", "❌ Non aggiunto: $1", "❌ No añadido: $1", "❌ Não adicionado: $1", "❌ Niet toegevoegd: $1")),
+    (r"^Found (\d+) quality channels \(showing the top (\d+)\)\. You can pick up to (\d+)\.$", ("$1 hochwertige Kanäle gefunden (die besten $2 werden angezeigt). Sie können bis zu $3 auswählen.", "$1 chaînes de qualité trouvées (les $2 meilleures sont affichées). Vous pouvez en choisir jusqu'à $3.", "Trovati $1 canali di qualità (mostrati i migliori $2). Puoi sceglierne fino a $3.", "Se encontraron $1 canales de calidad (se muestran los $2 mejores). Puedes elegir hasta $3.", "Encontrados $1 canais de qualidade (exibindo os $2 melhores). Você pode escolher até $3.", "$1 kwaliteitskanalen gevonden (de beste $2 worden getoond). Je kunt er tot $3 kiezen.")),
+    (r"^Found (\d+) quality channels\. You can pick up to (\d+)\.$", ("$1 hochwertige Kanäle gefunden. Sie können bis zu $2 auswählen.", "$1 chaînes de qualité trouvées. Vous pouvez en choisir jusqu'à $2.", "Trovati $1 canali di qualità. Puoi sceglierne fino a $2.", "Se encontraron $1 canales de calidad. Puedes elegir hasta $2.", "Encontrados $1 canais de qualidade. Você pode escolher até $2.", "$1 kwaliteitskanalen gevonden. Je kunt er tot $2 kiezen.")),
+    (r"^No resources to show \(your settings hide (\d+)\)\.$", ("Keine Quellen zum Anzeigen (Ihre Einstellungen blenden $1 aus).", "Aucune source à afficher (vos réglages en masquent $1).", "Nessuna fonte da mostrare (le tue impostazioni ne nascondono $1).", "No hay fuentes que mostrar (tu configuración oculta $1).", "Nenhuma fonte para mostrar (suas configurações ocultam $1).", "Geen bronnen om te tonen (jouw instellingen verbergen er $1).")),
+    (r"^No resources to show\.$", ("Keine Quellen zum Anzeigen.", "Aucune source à afficher.", "Nessuna fonte da mostrare.", "No hay fuentes que mostrar.", "Nenhuma fonte para mostrar.", "Geen bronnen om te tonen.")),
+    (r"^Remove \"(.*)\" from the resources\?$", ("„$1“ aus den Quellen entfernen?", "Retirer « $1 » des sources ?", "Rimuovere «$1» dalle fonti?", "¿Quitar «$1» de las fuentes?", "Remover “$1” das fontes?", "„$1” uit de bronnen verwijderen?")),
+    (r"^Delete \"(.*)\" from my resources\?$", ("„$1“ aus meinen Quellen löschen?", "Supprimer « $1 » de mes sources ?", "Eliminare «$1» dalle mie fonti?", "¿Eliminar «$1» de mis fuentes?", "Excluir “$1” das minhas fontes?", "„$1” uit mijn bronnen verwijderen?")),
+]
+
+
+def lookup(en, lang):
+    """English UI text -> text in `lang`, or None. Leading/trailing whitespace of the key is honoured, then ignored as a fallback."""
+    if lang not in ORDER:
+        return None
+    i = ORDER.index(lang)
+    v = T.get(en)
+    if v:
+        return v[i]
+    core = en.strip()
+    v = T.get(core)
+    if v:
+        return en[:len(en) - len(en.lstrip())] + v[i] + en[len(en.rstrip()):]
+    return None
+
+
+def strings_for(lang, base):
+    """server side: a copy of an English string table with every entry translated into `lang` when we have it"""
+    return {k: (lookup(v, lang) or v) for k, v in base.items()}
+
+
+SWITCH_JS = (
+    "(function(){var N=%s;function go(){var sw=document.querySelector('.langsw');if(!sw)return;var cur=window.LANG||document.documentElement.lang||'he';"
+    "var s=document.createElement('select');s.className='langsel';s.setAttribute('aria-label','Language');"
+    "Object.keys(N).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=N[k];if(k===cur)o.selected=true;s.appendChild(o);});"
+    "s.onchange=function(){var l=s.value;document.cookie='pawed_lang='+l+';path=/;max-age=31536000;samesite=lax';"
+    "var d=function(){location.reload()};try{fetch('/api/vidsum/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(d,d);}catch(x){d();}};"
+    "sw.textContent='';sw.appendChild(s);}"
+    "var st=document.createElement('style');st.textContent='.langsel{font:inherit;font-size:13px;padding:2px 4px;border:1px solid rgba(128,128,128,.4);border-radius:6px;background:transparent;color:inherit;cursor:pointer}';"
+    "document.head.appendChild(st);"
+    "if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();})();\n")
+
+
+def js():
+    """the browser side: window.PI = {order, T, P}; piT(english, lang) -> translation or the English text; plus the language menu"""
+    pats = [[p, list(r)] for p, r in P]
+    return ("window.PI={order:%s,T:%s,P:%s};\n" % (json.dumps(list(ORDER)), json.dumps(T, ensure_ascii=False), json.dumps(pats, ensure_ascii=False)) +
+            "window.piT=function(en,lang){var i=PI.order.indexOf(lang);if(i<0||typeof en!=='string')return en;var v=PI.T[en];if(v)return v[i];"
+            "var m=en.match(/^(\\s*)([\\s\\S]*?)(\\s*)$/);if(m[2]&&m[2]!==en){v=PI.T[m[2]];if(v)return m[1]+v[i]+m[3];}"
+            "var s=m[2];for(var k=0;k<PI.P.length;k++){var re=new RegExp(PI.P[k][0]);if(re.test(s)){return m[1]+s.replace(re,function(){var a=arguments,t=PI.P[k][1][i];"
+            "return t.replace(/\\$(\\d)/g,function(_,n){return a[+n]===undefined?'':a[+n];});})+m[3];}}return en;};\n"
+            + SWITCH_JS % json.dumps(NATIVE, ensure_ascii=False))

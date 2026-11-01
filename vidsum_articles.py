@@ -6,6 +6,7 @@ import urllib.request, urllib.parse, urllib.error
 
 import multiuser
 import geo_suites
+import pawed_i18n
 from multiuser import secret, GEMINI_MODEL, BudgetExhausted, current_user
 from multiuser import log as _mlog
 
@@ -1375,7 +1376,7 @@ def _motif_svg(m, acc):
 
 def cover_svg(a, lang="he"):
     motif = _motif_name(a)                          # chosen from the Hebrew topic, before the label is translated
-    if lang == "en":
+    if lang != "he":
         a = dict(a, topic=vidsum_render.EN_TOPICS.get(a.get("topic"), a.get("topic", "")), _acc_topic=a.get("topic"))
     acc = _COVER_ACC.get(a.get("_acc_topic") or a.get("topic"), "#e0a43a")
     seed = sum(ord(c) for c in a.get("vid", "x"))
@@ -1616,7 +1617,7 @@ def set_vprefs(uid, req):
         p["muted"] = [str(x)[:40] for x in req["muted"]][:200]
     if isinstance(req.get("hiddenBase"), list):
         p["hiddenBase"] = [str(x)[:80] for x in req["hiddenBase"]][:300]
-    if req.get("lang") in ("he", "en"):
+    if req.get("lang") in pawed_i18n.UI_LANGS:
         p["lang"] = req["lang"]
     if req.get("platform") in ("youtube", "spotify", "apple", "rss"):
         p["platform"] = req["platform"]
@@ -1640,24 +1641,26 @@ def viewer_country(handler):
 def explicit_lang(handler, qs=None):
     """The language the visitor chose themselves: ?lang=, the signed-in user's saved flag, the pawed_lang cookie. '' if never chosen."""
     q = ((qs or {}).get("lang") or [""])[0]
-    if q in ("he", "en"):
+    if q in pawed_i18n.UI_LANGS:
         return q
     try:
         u = current_user(handler)
         if u and u.get("id") != "admin-token":
             l = get_vprefs(u["id"]).get("lang")
-            if l in ("he", "en"):
+            if l in pawed_i18n.UI_LANGS:
                 return l
     except Exception:
         pass
-    m = re.search(r"(?:^|;\s*)pawed_lang=(he|en)\b", handler.headers.get("Cookie") or "")
+    m = re.search(r"(?:^|;\s*)pawed_lang=(he|en|de|fr|it|es|pt|nl)\b", handler.headers.get("Cookie") or "")
     return m.group(1) if m else ""
 
 
 def default_lang(handler):
     """No choice made yet: Hebrew for Israel (and when the country is unknown), English for the rest of the world."""
     cc = viewer_country(handler)
-    return "en" if cc and cc != "IL" else "he"
+    if not cc or cc == "IL":
+        return "he"
+    return geo_suites.GEOS[geo_suites.CC2SLUG[cc]][4] if cc in geo_suites.CC2SLUG else "en"
 
 
 def request_lang(handler, qs=None):
@@ -2237,8 +2240,9 @@ def _serve(handler, path, dflt=None):
     try:
         with open(path, "rb") as f:
             html = f.read()
-        if dflt == "en":                 # visitors outside Israel open the English edition until they pick a flag
-            html = html.replace(b'l=m?m[1]:"he"', b'l=m?m[1]:"en"', 1)
+        html = html.replace(b"(he|en)/", b"(he|en|de|fr|it|es|pt|nl)/", 1)         # every UI language is a valid cookie value
+        if dflt and dflt != "he":        # visitors outside Israel open their suite's language until they pick one
+            html = html.replace(b'l=m?m[1]:"he"', b'l=m?m[1]:"%s"' % dflt.encode(), 1)
         handler._html(html, "no-store")
     except OSError:
         handler._json({"error": "page missing"}, 404)
@@ -2467,7 +2471,7 @@ def handle_get(handler, path, qs):
             handler._json({"error": "article not found"}, 404)
         else:
             lang = request_lang(handler, qs)
-            if lang == "en" and a.get("blocks") and not a.get("en"):
+            if lang != "he" and a.get("blocks") and not a.get("en"):
                 import vidsum_translate
                 vidsum_translate.want(a["slug"])                       # not translated yet: do this one next
             pf = ""
@@ -2573,6 +2577,15 @@ def handle_get(handler, path, qs):
         return True
     if path == "/api/vidsum/lang":
         handler._json({"ok": True, "lang": request_lang(handler, qs)})
+        return True
+    if path == "/vidsum/i18n.js":
+        body = pawed_i18n.js().encode("utf-8")
+        handler.send_response(200)
+        handler.send_header("Content-Type", "application/javascript; charset=utf-8")
+        handler.send_header("Cache-Control", "public, max-age=300")
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
         return True
     if path == "/api/vidsum/sources":
         user = current_user(handler)
@@ -3078,9 +3091,9 @@ def handle_post(handler, path, req):
     if path == "/api/vidsum/lang":                       # remember the language for the signed-in user (the cookie is set by the page)
         l = req.get("lang")
         user = current_user(handler)
-        if l in ("he", "en") and user and user.get("id") != "admin-token":
+        if l in pawed_i18n.UI_LANGS and user and user.get("id") != "admin-token":
             set_vprefs(user["id"], {"lang": l})
-        handler._json({"ok": l in ("he", "en"), "lang": l})
+        handler._json({"ok": l in pawed_i18n.UI_LANGS, "lang": l})
         return True
     if path == "/api/vidsum/takedown":                 # public form: no sign-in needed
         import pawed_legal

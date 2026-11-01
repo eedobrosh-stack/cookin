@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <script>(function(){var m=location.search.match(/[?&]geo=([A-Za-z_-]+)/);if(m){document.cookie="pawed_geo="+(m[1].toLowerCase()==="auto"?"; max-age=0":m[1].toLowerCase()+";max-age=31536000")+";path=/;samesite=lax";}})();</script>
-  <script>(function(){var m=document.cookie.match(/(?:^|;\s*)pawed_lang=(he|en)/),l=m?m[1]:"he";window.LANG=l;var d=document.documentElement;d.lang=l;d.dir=l==="en"?"ltr":"rtl";})();</script>
+  <script>(function(){var m=document.cookie.match(/(?:^|;\s*)pawed_lang=(he|en|de|fr|it|es|pt|nl)/),l=m?m[1]:"he";window.LANG=l;var d=document.documentElement;d.lang=l;d.dir=l==="he"?"rtl":"ltr";})();</script>
+  <script src="/vidsum/i18n.js"></script>
   <meta name="theme-color" content="#e3222b">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>מקורות | Pawed</title>
@@ -270,7 +271,7 @@
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a></div><span class="langsw"><a data-l="en" title="English">🇺🇸</a><a data-l="he" title="עברית">🇮🇱</a></span></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a></div><span class="langsw"></span></div></div>
   <header class="masthead">
     <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
     <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
@@ -415,7 +416,8 @@ $('n_add').onclick = async () => {
 
 // ---------- add-source panel ----------
 const LANG_NAMES = {he:'עברית',en:'English',es:'Español',de:'Deutsch',fr:'Français',pt:'Português',nl:'Nederlands',sv:'Svenska',ja:'日本語',it:'Italiano',ru:'Русский',pl:'Polski',tr:'Türkçe',ko:'한국어',ar:'العربية',no:'Norsk'};
-const langName = k => (window.LANG==='en' && CATOPT && CATOPT.names_en && CATOPT.names_en[k]) || LANG_NAMES[k] || (CATOPT && CATOPT.names && CATOPT.names[k]) || k;
+const dispName = k => { try{ return window.LANG!=='he' && window.LANG!=='en' ? new Intl.DisplayNames([window.LANG],{type:'language'}).of(k) : ''; }catch(e){ return ''; } };
+const langName = k => dispName(k) || (window.LANG!=='he' && CATOPT && CATOPT.names_en && CATOPT.names_en[k]) || LANG_NAMES[k] || (CATOPT && CATOPT.names && CATOPT.names[k]) || k;
 const normN = s => String(s||'').replace(/[^\p{L}\p{N}]/gu,'').toLowerCase();
 let CATOPT = null, PICKED = null, PK = [], SELPK = new Set();
 const mineCount = () => D.sources.filter(s=>s.mine).length;
@@ -576,7 +578,7 @@ async function load(){
   if(!$('n_lang').options.length){ $('n_lang').innerHTML = opts(D.languages,'he'); $('n_vert').innerHTML = '<option value="">אוטומטי (לפי התוכן)</option>'+opts(D.verticals,''); }
   render(); loadUsers();
 }
-document.getElementById('today').textContent = new Date().toLocaleDateString(window.LANG==='en'?'en-US':'he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+document.getElementById('today').textContent = new Date().toLocaleDateString(({he:'he-IL',en:'en-US',de:'de-DE',fr:'fr-FR',it:'it-IT',es:'es-ES',pt:'pt-BR',nl:'nl-NL'})[window.LANG]||'en-US',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעינה</td></tr>'; });
 </script>
 <script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>
@@ -584,12 +586,12 @@ load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעי�
 <script>
 // ---- English edition: translate the page text (static and dynamic) from a Hebrew -> English table; LANG comes from the pawed_lang cookie ----
 (function(){
-  const EN = window.LANG==='en';
+  const EN = window.LANG!=='he';
   const sw = document.querySelector('.langsw');
   if(sw){ sw.querySelectorAll('a').forEach(a=>{ a.classList.toggle('on', a.dataset.l===(EN?'en':'he'));
     a.onclick=e=>{ e.preventDefault(); const l=a.dataset.l; if(l===(EN?'en':'he')) return; document.cookie='pawed_lang='+l+';path=/;max-age=31536000;samesite=lax';
       const done=()=>location.reload(); try{ fetch('/api/vidsum/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(done,done); }catch(x){ done(); } }; }); }
-  fetch('/api/vidsum/lang').then(r=>r.json()).then(j=>{ if(j.lang && j.lang!==(EN?'en':'he')){ document.cookie='pawed_lang='+j.lang+';path=/;max-age=31536000;samesite=lax'; location.reload(); } }).catch(()=>{});
+  fetch('/api/vidsum/lang').then(r=>r.json()).then(j=>{ if(j.lang && j.lang!==window.LANG){ document.cookie='pawed_lang='+j.lang+';path=/;max-age=31536000;samesite=lax'; location.reload(); } }).catch(()=>{});
   if(!EN) return;
   const TR = {
     'מקורות | Pawed':'Resources | Pawed','חדשות מתוך סיכומי וידאו ופודקאסטים':'News from video and podcast summaries','● מתעדכן אוטומטית':'● Updating automatically',
@@ -644,7 +646,8 @@ load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעי�
     [/^הסתיר (\d+) מתוך (\d+) ערוצי Pawed$/, 'Hid $1 of $2 Pawed channels'], [/^(.*) · נראה לאחרונה (.*)$/, '$1 · last seen $2'],
     [/^להסיר את "(.*)" מהמקורות\?$/, 'Remove "$1" from the resources?'], [/^למחוק את "(.*)" מהמקורות שלי\?$/, 'Delete "$1" from my resources?'], [/^(\d+) קריאות · קלט (.*) · פלט (.*) · מאז (.*)$/, '$1 calls · input $2 · output $3 · since $4']
   ];
-  const tr1 = core => { let r = TR[core]; if(r!==undefined) return r; for(const [re,rep] of PAT) if(re.test(core)) return core.replace(re,rep); return undefined; };
+  const OTHER = window.LANG!=='en';
+  const tr1 = core => { let r = TR[core]; if(r===undefined) for(const [re,rep] of PAT) if(re.test(core)){ r = core.replace(re,rep); break; } if(r===undefined) return undefined; return OTHER && window.piT ? piT(r,window.LANG) : r; };
   const trText = s => { const m = s.match(/^(\s*)([\s\S]*?)(\s*)$/); if(!m[2] || !/[֐-׿]/.test(m[2])) return s; const r = tr1(m[2]); return r===undefined ? s : m[1]+r+m[3]; };
   const ATTR = ['placeholder','title','aria-label','data-l'];
   function walk(n){

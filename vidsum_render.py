@@ -9,6 +9,7 @@ import os
 import re
 import html as _html
 import urllib.parse
+import pawed_i18n
 
 THEMES = {  # very mild page tint per portal category: bg, hairline, quote box, quote accent
     "כלכלה": ("#fdf8e1", "#eadfb0", "#f6e9b0", "#8a4a06"),      # yellow
@@ -135,7 +136,7 @@ CSS += ".brand-wordmark{height:70px;width:auto;display:block}@media(max-width:64
 PAW_JS = """<script>(function(){var seq=['maxresdefault','hq720','mqdefault'];
 function fix(img){var v=img.dataset.vid,i=0,own=img.dataset.img;var p=img.parentNode;if(!p.classList||!p.classList.contains('imgw')){var w=document.createElement('div');w.className='imgw';p.insertBefore(w,img);w.appendChild(img);}
 function next(){if(own){var o=own;own=null;img.src=o;return;}if(i<seq.length){img.src='https://i.ytimg.com/vi/'+v+'/'+seq[i++]+'.jpg';}
-else{img.onload=img.onerror=null;img.src='/vidsum/cover/'+v+'.svg'+(document.documentElement.lang==='en'?'?lang=en':'');}}
+else{img.onload=img.onerror=null;img.src='/vidsum/cover/'+v+'.svg'+(document.documentElement.lang!=='he'?'?lang=en':'');}}
 img.onerror=next;
 img.onload=function(){if(img.naturalWidth<300&&img.src.indexOf('/vidsum/cover/')<0){next();return;}img.parentNode.style.setProperty('--img','url("'+img.src+'")');};
 next();}
@@ -320,10 +321,26 @@ LANG_CSS = (".utility-inner{justify-content:flex-start}.utility-links{margin-inl
             "html[dir=ltr] .langsw{order:99}.langsw a{font-size:18px;line-height:1;opacity:.45;cursor:pointer;text-decoration:none;"
             "filter:grayscale(.4)}.langsw a.on{opacity:1;filter:none}.langsw a:hover{opacity:1}"
             ".he h1,.he .standfirst,.he .body,.he .keybox{direction:rtl;text-align:right}.wait{background:#fff6d6;border:1px solid #ecd57a;padding:10px 14px;margin:0 0 16px;font-size:14px;direction:ltr;text-align:left}")
-LANG_JS = ("<script>document.querySelectorAll('.langsw a').forEach(function(a){a.onclick=function(e){e.preventDefault();var l=a.dataset.l;"
-           "document.cookie='pawed_lang='+l+';path=/;max-age=31536000;samesite=lax';"
-           "try{fetch('/api/vidsum/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).finally(function(){location.reload()});}"
-           "catch(x){location.reload()}};});</script>")
+LANG_JS = '<script src="/vidsum/i18n.js"></script>'
+
+
+MONTHS_L = {
+    "de": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+    "fr": ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"],
+    "it": ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"],
+    "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+    "pt": ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"],
+    "nl": ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"],
+}
+_DATE_FMT = {"de": "{d}. {m} {y}", "fr": "{d} {m} {y}", "it": "{d} {m} {y}", "es": "{d} de {m} de {y}", "pt": "{d} de {m} de {y}", "nl": "{d} {m} {y}"}
+
+
+def _loc_date(iso, lang):
+    try:
+        y, m, d = (int(x) for x in iso[:10].split("-"))
+        return _DATE_FMT[lang].format(d=d, m=MONTHS_L[lang][m - 1], y=y)
+    except Exception:
+        return ""
 
 
 def _en_date(iso):
@@ -361,15 +378,15 @@ def _overlay_en(a):
 
 def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio=""):
     """a: article dict. latest: [{slug,title,topic,vid,channel}] newest first. base: URL prefix ('' on the server)."""
-    en = lang == "en"
-    S = STR["en" if en else "he"]
+    en = lang != "he"                       # every non-Hebrew edition reads left to right and uses the English text until its own exists
+    S = pawed_i18n.strings_for(lang, STR["en"]) if lang in pawed_i18n.ORDER else STR["en" if en else "he"]
     translated = True
     if en:
         a, translated = _overlay_en(a)
         latest = [dict(x, title=x.get("title_en") or x["title"]) for x in latest]
         disclaimer = EN_DISCLAIMER if disclaimer else ""
-    tname = (lambda t: EN_TOPICS.get(t, t)) if en else (lambda t: t)
-    fdate = _en_date if en else _he_date
+    tname = (lambda t: (pawed_i18n.lookup(EN_TOPICS.get(t, t), lang) or EN_TOPICS.get(t, t))) if en else (lambda t: t)
+    fdate = (lambda iso: _loc_date(iso, lang)) if lang in pawed_i18n.ORDER else (_en_date if en else _he_date)
     a = clean_dashes(a)
     latest = clean_dashes(list(latest))
     e = _html.escape
@@ -390,7 +407,6 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
                   for t in TOPICS)
     share_url = urllib.parse.quote(f'{SITE}/vidsum/article/{a["slug"]}', safe="")
     share_txt = urllib.parse.quote(a["title"], safe="")
-    he_title = "Hebrew" if en else "עברית"
     pl = platform_links(a, rss)
     hero_k = platform if platform in pl else ("youtube" if "youtube" in pl else ("rss" if "rss" in pl else "gen"))      # no choice yet: YouTube, as before
     hero_url = pl.get(hero_k) or a["url"]
@@ -400,7 +416,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(fdate(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">{S["live"]}</span>'
            f'<a class="admin-only" href="{base}/vidsum/articles">{S["all"]}</a><a class="auth-only" href="{base}/vidsum/sources">{S["sources"]}</a><a class="admin-only" href="{base}/vidsum/logs">{S["log"]}</a></div>'
-           f'<span class="langsw"><a data-l="en" class="{"on" if en else ""}" title="English">🇺🇸</a><a data-l="he" class="{"" if en else "on"}" title="{he_title}">🇮🇱</a></span></div></div>'
+           f'<span class="langsw"></span></div></div>'
            f'<header class="masthead"><a class="brand" href="{base}/"><img class="brand-wordmark" src="{base}/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a></header>'
            f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">{S["main"]}</a>{nav}</nav></div>',
            '<div class="page"><article class="he">' if en and not translated else '<div class="page"><article>',
