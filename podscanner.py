@@ -806,9 +806,52 @@ def handle_get(handler, path, qs):
     return False
 
 
+KEEP_LANGS = {"he", "en", "de", "fr", "it", "es", "pt", "nl"}      # the UI languages: nothing else can ever be offered by a suite
+
+
+def prune(dry=True, max_days=365):
+    """Drop catalog shows that can never be offered: no feed, a language no suite uses, or no episode within max_days. Never drops a show with a
+    manual verdict, one picked in a geo suite, or one already on the roster. A real run copies podscanner.json aside first."""
+    import shutil
+    import geo_suites
+    with LOCK:
+        d = _load()
+    protect = {str(p["id"]) for su in (geo_suites._load().get("suites") or {}).values() for ps in (su.get("pods") or {}).values() for p in ps}
+    names = {_nname(c.get("name")) for c in va._load_ch()["channels"] if c.get("name")}
+    drop, why = [], {}
+    for pid, p in d["pods"].items():
+        if p.get("manual") or str(p.get("id", pid)) in protect or _nname(p.get("name")) in names:
+            continue
+        r = None
+        if p.get("missing") or not p.get("feed"):
+            r = "no feed"
+        else:
+            lang, ds = canon_lang(p.get("language")), days_since(p)
+            if lang and lang not in KEEP_LANGS:
+                r = "language"
+            elif ds is None or ds > max_days:
+                r = "stale"
+        if r:
+            drop.append(pid)
+            why[r] = why.get(r, 0) + 1
+    out = {"total": len(d["pods"]), "drop": len(drop), "keep": len(d["pods"]) - len(drop), "why": why, "dry": dry}
+    if not dry and drop:
+        shutil.copy2(DATA_PATH, DATA_PATH + ".bak-" + time.strftime("%Y%m%d%H%M"))
+        for pid in drop:
+            del d["pods"][pid]
+        with LOCK:
+            _save(d)
+        _CAT["mtime"], _CAT["pods"] = 0.0, []
+        log(f"prune dropped {len(drop)} pods, kept {out['keep']}")
+    return out
+
+
 def handle_post(handler, path, req):
     if not _admin(handler):
         handler._json({"error": "not found"}, 404)
+        return True
+    if path == "/api/podscanner/prune":
+        handler._json({"ok": True, **prune(bool(req.get("dry", True)), int(req.get("max_days") or 365))})
         return True
     if path == "/api/podscanner/scan":
         ok = run_scan(req.get("countries"), req.get("genres"), int(req.get("limit") or 100), int(req.get("classify_cap") or 600),
