@@ -389,12 +389,12 @@ async function renderGeo(){
   const rn = c => { try{ return new Intl.DisplayNames([window.LANG],{type:'region'}).of(c); }catch(e){ return c; } };
   const cur = g.explicit ? g.geo : 'auto';
   el.hidden = false;
-  el.innerHTML = '<b>אזור התוכן</b><div class="opts"><select id="geosel"><option value="auto">זיהוי אוטומטי</option>'
-    + g.geos.map(x=>'<option value="'+x.slug+'"'+(x.slug===cur?' selected':'')+'>'+esc(rn(x.cc))+'</option>').join('') + '</select></div>'
+  const flag = c => String.fromCodePoint(...[...c].map(ch=>0x1F1E6+ch.charCodeAt(0)-65));
+  const opt = (v, ic, nm) => '<label class="'+(v===cur?'on':'')+'" title="'+esc(nm)+'"><input type="radio" name="geo" value="'+v+'"'+(v===cur?' checked':'')+'><span style="font-size:22px;line-height:1">'+ic+'</span>'+esc(nm)+'</label>';
+  el.innerHTML = '<b>אזור התוכן</b><div class="opts">' + opt('auto','🌐','זיהוי אוטומטי') + g.geos.map(x=>opt(x.slug, flag(x.cc), rn(x.cc))).join('') + '</div>'
     + '<small>האזור קובע את סט הפודקאסטים המוכן שמוצג בעמוד הראשי. השינויים האישיים שלכם נשמרים מעל הסט.</small>'
     + (g.geo!=='il' && g.effective!==g.geo ? '<small class="warn">הסט של האזור הזה עוד לא פעיל, מוצג הסט הכללי.</small>' : '');
-  $('geosel').value = cur;
-  $('geosel').onchange = e => { const v = e.target.value; document.cookie = 'pawed_geo=' + (v==='auto' ? '; max-age=0' : v + ';max-age=31536000') + ';path=/;samesite=lax'; location.reload(); };
+  el.querySelectorAll('input').forEach(i=>i.onchange = () => { const v = i.value; document.cookie = 'pawed_geo=' + (v==='auto' ? '; max-age=0' : v + ';max-age=31536000') + ';path=/;samesite=lax'; location.reload(); });
 }
 async function savePrefs(p){
   try{ const j = await api('/api/vidsum/prefs',p); D.prefs = j.prefs; await load(); msg('נשמר','ok'); }catch(e){ msg('❌ '+e.message,'err'); }
