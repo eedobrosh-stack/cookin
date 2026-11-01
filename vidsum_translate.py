@@ -190,7 +190,7 @@ import geo_suites
 import pawed_i18n
 import vidsum_render
 
-TR_SINCE = "2026-11-02"                      # only articles created from here on get language editions; older ones fall back to English
+TR_SINCE = "2026-11-01"                      # only articles created from here on get language editions; older ones fall back to English
 LANG_NAME = {"de": "German", "fr": "French", "it": "Italian", "es": "Spanish", "pt": "Brazilian Portuguese", "nl": "Dutch"}
 LANG_DAILY_CAP = 240                         # editions written per day (LunaRoute is free, this only bounds a runaway queue)
 _WANT_L = []                                 # (slug, lang) asked for by a page view
