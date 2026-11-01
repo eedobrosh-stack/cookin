@@ -382,8 +382,14 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
     S = pawed_i18n.strings_for(lang, STR["en"]) if lang in pawed_i18n.ORDER else STR["en" if en else "he"]
     translated = True
     if en:
-        a, translated = _overlay_en(a)
-        latest = [dict(x, title=x.get("title_en") or x["title"]) for x in latest]
+        ed = (a.get("tr") or {}).get(lang) if lang in pawed_i18n.ORDER else None
+        if ed:                                              # this language's own edition (same shape as an "original" English one)
+            a, translated = _overlay_en(dict(a, en=ed))
+        else:
+            a, translated = _overlay_en(a)
+            if lang in pawed_i18n.ORDER:
+                translated = False                          # English (or Hebrew) shown with a "translation is being prepared" note
+        latest = [dict(x, title=(x.get("tr") or {}).get(lang, [None])[0] or x.get("title_en") or x["title"]) for x in latest]
         disclaimer = EN_DISCLAIMER if disclaimer else ""
     tname = (lambda t: (pawed_i18n.lookup(EN_TOPICS.get(t, t), lang) or EN_TOPICS.get(t, t))) if en else (lambda t: t)
     fdate = (lambda iso: _loc_date(iso, lang)) if lang in pawed_i18n.ORDER else (_en_date if en else _he_date)

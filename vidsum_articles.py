@@ -207,7 +207,7 @@ def _articles():
 _IDX_FILES = {}                                   # file name -> ((mtime_ns, size), slim article)
 _IDX = {"sig": None, "items": []}
 _IDX_LOCK = threading.Lock()
-_SLIM_DROP = ("blocks", "key_points", "sections", "en")
+_SLIM_DROP = ("blocks", "key_points", "sections", "en", "tr")
 
 
 def _slim(a):
@@ -218,6 +218,8 @@ def _slim(a):
     en = a.get("en")
     if en:
         s["en"] = {"title": en.get("title", ""), "lead": en.get("lead", ""), "standfirst": en.get("standfirst", ""), "original": bool(en.get("original"))}
+    if a.get("tr"):                                     # language editions: titles and leads only, the bodies stay on disk
+        s["tr"] = {l: {"title": e.get("title", ""), "lead": e.get("lead", ""), "standfirst": e.get("standfirst", "")} for l, e in a["tr"].items()}
     return s
 
 
@@ -1493,6 +1495,7 @@ def news_items():
                     "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
                     "released_time": len((a.get("published_at") or "")) >= 19, "minutes": a["_min"] if "_min" in a else _length_min(a),
                     "lang": audio_lang(a, chmap.get(sid)),
+                    **({"tr": {l: [nd(e["title"]), nd(e.get("lead") or e.get("standfirst") or "")] for l, e in a["tr"].items()}} if a.get("tr") else {}),
                     "pf": (pl := vidsum_render.platform_links(a, a.get("kind") == "rss")),
                     "pfa": {k: ap for k, ap in ((k, vidsum_render._pf_app(k, u)) for k, u in pl.items()) if ap}})
     return out
@@ -2209,7 +2212,7 @@ def health_report(qs=None):
             "threads": sorted({t.name for t in threading.enumerate()})[:30], "thread_count": threading.active_count(),
             "last": {"yt_pass": last("vidsum yt-api pass"), "rss_found": last("vidsum rss:"), "translate": last("vidsum translate"), "done": last(" DONE "),
                      "quota": last("caption service QUOTA")},
-            "jobs": jobs, "translate_pending": vidsum_translate.pending(), "hours": hours, "log_lines": len(lines),
+            "jobs": jobs, "translate_pending": vidsum_translate.pending(), "translate_lang_pending": vidsum_translate.pending_langs(), "hours": hours, "log_lines": len(lines),
             "errors": sorted(groups.values(), key=lambda g: -g["count"])[:60], "raw": raw}
     for g in rep["errors"]:
         g["class"] = pawed_alerts.classify(g["example"])
@@ -2474,6 +2477,9 @@ def handle_get(handler, path, qs):
             if lang != "he" and a.get("blocks") and not a.get("en"):
                 import vidsum_translate
                 vidsum_translate.want(a["slug"])                       # not translated yet: do this one next
+            elif lang in pawed_i18n.ORDER and a.get("blocks") and not (a.get("tr") or {}).get(lang):
+                import vidsum_translate
+                vidsum_translate.want_lang(a["slug"], lang)            # this language edition does not exist yet (recent articles only)
             pf = ""
             try:
                 u = current_user(handler)
@@ -2755,6 +2761,11 @@ def handle_get(handler, path, qs):
             if r:
                 user = {"id": r["id"], "email": r["email"], "name": r["name"], "admin": False}
         items = news_items()
+        ul = request_lang(handler, qs)
+        for i in items:                                  # a de/fr/it/es/pt/nl visitor gets that edition's headline where it exists, English otherwise
+            trs = i.pop("tr", None)
+            if trs and ul in trs:
+                i["title_en"], i["lead_en"] = trs[ul]
         vis = _visible_source_ids(user)
         personal = vis is not None and bool(user)
         if vis is not None:                              # guests and signed-in users: private sources and one-off episodes stay private
