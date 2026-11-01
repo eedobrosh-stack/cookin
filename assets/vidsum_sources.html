@@ -189,6 +189,8 @@
     .plat b { display:block; margin-bottom:8px; font-size:15px; }
     .plat small { display:block; color:#777; font-size:12.5px; margin-top:8px; }
     .plat .opts { display:flex; gap:10px; flex-wrap:wrap; }
+    .plat select { font:inherit; font-weight:700; font-size:14px; padding:8px 14px; border:1.5px solid #ddd; border-radius:999px; background:#fff; color:inherit; cursor:pointer; }
+    .plat .warn { color:#b45309; }
     .plat label { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border:1.5px solid #ddd; border-radius:999px; cursor:pointer; font-weight:700; font-size:14px; }
     .plat label.on { border-color:#e3222b; background:#fff0f0; }
     .plat input { display:none; }
@@ -282,6 +284,7 @@
 
     <div class="acct" id="acct"></div>
     <div class="plat" id="plat" hidden></div>
+    <div class="plat" id="geobox" hidden></div>
 
 
     <section class="addp" id="addp" hidden>
@@ -379,11 +382,25 @@ function renderPlat(){
     + '</div><small>הפלטפורמה שתבחרו תופיע על תמונת הפרק ותפתח את האפליקציה שלה. האחרות יופיעו כלחצנים מתחת. פרקי פודקאסט ללא וידאו ביוטיוב יציגו את הנגן הזמין.</small>';
   el.querySelectorAll('input').forEach(i=>i.onchange=()=>savePrefs({platform:i.value}));
 }
+async function renderGeo(){
+  const el = $('geobox'); let g;
+  try{ g = await (await fetch('/api/vidsum/geo')).json(); }catch(e){ return; }
+  if(!g || !g.geos) return;
+  const rn = c => { try{ return new Intl.DisplayNames([window.LANG],{type:'region'}).of(c); }catch(e){ return c; } };
+  const cur = g.explicit ? g.geo : 'auto';
+  el.hidden = false;
+  el.innerHTML = '<b>אזור התוכן</b><div class="opts"><select id="geosel"><option value="auto">זיהוי אוטומטי</option>'
+    + g.geos.map(x=>'<option value="'+x.slug+'"'+(x.slug===cur?' selected':'')+'>'+esc(rn(x.cc))+'</option>').join('') + '</select></div>'
+    + '<small>האזור קובע את סט הפודקאסטים המוכן שמוצג בעמוד הראשי. השינויים האישיים שלכם נשמרים מעל הסט.</small>'
+    + (g.geo!=='il' && g.effective!==g.geo ? '<small class="warn">הסט של האזור הזה עוד לא פעיל, מוצג הסט הכללי.</small>' : '');
+  $('geosel').value = cur;
+  $('geosel').onchange = e => { const v = e.target.value; document.cookie = 'pawed_geo=' + (v==='auto' ? '; max-age=0' : v + ';max-age=31536000') + ';path=/;samesite=lax'; location.reload(); };
+}
 async function savePrefs(p){
   try{ const j = await api('/api/vidsum/prefs',p); D.prefs = j.prefs; await load(); msg('נשמר','ok'); }catch(e){ msg('❌ '+e.message,'err'); }
 }
 function render(){
-  renderAcct(); renderPlat(); $('adv').hidden = !D.admin; renderLists();
+  renderAcct(); renderPlat(); renderGeo(); $('adv').hidden = !D.admin; renderLists();
   const signed = !!D.me, canAdd = signed || D.admin;
   const rows = D.sources.map(s => '<tr><td class="name" data-l="שם">'+esc(s.name)+(s.kind==='rss'?' <span class="daily" style="background:#e6edfb;color:#1d3f9a">פודקאסט RSS</span>':'')+'</td>'
     +'<td data-l="שפה">'+(s.can_edit?'<select data-id="'+esc(s.id)+'" data-f="language">'+opts(D.languages,s.language)+'</select>':esc(D.languages[s.language]||s.language))+'</td>'
@@ -629,6 +646,7 @@ load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעי�
     'רואה את כל ערוצי Pawed':"Sees all of Pawed's channels",'עדיין אין משתמשים חיצוניים עם מקורות.':'No external users with resources yet.','שגיאה בטעינת המשתמשים':'Failed to load the users',
     'שימוש בטוקנים (7 ימים)':'Token usage (7 days)','קריאות':'Calls','קלט':'Input','פלט':'Output','משימה · מודל':'Task · model','משתמש':'User','יום':'Day','מנהל':'Admin','היום':'Today',
     'התחברו והוסיפו את הפודקאסטים שלכם':'Sign in and add your podcasts','התחברו ל-Pawed והתאימו את הפודים שלכם:':'Sign in to Pawed and tailor your pods:','הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕':'Add a channel by name or YouTube link, and remove existing ones with ✕',
+    'אזור התוכן':'Content region','זיהוי אוטומטי':'Auto-detect','האזור קובע את סט הפודקאסטים המוכן שמוצג בעמוד הראשי. השינויים האישיים שלכם נשמרים מעל הסט.':'The region sets the preset roster shown on the home page. Your own changes stay on top of it.','הסט של האזור הזה עוד לא פעיל, מוצג הסט הכללי.':"This region's preset is not live yet, so the default roster is shown.",
     'עברית':'Hebrew','פוליטיקה':'Politics','טכנולוגיה':'Technology','כלכלה':'Economy','ספורט':'Sports','תרבות':'Culture','לייפסטייל':'Lifestyle','בריאות':'Health'
   };
   const PAT = [

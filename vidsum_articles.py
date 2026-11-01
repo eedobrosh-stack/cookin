@@ -2412,7 +2412,7 @@ def _geo_get(handler, path, qs):
         g, explicit = geo_suites.ctx()
         chs = _load_ch()["channels"]
         handler._json({"ok": True, "geo": g, "explicit": explicit, "effective": geo_suites.effective(chs),
-                       "geos": [{"slug": k, "name": v[1], "name_he": v[2], "live": k == "il" or geo_suites.active(k, chs)} for k, v in geo_suites.GEOS.items()]})
+                       "geos": [{"slug": k, "cc": v[0], "name": v[1], "name_he": v[2], "live": k == "il" or geo_suites.active(k, chs)} for k, v in geo_suites.GEOS.items()]})
         return True
     if not path.startswith(("/api/vidsum/admin/geo", "/vidsum/geo")):
         return False
