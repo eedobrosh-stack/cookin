@@ -800,7 +800,7 @@ def handle_get(handler, path, qs):
         if not _admin(handler):
             handler._json({"error": "not found"}, 404)
             return True
-        handler._json({"ok": True, "status": STATUS})
+        handler._json({"ok": True, "status": STATUS, "build": (os.environ.get("RENDER_GIT_COMMIT") or "")[:7]})
         return True
     return False
 
