@@ -5,6 +5,7 @@ import calendar, datetime, json, math, os, re, sys, threading, uuid, time, html 
 import urllib.request, urllib.parse, urllib.error
 
 import multiuser
+import geo_suites
 from multiuser import secret, GEMINI_MODEL, BudgetExhausted, current_user
 from multiuser import log as _mlog
 
@@ -1504,10 +1505,12 @@ def removed_topics(viewer):
         return set()
     p = get_vprefs(viewer["id"])
     base, own_on = {}, set()
-    for c in _load_ch()["channels"]:
+    chs = _load_ch()["channels"]
+    for c in chs:
         v = c.get("vertical")
         if c.get("owner_id") is None:
-            base.setdefault(v, []).append(c["id"])
+            if geo_suites.channel_ok(c, chs):
+                base.setdefault(v, []).append(c["id"])
         elif c.get("owner_id") == viewer["id"] and c["id"] not in p["hiddenBase"]:
             own_on.add(v)
     return {v for v, ids in base.items() if v in TOPICS and v not in own_on and all(p["hideBase"] or i in p["hiddenBase"] for i in ids)}
@@ -1627,6 +1630,9 @@ def set_vprefs(uid, req):
 
 def viewer_country(handler):
     """Two-letter country of the visitor from Cloudflare's CF-IPCountry header ('' when unknown, e.g. direct hits or Tor)."""
+    g, explicit = geo_suites.ctx()
+    if explicit and g:                                  # ?geo=brazil / the pawed_geo cookie stand in for the visitor's IP
+        return geo_suites.GEOS[g][0]
     c = (handler.headers.get("CF-IPCountry") or "").strip().upper()
     return c if len(c) == 2 and c.isalpha() and c not in ("XX", "T1") else ""
 
@@ -1683,16 +1689,17 @@ def _viewer(handler):
 def _visible_source_ids(viewer):
     """Source ids a viewer sees (None = no filtering, admins only). A user's own sources are private to them; the Pawed roster
     (owner None) is shown to everyone unless the signed-in viewer hid it whole or per source."""
-    if viewer and (viewer.get("id") == "admin-token" or viewer.get("admin")):
-        return None
-    p = get_vprefs(viewer["id"]) if viewer else {"hideBase": False, "hiddenBase": [], "muted": []}
+    if viewer and (viewer.get("id") == "admin-token" or (viewer.get("admin") and not geo_suites.ctx()[1])):
+        return None                                                     # admins see the whole roster unless they preview a geo
+    p = get_vprefs(viewer["id"]) if viewer and viewer.get("id") != "admin-token" else {"hideBase": False, "hiddenBase": [], "muted": []}
     out = set()
-    for c in _load_ch()["channels"]:
+    chs = _load_ch()["channels"]
+    for c in chs:
         owner = c.get("owner_id")
         if viewer and owner == viewer["id"]:
             if c["id"] not in p["hiddenBase"]:             # a user can switch one of their own sources off without deleting it
                 out.add(c["id"])
-        elif owner is None and not p["hideBase"] and c["id"] not in p["hiddenBase"]:
+        elif owner is None and not p["hideBase"] and c["id"] not in p["hiddenBase"] and geo_suites.channel_ok(c, chs):
             out.add(c["id"])
     return out
 
@@ -2241,6 +2248,8 @@ def sources_view(viewer=None, hide_he=False):
     hidden = _hidden_names()
     real_names = {_norm_key(c["name"]) for c in _load_ch()["channels"] if not c["id"].startswith("pending-")}
     vis = _visible_source_ids(viewer)
+    all_ch = _load_ch()["channels"]
+    geo_on = not (viewer and viewer.get("admin") and not geo_suites.ctx()[1])
     out = []
     plus = source_plus(viewer["id"]) if viewer and viewer.get("id") != "admin-token" else {}
     for c in _load_ch()["channels"]:
@@ -2250,6 +2259,8 @@ def sources_view(viewer=None, hide_he=False):
             continue                                                   # a name-only placeholder next to the real source of the same name
         if vis is not None and owner is not None and not mine_c:      # other users' sources are private; the whole Pawed roster is always listed
             continue                                                   # (hidden ones too, so the viewer can switch them back on)
+        if owner is None and geo_on and not geo_suites.channel_ok(c, all_ch):
+            continue                                                   # another geo's suite
         if hide_he and c.get("language") == "he":
             continue                                                   # Israeli content stays out of the list for visitors outside Israel
         label = "Pawed" if owner is None else ("אנונימי" if owner in hidden else (c.get("owner_name") or "משתמש"))
@@ -2388,7 +2399,58 @@ def cooking_today():
 ART_PREFIX = "/vidsum/article/"
 
 
+def _geo_get(handler, path, qs):
+    """/api/vidsum/geo (public: the visitor's suite) and the admin review of the geo suites."""
+    if path == "/api/vidsum/geo":
+        g, explicit = geo_suites.ctx()
+        chs = _load_ch()["channels"]
+        handler._json({"ok": True, "geo": g, "explicit": explicit, "effective": geo_suites.effective(chs),
+                       "geos": [{"slug": k, "name": v[1], "name_he": v[2], "live": k == "il" or geo_suites.active(k, chs)} for k, v in geo_suites.GEOS.items()]})
+        return True
+    if not path.startswith(("/api/vidsum/admin/geo", "/vidsum/geo")):
+        return False
+    user = current_user(handler)
+    if not (user and user.get("admin")):
+        if path.startswith("/vidsum/geo") and not user:
+            handler.send_response(302)
+            handler.send_header("Location", "/auth/login?next=" + urllib.parse.quote("/vidsum/geo"))
+            handler.send_header("Content-Length", "0")
+            handler.end_headers()
+            return True
+        handler._json({"error": "not found"}, 404)
+        return True
+    if path in ("/vidsum/geo", "/vidsum/geo/"):
+        _serve(handler, os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "vidsum_geo.html"))
+    elif path == "/api/vidsum/admin/geo/review":
+        handler._json({"ok": True, "suites": geo_suites.review(), "topics": TOPICS, "per_topic": geo_suites.PER_TOPIC})
+    elif path == "/api/vidsum/admin/geo/alts":
+        g = lambda k: (qs.get(k) or [""])[0]
+        handler._json({"ok": True, "alts": geo_suites.alternatives(g("geo"), g("topic"))})
+    elif path == "/api/vidsum/admin/geo/csv":
+        import csv, io
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(["geo", "status", "section", "podcast", "rank_in_country", "score", "episodes", "days_since_last", "relaxed", "hosts", "feed"])
+        for su in geo_suites.review():
+            for t, pods in su["pods"].items():
+                for p in pods:
+                    w.writerow([su["name"], su["status"], t, p["name"], p["rank"], p["score"], p["episodes"], p["days_since"], p["relaxed"], ", ".join(p["hosts"]), p["feed"]])
+        handler.send_response(200)
+        body = ("\ufeff" + buf.getvalue()).encode("utf-8")
+        handler.send_header("Content-Type", "text/csv; charset=utf-8")
+        handler.send_header("Content-Disposition", 'attachment; filename="pawed_geo_suites.csv"')
+        handler.send_header("Content-Length", str(len(body)))
+        handler.end_headers()
+        handler.wfile.write(body)
+    else:
+        return False
+    return True
+
+
 def handle_get(handler, path, qs):
+    geo_suites.set_ctx(handler, qs)
+    if _geo_get(handler, path, qs):
+        return True
     if path in ("/vidsum/articles", "/vidsum/articles/"):
         handler._html(index_html(), "no-store")
         return True
@@ -2854,7 +2916,35 @@ def import_article(req):
     return art["slug"]
 
 
+def _geo_post(handler, path, req):
+    user = current_user(handler)
+    if not (user and user.get("admin")):
+        handler._json({"error": "forbidden"}, 403)
+        return True
+    try:
+        g = geo_suites.norm(req.get("geo"))
+        if path == "/api/vidsum/admin/geo/regenerate":
+            if req.get("geo") == "all":
+                geo_suites.propose_all()
+            else:
+                geo_suites.propose(g)
+            handler._json({"ok": True})
+        elif path == "/api/vidsum/admin/geo/pick":
+            geo_suites.pick(g, str(req.get("topic") or ""), req.get("remove") or None, req.get("add") or None)
+            handler._json({"ok": True})
+        elif path == "/api/vidsum/admin/geo/activate":
+            handler._json({"ok": True, **geo_suites.activate(g)})
+        else:
+            return False
+    except (ValueError, KeyError) as e:
+        handler._json({"ok": False, "error": str(e)[:200]}, 400)
+    return True
+
+
 def handle_post(handler, path, req):
+    geo_suites.set_ctx(handler)
+    if path.startswith("/api/vidsum/admin/geo/") and _geo_post(handler, path, req):
+        return True
     if path.startswith("/api/vidsum/relay/") or path == "/api/vidsum/bulk":
         user = current_user(handler)
         if not (user and user.get("admin")):

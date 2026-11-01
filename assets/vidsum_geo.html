@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pawed geo suites</title>
+<style>
+  :root { --bg:#faf8f4; --fg:#1d1b18; --mut:#756f66; --card:#fff; --line:#e4dfd6; --acc:#c2410c; --ok:#15803d; --warn:#b45309; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161412; --fg:#f1ede6; --mut:#a39c90; --card:#211e1b; --line:#38332d; --acc:#fb923c; --ok:#4ade80; --warn:#fbbf24; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 system-ui,-apple-system,sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--mut); margin:0 0 16px; }
+  .bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
+  button, .btn { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:6px 12px; font:inherit; cursor:pointer; text-decoration:none; }
+  button.pri { background:var(--acc); border-color:var(--acc); color:#fff; }
+  button:disabled { opacity:.5; cursor:default; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .tab { padding:5px 11px; border-radius:999px; border:1px solid var(--line); background:var(--card); cursor:pointer; }
+  .tab.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
+  .tab i { font-style:normal; font-size:12px; margin-inline-start:5px; color:var(--mut); }
+  .tab.on i { color:var(--bg); opacity:.7; }
+  .sec { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:12px; }
+  .sec h3 { margin:0 0 8px; font-size:16px; display:flex; justify-content:space-between; align-items:center; }
+  .row { display:grid; grid-template-columns:34px 1fr auto; gap:10px; align-items:center; padding:6px 0; border-top:1px solid var(--line); }
+  .row:first-of-type { border-top:0; }
+  .row img { width:34px; height:34px; border-radius:6px; object-fit:cover; background:var(--line); }
+  .nm { font-weight:600; }
+  .meta { color:var(--mut); font-size:13px; }
+  .tag { display:inline-block; font-size:11px; padding:1px 6px; border-radius:6px; border:1px solid var(--warn); color:var(--warn); margin-inline-start:6px; }
+  .st { font-size:13px; padding:2px 8px; border-radius:6px; border:1px solid var(--line); }
+  .st.active { color:var(--ok); border-color:var(--ok); }
+  .alts { margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; }
+  .alts button { font-size:13px; padding:3px 8px; }
+  .gap { color:var(--warn); font-size:13px; padding:4px 0; }
+  #msg { color:var(--mut); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pawed geo suites</h1>
+  <p class="sub">Top 5 quality podcasts per section for each geo (charted in that country, in its language), plus the US suite. Review, swap, then activate a geo. Test any geo with <code>pawed.io/?geo=brazil</code>.</p>
+  <div class="bar">
+    <button class="pri" id="regAll">Regenerate all proposals</button>
+    <a class="btn" href="/api/vidsum/admin/geo/csv">Download CSV</a>
+    <span id="msg"></span>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div id="view"></div>
+</main>
+<script>
+let D = null, cur = "us";
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const msg = t => { $("#msg").textContent = t || ""; };
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.ok === false) throw new Error(j.error || r.status);
+  return j;
+}
+async function load() { D = await api("/api/vidsum/admin/geo/review"); draw(); }
+function draw() {
+  $("#tabs").innerHTML = D.suites.map(s => `<span class="tab ${s.geo === cur ? "on" : ""}" data-g="${s.geo}">${esc(s.name)}<i>${s.count}</i></span>`).join("");
+  document.querySelectorAll(".tab").forEach(t => t.onclick = () => { cur = t.dataset.g; draw(); });
+  const s = D.suites.find(x => x.geo === cur);
+  let h = `<div class="bar"><b>${esc(s.name)}</b> <span class="st ${s.status}">${esc(s.status)}</span>
+    <span class="meta">${s.generated ? "generated " + esc(s.generated) : "no proposal yet"}</span>
+    <button id="regen">Regenerate</button>
+    <button class="pri" id="act" ${s.count ? "" : "disabled"}>${s.status === "active" ? "Re-apply to roster" : "Activate this geo"}</button>
+    <a class="btn" href="/?geo=${s.geo}" target="_blank">Preview ?geo=${s.geo}</a></div>`;
+  D.topics.forEach(t => {
+    const pods = (s.pods || {})[t] || [];
+    h += `<div class="sec"><h3>${esc(t)} <span class="meta">${pods.length}/${D.per_topic}</span></h3>`;
+    pods.forEach(p => {
+      h += `<div class="row"><img src="${esc(p.image)}" alt="" loading="lazy">
+        <div><div class="nm">${esc(p.name)}${p.relaxed ? '<span class="tag">relaxed quality</span>' : ""}</div>
+        <div class="meta">${p.rank ? "#" + p.rank + " in " + esc(s.name) + " · " : ""}score ${p.score} · ${p.episodes || "?"} episodes · last ${p.days_since == null ? "?" : p.days_since + "d ago"}${p.hosts && p.hosts.length ? " · " + esc(p.hosts.join(", ")) : ""}</div></div>
+        <button data-rm="${esc(p.id)}" data-t="${esc(t)}">Remove</button></div>`;
+    });
+    if (pods.length < D.per_topic) h += `<div class="gap">Only ${pods.length} found for this section. Open alternatives to fill it.</div>`;
+    h += `<div class="alts" data-t="${esc(t)}"><button data-alt="${esc(t)}">Alternatives</button></div></div>`;
+  });
+  $("#view").innerHTML = h;
+  $("#regen").onclick = async () => { msg("Regenerating..."); try { await api("/api/vidsum/admin/geo/regenerate", { geo: cur }); await load(); msg(""); } catch (e) { msg(e.message); } };
+  $("#act").onclick = async () => {
+    if (!confirm("Create these roster channels for " + s.name + "? New episodes start flowing in for every show.")) return;
+    msg("Activating..."); try { const r = await api("/api/vidsum/admin/geo/activate", { geo: cur }); msg(`created ${r.created}, tagged ${r.tagged}, failed ${r.failed}`); await load(); } catch (e) { msg(e.message); }
+  };
+  document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { try { await api("/api/vidsum/admin/geo/pick", { geo: cur, topic: b.dataset.t, remove: b.dataset.rm }); await load(); } catch (e) { msg(e.message); } });
+  document.querySelectorAll("[data-alt]").forEach(b => b.onclick = async () => {
+    const t = b.dataset.alt, box = b.parentElement; b.disabled = true;
+    try {
+      const j = await api(`/api/vidsum/admin/geo/alts?geo=${cur}&topic=${encodeURIComponent(t)}`);
+      box.innerHTML = j.alts.length ? j.alts.map(a => `<button data-add="${esc(a.id)}" data-t="${esc(t)}">+ ${esc(a.name)} <span class="meta">#${a.rank || "?"} · ${a.score}</span></button>`).join("") : '<span class="meta">No more candidates.</span>';
+      box.querySelectorAll("[data-add]").forEach(x => x.onclick = async () => { try { await api("/api/vidsum/admin/geo/pick", { geo: cur, topic: x.dataset.t, add: x.dataset.add }); await load(); } catch (e) { msg(e.message); } });
+    } catch (e) { msg(e.message); }
+  });
+}
+$("#regAll").onclick = async () => { if (!confirm("Rebuild every proposal? Manual swaps on inactive geos are lost.")) return; msg("Regenerating all..."); try { await api("/api/vidsum/admin/geo/regenerate", { geo: "all" }); await load(); msg(""); } catch (e) { msg(e.message); } };
+load().catch(e => msg(e.message));
+</script>
+</body>
+</html>
