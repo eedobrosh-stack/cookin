@@ -211,13 +211,12 @@ def _cap_left():
 
 
 def wanted_langs(ch, chs):
-    """UI languages a roster source's new articles should exist in: its geo suites' languages (a US-suite show is read in every live
-    suite's language), and the preferred language of the user who owns it."""
+    """UI languages a source's new articles are written in ahead of time: the language of the suite it belongs to (a German show gets a German
+    edition) and the preferred language of the user who owns it. A US-suite show gets none: it already exists in English and Hebrew, and
+    any other language is written the first time a reader opens an article in it (want_lang)."""
     out = set()
     for g in ch.get("geos") or []:
-        if g == "us":
-            out |= {geo_suites.GEOS[s][4] for s in geo_suites.GEOS if s not in ("il", "us") and geo_suites.active(s, chs)}
-        elif g in geo_suites.GEOS:
+        if g in geo_suites.GEOS and g not in ("us", "il"):
             out.add(geo_suites.GEOS[g][4])
     if ch.get("owner_id"):
         try:

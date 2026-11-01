@@ -1530,7 +1530,8 @@ def _vdb():
     c.execute("CREATE TABLE IF NOT EXISTS vidsum_prefs(user_id TEXT PRIMARY KEY, hide_base INTEGER DEFAULT 0, "
               "hide_name INTEGER DEFAULT 0, muted TEXT DEFAULT '[]')")
     for ddl in ("ALTER TABLE vidsum_prefs ADD COLUMN hidden_base TEXT DEFAULT '[]'", "ALTER TABLE vidsum_prefs ADD COLUMN lang TEXT DEFAULT ''",
-                "ALTER TABLE vidsum_prefs ADD COLUMN platform TEXT DEFAULT ''"):
+                "ALTER TABLE vidsum_prefs ADD COLUMN platform TEXT DEFAULT ''", "ALTER TABLE vidsum_prefs ADD COLUMN home_geo TEXT DEFAULT ''",
+                "ALTER TABLE vidsum_prefs ADD COLUMN content_geo TEXT DEFAULT ''"):
         try:
             c.execute(ddl)
         except Exception:
@@ -1590,7 +1591,7 @@ def get_vprefs(uid):
     with _vdb() as c:
         r = c.execute("SELECT * FROM vidsum_prefs WHERE user_id=?", (uid,)).fetchone()
     if not r:
-        return {"hideBase": False, "hideName": False, "muted": [], "hiddenBase": [], "lang": "", "platform": ""}
+        return {"hideBase": False, "hideName": False, "muted": [], "hiddenBase": [], "lang": "", "platform": "", "homeGeo": "", "contentGeo": ""}
     try:
         muted = json.loads(r["muted"] or "[]")
     except ValueError:
@@ -1607,7 +1608,12 @@ def get_vprefs(uid):
         platform = r["platform"] or ""
     except (IndexError, KeyError):
         platform = ""
-    return {"hideBase": bool(r["hide_base"]), "hideName": bool(r["hide_name"]), "muted": muted, "hiddenBase": hidden_base, "lang": lang, "platform": platform}
+    try:
+        home_geo, content_geo = r["home_geo"] or "", r["content_geo"] or ""
+    except (IndexError, KeyError):
+        home_geo = content_geo = ""
+    return {"hideBase": bool(r["hide_base"]), "hideName": bool(r["hide_name"]), "muted": muted, "hiddenBase": hidden_base, "lang": lang, "platform": platform,
+            "homeGeo": home_geo, "contentGeo": content_geo}
 
 
 def set_vprefs(uid, req):
@@ -1624,11 +1630,19 @@ def set_vprefs(uid, req):
         p["lang"] = req["lang"]
     if req.get("platform") in ("youtube", "spotify", "apple", "rss"):
         p["platform"] = req["platform"]
+    if "homeGeo" in req:                      # where the user is based: sets the reading language too, and the roster unless a content region is set
+        g = geo_suites.norm(req["homeGeo"])
+        p["homeGeo"] = g
+        if g:
+            p["lang"] = geo_suites.GEOS[g][4]
+    if "contentGeo" in req:                   # '' = same as where I'm based
+        p["contentGeo"] = geo_suites.norm(req["contentGeo"])
     with _vdb() as c:
-        c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted,hidden_base,lang,platform) VALUES(?,?,?,?,?,?,?) "
+        c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted,hidden_base,lang,platform,home_geo,content_geo) VALUES(?,?,?,?,?,?,?,?,?) "
                   "ON CONFLICT(user_id) DO UPDATE SET hide_base=excluded.hide_base, hide_name=excluded.hide_name, muted=excluded.muted, "
-                  "hidden_base=excluded.hidden_base, lang=excluded.lang, platform=excluded.platform",
-                  (uid, int(p["hideBase"]), int(p["hideName"]), json.dumps(p["muted"]), json.dumps(p["hiddenBase"]), p.get("lang") or "", p.get("platform") or ""))
+                  "hidden_base=excluded.hidden_base, lang=excluded.lang, platform=excluded.platform, home_geo=excluded.home_geo, content_geo=excluded.content_geo",
+                  (uid, int(p["hideBase"]), int(p["hideName"]), json.dumps(p["muted"]), json.dumps(p["hiddenBase"]), p.get("lang") or "", p.get("platform") or "",
+                   p.get("homeGeo") or "", p.get("contentGeo") or ""))
     return p
 
 
@@ -2454,8 +2468,25 @@ def _geo_get(handler, path, qs):
     return True
 
 
-def handle_get(handler, path, qs):
+def _set_geo_ctx(handler, qs=None):
+    """?geo= wins (testing), then the signed-in user's saved content region / home region, then the cookie, then the visitor's country."""
     geo_suites.set_ctx(handler, qs)
+    q = ((qs or {}).get("geo") or [""])[0] or re.search(r"[?&]geo=([A-Za-z_-]{2,20})", getattr(handler, "path", "") or "")
+    if q:
+        return
+    try:
+        u = current_user(handler)
+        if u and u.get("id") != "admin-token":
+            pr = get_vprefs(u["id"])
+            g = pr.get("contentGeo") or pr.get("homeGeo")
+            if g in geo_suites.GEOS:
+                geo_suites.CTX.geo, geo_suites.CTX.explicit = g, True
+    except Exception:
+        pass
+
+
+def handle_get(handler, path, qs):
+    _set_geo_ctx(handler, qs)
     if _geo_get(handler, path, qs):
         return True
     if path in ("/vidsum/articles", "/vidsum/articles/"):
@@ -2966,7 +2997,7 @@ def _geo_post(handler, path, req):
 
 
 def handle_post(handler, path, req):
-    geo_suites.set_ctx(handler)
+    _set_geo_ctx(handler)
     if path.startswith("/api/vidsum/admin/geo/") and _geo_post(handler, path, req):
         return True
     if path.startswith("/api/vidsum/relay/") or path == "/api/vidsum/bulk":

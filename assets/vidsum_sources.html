@@ -387,14 +387,27 @@ async function renderGeo(){
   try{ g = await (await fetch('/api/vidsum/geo')).json(); }catch(e){ return; }
   if(!g || !g.geos) return;
   const rn = c => { try{ return new Intl.DisplayNames([window.LANG],{type:'region'}).of(c); }catch(e){ return c; } };
-  const cur = g.explicit ? g.geo : 'auto';
-  el.hidden = false;
   const flag = c => String.fromCodePoint(...[...c].map(ch=>0x1F1E6+ch.charCodeAt(0)-65));
-  const opt = (v, ic, nm) => '<label class="'+(v===cur?'on':'')+'" title="'+esc(nm)+'"><input type="radio" name="geo" value="'+v+'"'+(v===cur?' checked':'')+'><span style="font-size:22px;line-height:1">'+ic+'</span>'+esc(nm)+'</label>';
-  el.innerHTML = '<b>אזור התוכן</b><div class="opts">' + opt('auto','🌐','זיהוי אוטומטי') + g.geos.map(x=>opt(x.slug, flag(x.cc), rn(x.cc))).join('') + '</div>'
+  const signed = !!(D && D.me && D.prefs);
+  const row = (name, cur, first, onPick) => '<div class="opts" data-row="'+name+'">' + (first ? '<label class="'+(cur===''?'on':'')+'"><input type="radio" name="'+name+'" value=""'+(cur===''?' checked':'')+'><span style="font-size:22px;line-height:1">'+first[0]+'</span>'+esc(first[1])+'</label>' : '')
+    + g.geos.map(x=>'<label class="'+(x.slug===cur?'on':'')+'" title="'+esc(rn(x.cc))+'"><input type="radio" name="'+name+'" value="'+x.slug+'"'+(x.slug===cur?' checked':'')+'><span style="font-size:22px;line-height:1">'+flag(x.cc)+'</span>'+esc(rn(x.cc))+'</label>').join('') + '</div>';
+  el.hidden = false;
+  if(signed){
+    const home = D.prefs.homeGeo || '', content = D.prefs.contentGeo || '';
+    el.innerHTML = '<b>המיקום שלי</b>' + row('home', home) + '<small>קובע את שפת הקריאה ואת אזור התוכן כברירת מחדל.</small>'
+      + '<b style="margin-top:14px">אזור התוכן</b>' + row('content', content, ['📍','כמו המיקום שלי'])
+      + '<small>האזור קובע את סט הפודקאסטים המוכן שמוצג בעמוד הראשי. השינויים האישיים שלכם נשמרים מעל הסט.</small>'
+      + (g.geo!=='il' && g.effective!==g.geo ? '<small class="warn">הסט של האזור הזה עוד לא פעיל, מוצג הסט הכללי.</small>' : '');
+    const save = async p => { try{ await api('/api/vidsum/prefs', p); location.reload(); }catch(e){ msg('❌ '+e.message,'err'); } };
+    el.querySelectorAll('input[name=home]').forEach(i=>i.onchange=()=>save({homeGeo:i.value}));
+    el.querySelectorAll('input[name=content]').forEach(i=>i.onchange=()=>save({contentGeo:i.value}));
+    return;
+  }
+  const cur = g.explicit ? g.geo : 'auto';
+  el.innerHTML = '<b>אזור התוכן</b>' + row('geo', cur === 'auto' ? '' : cur, ['🌐','זיהוי אוטומטי'])
     + '<small>האזור קובע את סט הפודקאסטים המוכן שמוצג בעמוד הראשי. השינויים האישיים שלכם נשמרים מעל הסט.</small>'
     + (g.geo!=='il' && g.effective!==g.geo ? '<small class="warn">הסט של האזור הזה עוד לא פעיל, מוצג הסט הכללי.</small>' : '');
-  el.querySelectorAll('input').forEach(i=>i.onchange = () => { const v = i.value; document.cookie = 'pawed_geo=' + (v==='auto' ? '; max-age=0' : v + ';max-age=31536000') + ';path=/;samesite=lax'; location.reload(); });
+  el.querySelectorAll('input').forEach(i=>i.onchange = () => { const v = i.value || 'auto'; document.cookie = 'pawed_geo=' + (v==='auto' ? '; max-age=0' : v + ';max-age=31536000') + ';path=/;samesite=lax'; location.reload(); });
 }
 async function savePrefs(p){
   try{ const j = await api('/api/vidsum/prefs',p); D.prefs = j.prefs; await load(); msg('נשמר','ok'); }catch(e){ msg('❌ '+e.message,'err'); }
@@ -646,6 +659,7 @@ load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעי�
     'רואה את כל ערוצי Pawed':"Sees all of Pawed's channels",'עדיין אין משתמשים חיצוניים עם מקורות.':'No external users with resources yet.','שגיאה בטעינת המשתמשים':'Failed to load the users',
     'שימוש בטוקנים (7 ימים)':'Token usage (7 days)','קריאות':'Calls','קלט':'Input','פלט':'Output','משימה · מודל':'Task · model','משתמש':'User','יום':'Day','מנהל':'Admin','היום':'Today',
     'התחברו והוסיפו את הפודקאסטים שלכם':'Sign in and add your podcasts','התחברו ל-Pawed והתאימו את הפודים שלכם:':'Sign in to Pawed and tailor your pods:','הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕':'Add a channel by name or YouTube link, and remove existing ones with ✕',
+    'המיקום שלי':"Where I'm based",'כמו המיקום שלי':'Same as my location','קובע את שפת הקריאה ואת אזור התוכן כברירת מחדל.':'Sets the language you read in and the default content region.',
     'אזור התוכן':'Content region','זיהוי אוטומטי':'Auto-detect','האזור קובע את סט הפודקאסטים המוכן שמוצג בעמוד הראשי. השינויים האישיים שלכם נשמרים מעל הסט.':'The region sets the preset roster shown on the home page. Your own changes stay on top of it.','הסט של האזור הזה עוד לא פעיל, מוצג הסט הכללי.':"This region's preset is not live yet, so the default roster is shown.",
     'עברית':'Hebrew','פוליטיקה':'Politics','טכנולוגיה':'Technology','כלכלה':'Economy','ספורט':'Sports','תרבות':'Culture','לייפסטייל':'Lifestyle','בריאות':'Health'
   };
