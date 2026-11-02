@@ -2787,7 +2787,10 @@ def handle_get(handler, path, qs):
         return True
     if path == "/api/vidsum/me":
         user = current_user(handler)
-        handler._json({"signed": bool(user), "admin": bool(user and user.get("admin"))})
+        named = bool(user and user.get("id") != "admin-token")
+        handler._json({"signed": bool(user), "admin": bool(user and user.get("admin")),
+                       "name": (user.get("name") or user.get("email") or "") if named else "", "email": (user.get("email") or "") if named else "",
+                       "avatar": (user.get("avatar") or "") if named else ""})
         return True
     if path == "/api/vidsum/rating":
         user = current_user(handler)

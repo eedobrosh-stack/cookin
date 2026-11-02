@@ -232,6 +232,35 @@ SWITCH_JS = (
     "if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();})();\n")
 
 
+USER_JS = r"""(function(){
+var L={he:['אורח','התחברות עם Google','מקורות','החלפת משתמש','יציאה','גולש כאורח'],en:['Guest','Sign in with Google','Resources','Switch user','Sign out','Browsing as a guest'],
+de:['Gast','Mit Google anmelden','Ressourcen','Benutzer wechseln','Abmelden','Als Gast unterwegs'],fr:['Invité','Se connecter avec Google','Ressources','Changer d’utilisateur','Se déconnecter','Navigation en invité'],
+it:['Ospite','Accedi con Google','Risorse','Cambia utente','Esci','Stai navigando come ospite'],es:['Invitado','Iniciar sesión con Google','Recursos','Cambiar de usuario','Cerrar sesión','Navegando como invitado'],
+pt:['Convidado','Entrar com o Google','Recursos','Trocar de usuário','Sair','Navegando como convidado'],nl:['Gast','Inloggen met Google','Bronnen','Gebruiker wisselen','Uitloggen','Je bladert als gast']};
+var lang=window.LANG||document.documentElement.lang||'en',T=L[lang]||L.en;
+var css=document.createElement('style');css.textContent='.pu{position:relative;display:inline-flex;margin-inline-start:10px;vertical-align:middle}.pu>button{width:30px;height:30px;border-radius:50%;border:1.5px solid #cfcfcf;background:#f1f1f1;color:#666;padding:0;cursor:pointer;display:grid;place-items:center;overflow:hidden;font:700 14px system-ui,sans-serif}.pu>button img{width:100%;height:100%;object-fit:cover}.pu>button.in{border-color:#e3222b;color:#e3222b;background:#fff}.pu .pm{position:absolute;top:36px;inset-inline-end:0;min-width:210px;background:#fff;color:#222;border:1px solid #ddd;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:6px;z-index:9999;text-align:start;font:14px system-ui,sans-serif}.pu .pm[hidden]{display:none}.pu .pm div{padding:8px 10px;color:#666;font-size:13px;border-bottom:1px solid #eee;margin-bottom:4px;word-break:break-all}.pu .pm a,.pu .pm .pa{display:block;padding:8px 10px;border-radius:6px;color:#222;text-decoration:none;cursor:pointer;background:none;border:0;width:100%;text-align:start;font:inherit}.pu .pm a:hover,.pu .pm .pa:hover{background:#f3f3f3}.pu.fx{position:fixed;top:8px;inset-inline-end:10px;z-index:9998}';
+document.head.appendChild(css);
+var esc=function(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]})};
+var GUEST='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>';
+function mount(j){
+ var host=document.querySelector('.utility-links')||document.querySelector('.utility-inner')||document.querySelector('.masthead-actions'),w=document.createElement('span');
+ w.className='pu'+(host?'':' fx');var named=j.signed&&j.name,next=encodeURIComponent(location.pathname+location.search);
+ var ic=named?(j.avatar?'<img src="'+esc(j.avatar)+'" alt="" referrerpolicy="no-referrer">':esc(j.name.trim().charAt(0).toUpperCase())):GUEST;
+ var menu=named?'<div>'+esc(j.name)+(j.email&&j.email!==j.name?'<br>'+esc(j.email):'')+'</div><a href="/vidsum/sources">'+T[2]+'</a><a href="/auth/login?next='+next+'">'+T[3]+'</a><button class="pa" id="pu-out">'+T[4]+'</button>'
+  :j.signed?'<div>Admin</div><a href="/vidsum/sources">'+T[2]+'</a><a href="/auth/login?next='+next+'">'+T[1]+'</a>'
+  :'<div>'+T[5]+'</div><a href="/auth/login?next='+next+'">'+T[1]+'</a><a href="/vidsum/sources">'+T[2]+'</a>';
+ w.innerHTML='<button type="button" class="'+(named?'in':'')+'" title="'+esc(named?j.name:T[0])+'" aria-label="'+esc(named?j.name:T[0])+'">'+ic+'</button><span class="pm" hidden>'+menu+'</span>';
+ (host||document.body).appendChild(w);
+ var b=w.firstChild,m=w.lastChild;b.onclick=function(e){e.stopPropagation();m.hidden=!m.hidden};
+ document.addEventListener('click',function(e){if(!w.contains(e.target))m.hidden=true});
+ var o=w.querySelector('#pu-out');if(o)o.onclick=function(){var d=function(){location.reload()};fetch('/auth/logout',{method:'POST'}).then(d,d)};
+}
+function go(){fetch('/api/vidsum/me').then(function(r){return r.json()}).then(mount).catch(function(){mount({signed:false})})}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();
+})();
+"""
+
+
 def js():
     """the browser side: window.PI = {order, T, P}; piT(english, lang) -> translation or the English text; plus the language menu"""
     pats = [[p, list(r)] for p, r in P]
@@ -240,4 +269,4 @@ def js():
             "var m=en.match(/^(\\s*)([\\s\\S]*?)(\\s*)$/);if(m[2]&&m[2]!==en){v=PI.T[m[2]];if(v)return m[1]+v[i]+m[3];}"
             "var s=m[2];for(var k=0;k<PI.P.length;k++){var re=new RegExp(PI.P[k][0]);if(re.test(s)){return m[1]+s.replace(re,function(){var a=arguments,t=PI.P[k][1][i];"
             "return t.replace(/\\$(\\d)/g,function(_,n){return a[+n]===undefined?'':a[+n];});})+m[3];}}return en;};\n"
-            + SWITCH_JS % (json.dumps(NATIVE, ensure_ascii=False), json.dumps(FLAG, ensure_ascii=False)))
+            + SWITCH_JS % (json.dumps(NATIVE, ensure_ascii=False), json.dumps(FLAG, ensure_ascii=False)) + USER_JS)
