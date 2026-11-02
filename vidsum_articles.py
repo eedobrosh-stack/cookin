@@ -3017,6 +3017,8 @@ def _geo_post(handler, path, req):
         elif path == "/api/vidsum/admin/geo/pick":
             geo_suites.pick(g, str(req.get("topic") or ""), req.get("remove") or None, req.get("add") or None)
             handler._json({"ok": True})
+        elif path == "/api/vidsum/admin/geo/retag":
+            handler._json({"ok": True, **geo_suites.retag(dry=req.get("apply") is not True)})
         elif path == "/api/vidsum/admin/geo/activate":
             handler._json({"ok": True, **geo_suites.activate(g)})
         else:

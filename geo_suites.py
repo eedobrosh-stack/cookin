@@ -284,8 +284,8 @@ def activate(slug):
                 for c in dd["channels"]:
                     if c["id"] == cid:
                         g = list(c.get("geos") or [])
-                        if not g and ex:
-                            g = ["il"]                                   # a legacy roster channel keeps its Israel membership
+                        if not g and ex and c.get("language") == "he":
+                            g = ["il"]                                   # a Hebrew legacy roster channel keeps its Israel membership; other languages are not Israel
                         if slug not in g:
                             g.append(slug)
                         c["geos"] = g
@@ -296,3 +296,30 @@ def activate(slug):
         d["suites"][slug]["activated"] = time.strftime("%Y-%m-%d %H:%M:%S")
         _save(d)
     return {"created": made, "tagged": tagged, "failed": failed}
+
+
+def retag(dry=True):
+    """Israel's suite is the Hebrew roster. Base channels in another language that still count as Israel (no geos, or an `il` tag
+    added by an earlier activation) move out: English ones become US content, `il` is dropped from the rest. -> counts + the changes."""
+    import vidsum_articles as va
+    changes = []
+    with va.LOCK:
+        d = va._load_ch()
+        for c in d["channels"]:
+            if c.get("owner_id") is not None or c.get("language") == "he" or c["id"].startswith("pending-"):
+                continue
+            g = list(c.get("geos") or [])
+            new = None
+            if not g and c.get("language") == "en":
+                new = ["us"]
+            elif "il" in g and len(g) > 1:
+                new = [x for x in g if x != "il"]
+            elif g == ["il"]:
+                new = ["us"] if c.get("language") == "en" else None
+            if new is not None and new != g:
+                changes.append({"name": c.get("name"), "language": c.get("language"), "from": g, "to": new})
+                if not dry:
+                    c["geos"] = new
+        if not dry and changes:
+            va._save_ch(d)
+    return {"dry": dry, "count": len(changes), "changes": changes}
