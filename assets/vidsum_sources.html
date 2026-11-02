@@ -405,12 +405,20 @@ async function renderGeo(){
     if(signed){ try{ await api('/api/vidsum/prefs',{lang:i.value}); }catch(e){ msg('❌ '+e.message,'err'); return; } }
     location.reload();
   });
-  el.querySelectorAll('input[name=geo]').forEach(i=>i.onchange = async () => {
+  let tmr = null;
+  el.querySelectorAll('input[name=geo]').forEach(i=>i.onchange = () => {
     const vals = [...el.querySelectorAll('input[name=geo]:checked')].map(x=>x.value);
     if(!vals.length){ i.checked = true; return; }                               // at least one region
-    document.cookie = 'pawed_geo=;path=/;max-age=0'; ck('pawed_geos', vals.join(','));
-    if(signed){ try{ await api('/api/vidsum/prefs',{contentGeos:vals}); }catch(e){ msg('❌ '+e.message,'err'); return; } }
-    location.reload();
+    el.querySelectorAll('input[name=geo]').forEach(x=>x.parentElement.classList.toggle('on', x.checked));   // instant visual feedback
+    clearTimeout(tmr);                                                          // several clicks in a row become one save
+    tmr = setTimeout(async () => {
+      msg('מעדכן את התוכן…','ok');
+      document.cookie = 'pawed_geo=;path=/;max-age=0'; ck('pawed_geos', vals.join(','));
+      try{
+        if(signed){ const j = await api('/api/vidsum/prefs',{contentGeos:vals}); D.prefs = j.prefs; }
+        await load(); msg('נשמר','ok');                            // reload the lists in place, no page reload
+      }catch(e){ msg('❌ '+e.message,'err'); }
+    }, 700);
   });
 }
 async function savePrefs(p){
