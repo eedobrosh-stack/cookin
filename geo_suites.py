@@ -101,8 +101,11 @@ def effective(channels, geo=None):
 
 
 def effective_set(channels, sel=None):
-    """The live suites behind the selected regions (a region without a live suite falls back as `effective` says)."""
-    return list(dict.fromkeys(effective(channels, g) for g in (sel or geos())))
+    """The live suites behind the selected regions. A region without a live suite adds nothing; only when none of the picks is live
+    does the visitor get the single-geo fallback (US suite, else the Israel roster)."""
+    sel = sel or geos()
+    live = [g for g in dict.fromkeys(sel) if g == "il" or active(g, channels)]
+    return live or [effective(channels, sel[0])]
 
 
 def channel_ok(c, channels, sel=None):
