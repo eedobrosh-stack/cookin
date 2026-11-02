@@ -397,9 +397,20 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
     latest = clean_dashes(list(latest))
     e = _html.escape
     rss = a.get("kind") == "rss"            # a podcast episode: no YouTube deep links, the time is shown as plain text
-    ts_link = lambda ts: ("" if not _ts_sec(ts) else (f'<span class="ts">{e(ts)}</span>' if rss else
-                          f'<a class="ts" href="{e(a["url"])}&amp;t={_ts_sec(ts)}s" target="_blank" rel="noopener">▶ {e(ts)}</a>')
-                          if _ts_sec(ts) is not None and ts else "")
+    def ts_link(ts):
+        sec = _ts_sec(ts) if ts else None
+        if not sec:
+            return ""
+        if not rss:
+            return f'<a class="ts" href="{e(a["url"])}&amp;t={sec}s" target="_blank" rel="noopener">▶ {e(ts)}</a>'
+        pl_, k_ = platform_links(a, rss), None
+        k_ = platform if platform in ("spotify", "youtube") and platform in pl_ else ("spotify" if "spotify" in pl_ else ("youtube" if "youtube" in pl_ and a.get("links", {}).get("youtube") else None))
+        if k_ == "spotify":                              # Spotify opens an episode at ?t=<seconds>, in the app or the web player
+            u = pl_["spotify"].split("?")[0]
+            return f'<a class="ts" href="{e(u)}?t={sec}" target="_blank" rel="noopener">▶ {e(ts)}</a>'
+        if k_ == "youtube":
+            return f'<a class="ts" href="{e(pl_["youtube"])}&amp;t={sec}s" target="_blank" rel="noopener">▶ {e(ts)}</a>'
+        return f'<span class="ts">{e(ts)}</span>'        # Apple Podcasts and plain RSS pages have no time-offset link
     art_url = lambda s: f'{base}/vidsum/article/{urllib.parse.quote(s["slug"])}'
     thumb = lambda v: f"https://i.ytimg.com/vi/{v}/hq720.jpg"   # true 16:9 (hqdefault has baked-in black bars)
     mins = max(1, round(sum(len(b.get("text", "").split()) for b in a["blocks"]) / 200))

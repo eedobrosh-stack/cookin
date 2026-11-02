@@ -2840,6 +2840,22 @@ def handle_get(handler, path, qs):
                 {"id": c["id"], "name": c["name"], "added": c.get("added", ""), "backfill": bool(c.get("backfill")),
                  "daily": c.get("cadence") == "daily", "pub_days": c.get("pub_days") or [], "seen": (c.get("seen") or [])[-300:]} for c in _load_ch()["channels"] if not c["id"].startswith("pending-") and c.get("kind") != "rss"]})
         return True
+    if path == "/api/vidsum/links/audit":                 # every article that carries a platform link, for the Mac-side link auditor
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            rows = []
+            for a in sorted(_articles(), key=lambda x: x.get("published_at") or x.get("created") or "", reverse=True):
+                lk = a.get("links") or {}
+                if not (lk.get("spotify") or lk.get("apple") or lk.get("youtube")) and a.get("kind") != "rss" and not a.get("url"):
+                    continue
+                rows.append({"slug": a["slug"], "kind": a.get("kind") or "youtube", "vid": a.get("vid"), "channel": a.get("channel", ""),
+                             "src_title": a.get("src_title") or a.get("title", ""), "published": (a.get("published") or a.get("created") or "")[:10],
+                             "duration": a.get("duration") or 0, "url": a.get("url") or "", "audited": lk.get("audited") or "",
+                             "links": {k: lk[k] for k in ("spotify", "apple", "youtube") if lk.get(k)}})
+            handler._json({"ok": True, "articles": rows})
+        return True
     if path == "/api/vidsum/links/todo":
         user = current_user(handler)
         if not (user and user.get("admin")):
@@ -2868,7 +2884,7 @@ def handle_get(handler, path, qs):
                 if not (qs.get("recheck") or [""])[0] and lk.get("checked") and lk["checked"] >= time.strftime("%Y-%m-%d", time.localtime(time.time() - 3 * 86400)):
                     continue                      # looked recently; new episodes appear on podcast feeds late, retry after 3 days (recheck=1 ignores this)
                 todo.append({"slug": a["slug"], "vid": a["vid"], "channel": a.get("channel", ""), "src_title": a.get("src_title", ""),
-                             "published": a.get("published") or ""})
+                             "published": a.get("published") or "", "duration": a.get("duration") or 0})
                 if len(todo) >= lim:
                     break
             handler._json({"ok": True, "todo": todo})
@@ -3064,12 +3080,13 @@ def handle_post(handler, path, req):
             except Exception:
                 handler._json({"ok": False, "error": "no such article"}, 404)
                 return True
-            lk = {k: str(v)[:400] for k, v in (req.get("links") or {}).items() if k in ("apple", "spotify", "youtube", "checked", "yt_checked") and v}
-            for k in ("apple", "spotify", "youtube", "checked", "yt_checked"):     # never overwrite what we already have with nothing
-                if not lk.get(k) and (a.get("links") or {}).get(k):
+            clear = [k for k in (req.get("clear") or []) if k in ("apple", "spotify", "youtube", "checked", "yt_checked")]   # auditor: this link is wrong
+            lk = {k: str(v)[:400] for k, v in (req.get("links") or {}).items() if k in ("apple", "spotify", "youtube", "checked", "yt_checked", "audited") and v}
+            for k in ("apple", "spotify", "youtube", "checked", "yt_checked", "audited"):     # never overwrite what we already have with nothing
+                if not lk.get(k) and k not in clear and (a.get("links") or {}).get(k):
                     lk[k] = a["links"][k]
             ok_host = {"apple": "https://podcasts.apple.com/", "spotify": "https://open.spotify.com/", "youtube": "https://www.youtube.com/watch?v="}
-            lk = {k: v for k, v in lk.items() if k in ("checked", "yt_checked") or v.startswith(ok_host[k])}
+            lk = {k: v for k, v in lk.items() if k in ("checked", "yt_checked", "audited") or v.startswith(ok_host[k])}
             a["links"] = lk
             _write_article(a)
             handler._json({"ok": True, "links": lk})
