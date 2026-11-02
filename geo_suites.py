@@ -298,6 +298,9 @@ def activate(slug):
     return {"created": made, "tagged": tagged, "failed": failed}
 
 
+ISRAEL_FOCUS = ("Call Me Back", "Unholy: Two Jews")
+
+
 def retag(dry=True):
     """Israel's suite is the Hebrew roster. Base channels in another language that still count as Israel (no geos, or an `il` tag
     added by an earlier activation) move out: English ones become US content, `il` is dropped from the rest. -> counts + the changes."""
@@ -316,6 +319,8 @@ def retag(dry=True):
                 new = [x for x in g if x != "il"]
             elif g == ["il"]:
                 new = ["us"] if c.get("language") == "en" else None
+            if new == ["us"] and any(k in (c.get("name") or "") for k in ISRAEL_FOCUS):
+                new = ["il", "us"]                                       # American-made, Israel-focused shows stay in both
             if new is not None and new != g:
                 changes.append({"name": c.get("name"), "language": c.get("language"), "from": g, "to": new})
                 if not dry:
