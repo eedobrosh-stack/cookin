@@ -43,31 +43,45 @@ def norm(v):
 
 # ------------------------------------------------------------------ visitor geo
 def resolve(handler, qs=None):
-    """-> (slug, explicit). ?geo= and the pawed_geo cookie are explicit; otherwise Cloudflare's country decides.
-    Unknown country keeps the legacy default (Israel roster); a known country without a suite gets the US suite."""
+    """-> (slugs, explicit). The content regions the visitor reads: ?geo= (one, for testing), the pawed_geos cookie (several),
+    the legacy pawed_geo cookie, else the detected country plus the United States. Unknown country: Israel plus the US."""
     q = ((qs or {}).get("geo") or [""])[0]
     if not q:
         m = re.search(r"[?&]geo=([A-Za-z_-]{2,20})", getattr(handler, "path", "") or "")
         q = m.group(1) if m else ""
     s = norm(q)
     if s:
-        return s, True
-    m = re.search(r"(?:^|;\s*)pawed_geo=([a-z]{2,20})\b", handler.headers.get("Cookie") or "")
+        return [s], True
+    ck = handler.headers.get("Cookie") or ""
+    m = re.search(r"(?:^|;\s*)pawed_geos=([a-z,]{2,60})", ck)
+    sel = list(dict.fromkeys(g for g in (norm(x) for x in (m.group(1).split(",") if m else [])) if g))
+    if sel:
+        return sel, True
+    m = re.search(r"(?:^|;\s*)pawed_geo=([a-z]{2,20})\b", ck)
     s = norm(m.group(1)) if m else ""
     if s:
-        return s, True
+        return [s], True
     cc = (handler.headers.get("CF-IPCountry") or "").strip().upper()
-    if len(cc) == 2 and cc.isalpha() and cc not in ("XX", "T1"):
-        return CC2SLUG.get(cc, "us"), False
-    return "il", False
+    home = CC2SLUG.get(cc, "us") if len(cc) == 2 and cc.isalpha() and cc not in ("XX", "T1") else "il"
+    return list(dict.fromkeys([home, "us"])), False
 
 
 def set_ctx(handler, qs=None):
-    CTX.geo, CTX.explicit = resolve(handler, qs)
+    CTX.geos, CTX.explicit = resolve(handler, qs)
+    CTX.geo = CTX.geos[0]
+
+
+def set_geos(geos, explicit=True):
+    CTX.geos, CTX.explicit = list(geos), explicit
+    CTX.geo = CTX.geos[0]
 
 
 def ctx():
     return getattr(CTX, "geo", None), getattr(CTX, "explicit", False)
+
+
+def geos():
+    return list(getattr(CTX, "geos", None) or [getattr(CTX, "geo", None) or "il"])
 
 
 def active(slug, channels):
@@ -86,13 +100,18 @@ def effective(channels, geo=None):
     return "il"
 
 
-def channel_ok(c, channels, geo=None):
-    """Is this base (Pawed roster) channel in the visitor's suite?"""
-    eff = effective(channels, geo)
+def effective_set(channels, sel=None):
+    """The live suites behind the selected regions (a region without a live suite falls back as `effective` says)."""
+    return list(dict.fromkeys(effective(channels, g) for g in (sel or geos())))
+
+
+def channel_ok(c, channels, sel=None):
+    """Is this base (Pawed roster) channel in any of the visitor's selected suites?"""
+    eff = effective_set(channels, sel)
     g = c.get("geos") or []
-    if eff == "il":
-        return not g or "il" in g
-    return eff in g or "us" in g
+    if "il" in eff and (not g or "il" in g):
+        return True
+    return bool(set(eff) - {"il"}) and bool(set(eff) & set(g))
 
 
 # ------------------------------------------------------------------ proposals

@@ -1531,7 +1531,7 @@ def _vdb():
               "hide_name INTEGER DEFAULT 0, muted TEXT DEFAULT '[]')")
     for ddl in ("ALTER TABLE vidsum_prefs ADD COLUMN hidden_base TEXT DEFAULT '[]'", "ALTER TABLE vidsum_prefs ADD COLUMN lang TEXT DEFAULT ''",
                 "ALTER TABLE vidsum_prefs ADD COLUMN platform TEXT DEFAULT ''", "ALTER TABLE vidsum_prefs ADD COLUMN home_geo TEXT DEFAULT ''",
-                "ALTER TABLE vidsum_prefs ADD COLUMN content_geo TEXT DEFAULT ''"):
+                "ALTER TABLE vidsum_prefs ADD COLUMN content_geo TEXT DEFAULT ''", "ALTER TABLE vidsum_prefs ADD COLUMN content_geos TEXT DEFAULT ''"):
         try:
             c.execute(ddl)
         except Exception:
@@ -1591,7 +1591,7 @@ def get_vprefs(uid):
     with _vdb() as c:
         r = c.execute("SELECT * FROM vidsum_prefs WHERE user_id=?", (uid,)).fetchone()
     if not r:
-        return {"hideBase": False, "hideName": False, "muted": [], "hiddenBase": [], "lang": "", "platform": "", "homeGeo": "", "contentGeo": ""}
+        return {"hideBase": False, "hideName": False, "muted": [], "hiddenBase": [], "lang": "", "platform": "", "homeGeo": "", "contentGeo": "", "contentGeos": []}
     try:
         muted = json.loads(r["muted"] or "[]")
     except ValueError:
@@ -1612,8 +1612,12 @@ def get_vprefs(uid):
         home_geo, content_geo = r["home_geo"] or "", r["content_geo"] or ""
     except (IndexError, KeyError):
         home_geo = content_geo = ""
+    try:
+        geos = [g for g in (r["content_geos"] or "").split(",") if g in geo_suites.GEOS]
+    except (IndexError, KeyError):
+        geos = []
     return {"hideBase": bool(r["hide_base"]), "hideName": bool(r["hide_name"]), "muted": muted, "hiddenBase": hidden_base, "lang": lang, "platform": platform,
-            "homeGeo": home_geo, "contentGeo": content_geo}
+            "homeGeo": home_geo, "contentGeo": content_geo, "contentGeos": geos}
 
 
 def set_vprefs(uid, req):
@@ -1630,19 +1634,14 @@ def set_vprefs(uid, req):
         p["lang"] = req["lang"]
     if req.get("platform") in ("youtube", "spotify", "apple", "rss"):
         p["platform"] = req["platform"]
-    if "homeGeo" in req:                      # where the user is based: sets the reading language too, and the roster unless a content region is set
-        g = geo_suites.norm(req["homeGeo"])
-        p["homeGeo"] = g
-        if g:
-            p["lang"] = geo_suites.GEOS[g][4]
-    if "contentGeo" in req:                   # '' = same as where I'm based
-        p["contentGeo"] = geo_suites.norm(req["contentGeo"])
+    if isinstance(req.get("contentGeos"), list):         # content origin: any number of regions, saved per user
+        p["contentGeos"] = list(dict.fromkeys(g for g in (geo_suites.norm(x) for x in req["contentGeos"]) if g))
     with _vdb() as c:
-        c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted,hidden_base,lang,platform,home_geo,content_geo) VALUES(?,?,?,?,?,?,?,?,?) "
+        c.execute("INSERT INTO vidsum_prefs(user_id,hide_base,hide_name,muted,hidden_base,lang,platform,home_geo,content_geo,content_geos) VALUES(?,?,?,?,?,?,?,?,?,?) "
                   "ON CONFLICT(user_id) DO UPDATE SET hide_base=excluded.hide_base, hide_name=excluded.hide_name, muted=excluded.muted, "
-                  "hidden_base=excluded.hidden_base, lang=excluded.lang, platform=excluded.platform, home_geo=excluded.home_geo, content_geo=excluded.content_geo",
+                  "hidden_base=excluded.hidden_base, lang=excluded.lang, platform=excluded.platform, home_geo=excluded.home_geo, content_geo=excluded.content_geo, content_geos=excluded.content_geos",
                   (uid, int(p["hideBase"]), int(p["hideName"]), json.dumps(p["muted"]), json.dumps(p["hiddenBase"]), p.get("lang") or "", p.get("platform") or "",
-                   p.get("homeGeo") or "", p.get("contentGeo") or ""))
+                   p.get("homeGeo") or "", p.get("contentGeo") or "", ",".join(p.get("contentGeos") or [])))
     return p
 
 
@@ -1674,7 +1673,12 @@ def explicit_lang(handler, qs=None):
 
 def default_lang(handler):
     """No choice made yet: Hebrew for Israel (and when the country is unknown), English for the rest of the world."""
-    cc = viewer_country(handler)
+    for part in (handler.headers.get("Accept-Language") or "").split(","):        # the browser's own language list decides first
+        l = part.split(";")[0].strip().lower()[:2]
+        l = "he" if l in ("he", "iw") else l
+        if l in pawed_i18n.UI_LANGS:
+            return l
+    cc = (handler.headers.get("CF-IPCountry") or "").strip().upper()
     if not cc or cc == "IL":
         return "he"
     return geo_suites.GEOS[geo_suites.CC2SLUG[cc]][4] if cc in geo_suites.CC2SLUG else "en"
@@ -2425,7 +2429,7 @@ def _geo_get(handler, path, qs):
     if path == "/api/vidsum/geo":
         g, explicit = geo_suites.ctx()
         chs = _load_ch()["channels"]
-        handler._json({"ok": True, "geo": g, "explicit": explicit, "effective": geo_suites.effective(chs),
+        handler._json({"ok": True, "geo": g, "sel": geo_suites.geos(), "explicit": explicit, "effective": geo_suites.effective(chs), "lang": request_lang(handler, qs),
                        "geos": [{"slug": k, "cc": v[0], "name": v[1], "name_he": v[2], "live": k == "il" or geo_suites.active(k, chs)} for k, v in geo_suites.GEOS.items()]})
         return True
     if not path.startswith(("/api/vidsum/admin/geo", "/vidsum/geo")):
@@ -2478,9 +2482,9 @@ def _set_geo_ctx(handler, qs=None):
         u = current_user(handler)
         if u and u.get("id") != "admin-token":
             pr = get_vprefs(u["id"])
-            g = pr.get("contentGeo") or pr.get("homeGeo")
-            if g in geo_suites.GEOS:
-                geo_suites.CTX.geo, geo_suites.CTX.explicit = g, True
+            sel = pr.get("contentGeos") or [g for g in (pr.get("contentGeo"),) if g in geo_suites.GEOS]
+            if sel:
+                geo_suites.set_geos(sel)
     except Exception:
         pass
 

@@ -226,7 +226,7 @@ SWITCH_JS = (
     "(function(){var N=%s,F=%s;function go(){var sw=document.querySelector('.langsw');if(!sw)return;var cur=window.LANG||document.documentElement.lang||'he';"
     "sw.textContent='';Object.keys(N).forEach(function(k){var a=document.createElement('a');a.dataset.l=k;a.title=N[k];a.textContent=F[k];a.setAttribute('role','button');"
     "a.className=k===cur?'on':'';a.onclick=function(e){e.preventDefault();if(k===cur)return;document.cookie='pawed_lang='+k+';path=/;max-age=31536000;samesite=lax';"
-    "var G={he:'il',en:'us',de:'de',fr:'fr',it:'it',es:'es',pt:'br',nl:'nl'};document.cookie='pawed_geo='+G[k]+';path=/;max-age=31536000;samesite=lax';var d=function(){location.reload()};try{fetch('/api/vidsum/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:k})}).then(d,d);}catch(x){d();}};sw.appendChild(a);});}"
+    "var d=function(){location.reload()};try{fetch('/api/vidsum/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:k})}).then(d,d);}catch(x){d();}};sw.appendChild(a);});}"
     "var st=document.createElement('style');st.textContent='.langsw{flex-wrap:wrap}.langsw a{cursor:pointer;font-size:18px;line-height:1;opacity:.45;filter:grayscale(.4);text-decoration:none}.langsw a.on{opacity:1;filter:none}.langsw a:hover{opacity:1}';"
     "document.head.appendChild(st);"
     "if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();})();\n")

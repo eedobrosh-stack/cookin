@@ -387,27 +387,31 @@ async function renderGeo(){
   try{ g = await (await fetch('/api/vidsum/geo')).json(); }catch(e){ return; }
   if(!g || !g.geos) return;
   const rn = c => { try{ return new Intl.DisplayNames([window.LANG],{type:'region'}).of(c); }catch(e){ return c; } };
+  const ln = l => { try{ return new Intl.DisplayNames([l],{type:'language'}).of(l); }catch(e){ return l; } };
   const flag = c => String.fromCodePoint(...[...c].map(ch=>0x1F1E6+ch.charCodeAt(0)-65));
+  const LANGS = [['he','IL'],['en','US'],['de','DE'],['fr','FR'],['es','ES'],['it','IT'],['pt','BR'],['nl','NL']];
   const signed = !!(D && D.me && D.prefs);
-  const row = (name, cur, first, onPick) => '<div class="opts" data-row="'+name+'">' + (first ? '<label class="'+(cur===''?'on':'')+'"><input type="radio" name="'+name+'" value=""'+(cur===''?' checked':'')+'><span style="font-size:22px;line-height:1">'+first[0]+'</span>'+esc(first[1])+'</label>' : '')
-    + g.geos.map(x=>'<label class="'+(x.slug===cur?'on':'')+'" title="'+esc(rn(x.cc))+'"><input type="radio" name="'+name+'" value="'+x.slug+'"'+(x.slug===cur?' checked':'')+'><span style="font-size:22px;line-height:1">'+flag(x.cc)+'</span>'+esc(rn(x.cc))+'</label>').join('') + '</div>';
+  const curLang = (signed && D.prefs.lang) || g.lang || window.LANG, sel = g.sel || [];
+  const big = f => '<span style="font-size:22px;line-height:1">'+f+'</span>';
   el.hidden = false;
-  if(signed){
-    const home = D.prefs.homeGeo || '', content = D.prefs.contentGeo || '';
-    el.innerHTML = '<b>המיקום שלי</b>' + row('home', home) + '<small>קובע את שפת הקריאה ואת אזור התוכן כברירת מחדל.</small>'
-      + '<b style="margin-top:14px">אזור התוכן</b>' + row('content', content, ['📍','כמו המיקום שלי'])
-      + '<small>האזור קובע את סט הפודקאסטים המוכן שמוצג בעמוד הראשי. השינויים האישיים שלכם נשמרים מעל הסט.</small>'
-      + (g.geo!=='il' && g.effective!==g.geo ? '<small class="warn">הסט של האזור הזה עוד לא פעיל, מוצג הסט הכללי.</small>' : '');
-    const save = async p => { try{ await api('/api/vidsum/prefs', p); location.reload(); }catch(e){ msg('❌ '+e.message,'err'); } };
-    el.querySelectorAll('input[name=home]').forEach(i=>i.onchange=()=>save({homeGeo:i.value}));
-    el.querySelectorAll('input[name=content]').forEach(i=>i.onchange=()=>save({contentGeo:i.value}));
-    return;
-  }
-  const cur = g.explicit ? g.geo : 'auto';
-  el.innerHTML = '<b>אזור התוכן</b>' + row('geo', cur === 'auto' ? '' : cur, ['🌐','זיהוי אוטומטי'])
-    + '<small>האזור קובע את סט הפודקאסטים המוכן שמוצג בעמוד הראשי. השינויים האישיים שלכם נשמרים מעל הסט.</small>'
-    + (g.geo!=='il' && g.effective!==g.geo ? '<small class="warn">הסט של האזור הזה עוד לא פעיל, מוצג הסט הכללי.</small>' : '');
-  el.querySelectorAll('input').forEach(i=>i.onchange = () => { const v = i.value || 'auto'; document.cookie = 'pawed_geo=' + (v==='auto' ? '; max-age=0' : v + ';max-age=31536000') + ';path=/;samesite=lax'; location.reload(); });
+  el.innerHTML = '<b>שפה</b><div class="opts">' + LANGS.map(([l,c])=>'<label class="'+(l===curLang?'on':'')+'"><input type="radio" name="lang" value="'+l+'"'+(l===curLang?' checked':'')+'>'+big(flag(c))+esc(ln(l))+'</label>').join('') + '</div>'
+    + '<small>שפת הממשק ושפת סיכומי הכתבות בכל המסכים. ברירת המחדל נקבעת לפי הדפדפן.</small>'
+    + '<b style="margin-top:14px">מקור התוכן</b><div class="opts">' + g.geos.map(x=>'<label class="'+(sel.includes(x.slug)?'on':'')+'" title="'+esc(rn(x.cc))+'"><input type="checkbox" name="geo" value="'+x.slug+'"'+(sel.includes(x.slug)?' checked':'')+'>'+big(flag(x.cc))+esc(rn(x.cc))+'</label>').join('') + '</div>'
+    + '<small>אפשר לבחור כמה מדינות. ברירת המחדל: המדינה שזוהתה ו-ארצות הברית. '+(signed?'השינויים נשמרים בפרופיל.':'השינויים נשמרים בדפדפן.')+'</small>'
+    + (g.sel.some(x=>x!=='il' && !g.geos.find(y=>y.slug===x).live) ? '<small class="warn">לחלק מהמדינות עוד אין סט פעיל, מוצג במקומן הסט הכללי.</small>' : '');
+  const ck = (k,v) => { document.cookie = k+'='+v+';path=/;max-age=31536000;samesite=lax'; };
+  el.querySelectorAll('input[name=lang]').forEach(i=>i.onchange = async () => {
+    ck('pawed_lang', i.value);
+    if(signed){ try{ await api('/api/vidsum/prefs',{lang:i.value}); }catch(e){ msg('❌ '+e.message,'err'); return; } }
+    location.reload();
+  });
+  el.querySelectorAll('input[name=geo]').forEach(i=>i.onchange = async () => {
+    const vals = [...el.querySelectorAll('input[name=geo]:checked')].map(x=>x.value);
+    if(!vals.length){ i.checked = true; return; }                               // at least one region
+    document.cookie = 'pawed_geo=;path=/;max-age=0'; ck('pawed_geos', vals.join(','));
+    if(signed){ try{ await api('/api/vidsum/prefs',{contentGeos:vals}); }catch(e){ msg('❌ '+e.message,'err'); return; } }
+    location.reload();
+  });
 }
 async function savePrefs(p){
   try{ const j = await api('/api/vidsum/prefs',p); D.prefs = j.prefs; await load(); msg('נשמר','ok'); }catch(e){ msg('❌ '+e.message,'err'); }
