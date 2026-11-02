@@ -1654,6 +1654,16 @@ def viewer_country(handler):
     return c if len(c) == 2 and c.isalpha() and c not in ("XX", "T1") else ""
 
 
+def viewer_platform(handler, user=None):
+    """Preferred listening platform: the signed-in user's saved one, else the pawed_platform cookie a guest set on Resources."""
+    if user and user.get("id") != "admin-token":
+        pl = get_vprefs(user["id"]).get("platform") or ""
+        if pl:
+            return pl
+    m = re.search(r"(?:^|;\s*)pawed_platform=(youtube|spotify|apple|rss)\b", handler.headers.get("Cookie") or "")
+    return m.group(1) if m else ""
+
+
 def explicit_lang(handler, qs=None):
     """The language the visitor chose themselves: ?lang=, the signed-in user's saved flag, the pawed_lang cookie. '' if never chosen."""
     q = ((qs or {}).get("lang") or [""])[0]
@@ -2515,13 +2525,10 @@ def handle_get(handler, path, qs):
             elif lang in pawed_i18n.ORDER and a.get("blocks") and not (a.get("tr") or {}).get(lang):
                 import vidsum_translate
                 vidsum_translate.want_lang(a["slug"], lang)            # this language edition does not exist yet (recent articles only)
-            pf = ""
             try:
-                u = current_user(handler)
-                if u and u.get("id") != "admin-token":
-                    pf = get_vprefs(u["id"]).get("platform") or ""
+                pf = viewer_platform(handler, current_user(handler))
             except Exception:
-                pass
+                pf = ""
             handler._html(render_article(a, lang, pf), "no-store")
         return True
     if path in ("/vidsum", "/vidsum/"):
@@ -2820,7 +2827,7 @@ def handle_get(handler, path, qs):
             items = [dict(i, topics=[t for t in i["topics"] if t not in gone]) for i in items if i["topic"] not in gone]
         handler._json({"ok": True, "topics": [t for t in TOPICS if t not in gone], "items": items, "personal": personal,
                        "me": ({"name": user.get("name") or user.get("email")} if user and user.get("id") != "admin-token" else None),
-                       "platform": (get_vprefs(user["id"]).get("platform") or "") if user and user.get("id") != "admin-token" else ""})
+                       "platform": viewer_platform(handler, user)})
         return True
     if path == "/api/vidsum/channels":
         user = current_user(handler)

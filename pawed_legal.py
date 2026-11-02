@@ -277,7 +277,7 @@ def _page(title, body, lang, extra_js="", ui=None):
            f'<a href="/vidsum/privacy">{"פרטיות" if he else L("Privacy")}</a><a href="/vidsum/takedown">{"הסרה ופניות" if he else L("Takedown")}</a>')
     if ui not in ("he", "en"):
         body = f'<p class="small">{L("The full text is available in English and Hebrew.")}</p>' + body
-    sw = '<span class="langsw"></span>'
+    sw = ''
     js = '<script src="/vidsum/i18n.js"></script>'
     return (f'<!doctype html><html lang="{ui}" dir="{"rtl" if he else "ltr"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<title>{_html.escape(title)} | Pawed</title><meta name="robots" content="index,follow"><style>{CSS}</style></head><body>'

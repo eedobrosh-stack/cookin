@@ -273,7 +273,7 @@
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="auth-only" href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a></div><span class="langsw"></span></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a href="/vidsum/sources">מקורות</a><a class="admin-only" href="/vidsum/logs">יומן</a></div></div></div>
   <header class="masthead">
     <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
     <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
@@ -375,12 +375,12 @@ const PLAT_SVG = {
   apple:'<svg viewBox="0 0 24 24"><defs><linearGradient id="apq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F452FF"/><stop offset="1" stop-color="#832BC1"/></linearGradient></defs><rect width="24" height="24" rx="5.5" fill="url(#apq)"/><circle cx="12" cy="10" r="2" fill="#fff"/><path d="M12 13.2c-1 0-1.6.7-1.5 1.6l.4 3.4c.1.8.5 1.3 1.1 1.3s1-.5 1.1-1.3l.4-3.4c.1-.9-.5-1.6-1.5-1.6z" fill="#fff"/><path d="M7.6 12.2a4.7 4.7 0 117.5-.4M5.9 12.6a6.5 6.5 0 1112.2-.2" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>'
 };
 function renderPlat(){
-  const el = $('plat'); el.hidden = !(D.me && !D.admin) && !D.me; if(!D.me){ el.hidden = true; return; }
-  const cur = (D.prefs && D.prefs.platform) || 'youtube', names = {youtube:'YouTube', spotify:'Spotify', apple:'Apple Podcasts', rss:'נגן RSS'};
+  const el = $('plat');
+  const ckPlat = (document.cookie.match(/(?:^|;\s*)pawed_platform=(\w+)/)||[])[1], cur = (D.prefs && D.prefs.platform) || ckPlat || 'youtube', names = {youtube:'YouTube', spotify:'Spotify', apple:'Apple Podcasts', rss:'נגן RSS'};
   el.hidden = false;
   el.innerHTML = '<b>הפלטפורמה המועדפת להאזנה</b><div class="opts">' + ['youtube','spotify','apple','rss'].map(k=>'<label class="'+(k===cur?'on':'')+'"><input type="radio" name="plat" value="'+k+'"'+(k===cur?' checked':'')+'>'+PLAT_SVG[k]+names[k]+'</label>').join('')
     + '</div><small>הפלטפורמה שתבחרו תופיע על תמונת הפרק ותפתח את האפליקציה שלה. האחרות יופיעו כלחצנים מתחת. פרקי פודקאסט ללא וידאו ביוטיוב יציגו את הנגן הזמין.</small>';
-  el.querySelectorAll('input').forEach(i=>i.onchange=()=>savePrefs({platform:i.value}));
+  el.querySelectorAll('input').forEach(i=>i.onchange=()=>{ if(D.me) return savePrefs({platform:i.value}); document.cookie='pawed_platform='+i.value+';path=/;max-age=31536000;samesite=lax'; renderPlat(); msg('נשמר','ok'); });
 }
 async function renderGeo(){
   const el = $('geobox'); let g;
@@ -421,6 +421,21 @@ async function renderGeo(){
     }, 700);
   });
 }
+// ---- guests can set language, content countries and platform; every other edit asks for a Google sign-in first
+function needSignin(){
+  if($('signin-modal')) return;
+  const m = document.createElement('div'); m.id = 'signin-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:99';
+  m.innerHTML = '<div style="background:#fff;border-radius:12px;padding:22px 24px;max-width:340px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.3)"><b style="font-size:17px">נדרשת התחברות עם Google</b><p style="color:#555;margin:10px 0 18px">כדי להוסיף או לערוך מקורות צריך להתחבר עם חשבון Google. להתחבר עכשיו?</p><div style="display:flex;gap:10px;justify-content:center"><button id="si-yes" class="go" style="padding:8px 22px">כן</button><button id="si-no" class="ghost" style="padding:8px 22px">לא</button></div></div>';
+  document.body.appendChild(m);
+  $('si-yes').onclick = () => { location.href = '/auth/login?next=' + encodeURIComponent('/vidsum/sources'); };
+  $('si-no').onclick = () => m.remove();
+  m.onclick = e => { if(e.target === m) m.remove(); };
+}
+['click','focusin'].forEach(ev => document.addEventListener(ev, e => {
+  if(!D || D.me || D.admin) return;
+  if(e.target.closest && e.target.closest('#addp, #sec-base, #sec-mine, #adv')){ e.preventDefault(); e.stopPropagation(); if(document.activeElement && document.activeElement.blur) document.activeElement.blur(); needSignin(); }
+}, true));
 async function savePrefs(p){
   try{ const j = await api('/api/vidsum/prefs',p); D.prefs = j.prefs; await load(); msg('נשמר','ok'); }catch(e){ msg('❌ '+e.message,'err'); }
 }
@@ -468,7 +483,7 @@ const inTable = name => { const k=normN(name); return k.length>=3 && D.sources.s
 function podLine(p){ const days = p.days_since==null?'':(p.days_since===0?'היום':p.days_since===1?'אתמול':'לפני '+p.days_since+' ימים');
   return '<img loading="lazy" referrerpolicy="no-referrer" src="'+esc(p.image)+'" alt=""><div><b>'+esc(p.name)+'</b><small>'+esc((p.hosts||[]).join(', '))+(p.hosts&&p.hosts.length?' · ':'')+esc(langName(p.language))+' · '+(p.episodes||0)+' פרקים'+(days?' · פרק אחרון '+days:'')+'</small></div>'; }
 function renderAddPanel(){
-  const ok = !!D.me || D.admin; $('addp').hidden = !ok; if(!ok) return;
+  const ok = !!D.me || D.admin; $('addp').hidden = false; if(!ok){ $('quota').textContent = 'הוספת מקורות זמינה למשתמשים מחוברים עם Google.'; return; }
   $('quota').textContent = D.admin ? 'מקורות שתוסיפו יוצגו לכולם' : 'נותרו לכם '+quotaLeft()+' מתוך '+D.limit+' מקורות. מקורות שתוסיפו נראים רק לכם.';
   if(!CATOPT) fetch('/api/vidsum/catalog/options').then(r=>r.json()).then(j=>{ if(!j.ok) return; CATOPT=j;
     $('pk_lang').innerHTML = Object.entries(j.languages).map(([k,n])=>'<option value="'+esc(k)+'"'+(k==='he'?' selected':'')+'>'+esc(langName(k))+' ('+n+')</option>').join('');
