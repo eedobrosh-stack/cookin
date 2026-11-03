@@ -9,8 +9,8 @@ KNOWN = [
      "Supadata (YouTube captions) plan is used up. The server pauses it 30 min at a time and the Mac covers, slower.",
      "Upgrade or wait for the reset in the Supadata dashboard; nothing to change in code.", "Eedo"),
     (r"Ran out of memory|out of memory", "oom", "crit",
-     "The 512 MB instance was killed. Pawed restarts by itself but anything running was lost.",
-     "Look at the memory graph (Render > Metrics, 7 days): a baseline above ~400 MB means a leak or too many parallel jobs. Deploy 8ef37a7 lowered the baseline; if it returns, profile article loading and podcast jobs.", "Claude + Eedo"),
+     "The instance ran out of memory and was killed. Pawed restarts by itself but anything running was lost.",
+     "Look at the memory graph (Render > Metrics, 7 days): a baseline above ~65% of the cap means a leak or too many parallel jobs. Deploy 8ef37a7 lowered the baseline; if it returns, profile article loading and podcast jobs.", "Claude + Eedo"),
     (r"gemini 403|The caller does not have permission", "gemini-video-403", "info",
      "First attempt through Gemini's video path was refused (podcast audio is not a video). The automatic retry succeeds via Gemini audio.",
      "None. Only act if the same episode keeps failing after 3 retries.", "-"),
@@ -57,16 +57,33 @@ def classify(text):
     return {"id": "unknown", "severity": "warn", "meaning": "A message that is not in the catalog.", "next": "Read it, decide if it is a problem, then add it to known_errors.py.", "who": "Claude"}
 
 
+def mem_limit_mb():
+    """The instance's real memory cap: the container's cgroup limit (v2, then v1), else PAWED_MEM_MB, else 2048 (the plan since 2026-11)."""
+    import os
+    for f in ("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"):
+        try:
+            v = open(f).read().strip()
+            if v.isdigit() and 256 * 2**20 <= int(v) < 2**40:
+                return int(v) // 2**20
+        except OSError:
+            pass
+    try:
+        return int(os.environ.get("PAWED_MEM_MB") or 2048)
+    except ValueError:
+        return 2048
+
+
 def system_alerts(h):
     """Alerts derived from the health numbers themselves (not from log lines): memory, disk, stalled loops, silent Mac. h = health_report dict + 'relay'."""
     out = []
     def add(sev, id_, title, meaning, step, who):
         out.append({"severity": sev, "id": id_, "title": title, "count": 1, "last": h.get("now"), "meaning": meaning, "next": step, "who": who, "source": "system"})
     rss = h.get("rss_mb")
-    if rss and rss > 450:
-        add("crit", "memory-high", f"Memory {rss} MB of 512", "The instance is close to being killed (out of memory).", "Restart if it keeps rising; read the Render Metrics 7 day graph and check what grew.", "Claude + Eedo")
-    elif rss and rss > 380:
-        add("warn", "memory-high", f"Memory {rss} MB of 512", "Higher than the ~300 MB baseline.", "Watch it; if it stays up, profile article loading and podcast jobs.", "Claude")
+    cap = mem_limit_mb()
+    if rss and rss > cap * 0.85:
+        add("crit", "memory-high", f"Memory {rss} MB of {cap}", "The instance is close to being killed (out of memory).", "Restart if it keeps rising; read the Render Metrics 7 day graph and check what grew.", "Claude + Eedo")
+    elif rss and rss > cap * 0.65:
+        add("warn", "memory-high", f"Memory {rss} MB of {cap}", "Well above the ~300 MB baseline, so something is growing.", "Watch it; if it stays up, profile article loading and podcast jobs.", "Claude")
     if (h.get("disk_free_mb") or 1e9) < 300:
         add("crit", "disk-low", f"Only {h['disk_free_mb']} MB of disk left", "Writes will start failing.", "Clear old data on the Render disk.", "Eedo")
     try:
