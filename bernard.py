@@ -55,7 +55,7 @@ def handle_post(h, p, d):
             label = name
             if e: label = (he if _is_he(name) and he else en if not _is_he(name) and en else he or en) or name
             dup = next((i for i in st["items"] if not i["done"] and _norm(i["name"]) == _norm(label)), None)
-            if dup: dup["qty"] = min(99, dup.get("qty", 1) + 1); _bump(); h._json({"item": dup, "dup": True, "new": False}); return True
+            if dup: h._json({"item": dup, "dup": True, "new": False}); return True
             if len(st["items"]) >= MAX_ITEMS: h._json({"error": "list full"}, 429); return True
             it = {"id": uuid.uuid4().hex[:8], "name": label, "he": he, "en": en, "sec": sec, "qty": 1, "by": who, "at": int(time.time()), "done": False, "doneBy": "", "doneAt": 0}
             st["items"].append(it); _bump(); h._json({"item": it, "new": new}); return True
