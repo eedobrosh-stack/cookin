@@ -2646,7 +2646,8 @@ def handle_get(handler, path, qs):
             handler._json({"error": "not found"}, 404)
         else:
             handler.send_response(302)
-            handler.send_header("Location", "/vidsum/article/" + urllib.parse.quote(slug))
+            ql = (qs.get("lang") or [""])[0]
+            handler.send_header("Location", "/vidsum/article/" + urllib.parse.quote(slug) + ("?lang=" + ql if ql in pawed_i18n.UI_LANGS else ""))
             handler.send_header("Content-Length", "0")
             handler.end_headers()
         return True

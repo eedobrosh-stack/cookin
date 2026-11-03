@@ -71,7 +71,7 @@ function copy(url) {
 document.getElementById('grid').addEventListener('click', e => {
   const rm = e.target.closest('[data-rm]'), sh = e.target.closest('[data-sh]');
   if (rm) { window.pawedBM.toggle(rm.dataset.rm); items = items.filter(a => a.id !== rm.dataset.rm); draw(); }
-  if (sh) copy(location.origin + '/a/' + sh.dataset.sh);
+  if (sh) copy(location.origin + '/a/' + sh.dataset.sh + '?lang=' + (window.LANG||'he'));
 });
 async function load() {
   await window.pawedBM.ready;

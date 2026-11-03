@@ -443,7 +443,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
            f'<h1>{e(a["title"])}</h1><p class="standfirst">{e(a["standfirst"])}</p>',
            f'<div class="byline"><span>{S["by"]} <b>{S["desk"]}</b></span><span>{S["from"]} {e(a.get("channel", "").strip())}</span>'
            f'<span>{e(fdate(a.get("published_at") or a.get("published") or ""))}</span><span>{mins} {S["read"]}</span>'
-           f'<span class="share"><button type="button" class="copy" data-url="{e(SITE + "/a/" + pawed_bm.short_id(a["slug"]))}" data-ok="{S["cp_ok"]}" title="{S["cp"]}" aria-label="{S["cp"]}">'
+           f'<span class="share"><button type="button" class="copy" data-url="{e(SITE + "/a/" + pawed_bm.short_id(a["slug"]) + "?lang=" + lang)}" data-ok="{S["cp_ok"]}" title="{S["cp"]}" aria-label="{S["cp"]}">'
            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/></svg></button></span></div>',
            f'<figure><a class="hero" href="{e(hero_url)}"{app_attr(hero_app)} target="_blank" rel="noopener" title="{e(hero_title)}"><img data-vid="{e(a["vid"])}" data-img="{e(a.get("image") or "")}" alt=""><span class="pico">{_pf_svg(hero_k, 40)}{audio_flag(audio, not en)}</span></a>'
            f'<figcaption>{e(a.get("caption") or a.get("channel", "").strip())}{"" if rss else S["shot"]}</figcaption></figure>']
