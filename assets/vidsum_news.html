@@ -358,6 +358,7 @@
     .im > .pfbar { --bs:24px; position:absolute; left:8px; bottom:8px; direction:ltr; display:flex; align-items:center; gap:6px; }
     .pfbar .pf { --s:var(--bs); filter:drop-shadow(0 1px 4px rgba(0,0,0,.5)); }
     .hero2-i .im > .pfbar, .cd.big .im > .pfbar { --bs:32px; left:12px; bottom:12px; gap:8px; }
+        .hero2-s li .afi, .tr small .afi { font-size:15px; line-height:1; vertical-align:middle; margin-inline-start:6px; cursor:default; }
         .hero2-s li .pf, .tr small .pf { --s:18px; vertical-align:middle; margin-inline-start:8px; }
 
     /* the flag is a square exactly the size of the platform icon next to it */
@@ -480,6 +481,7 @@ const ACC = {"he": "IL", "en": "US", "es": "ES", "fr": "FR", "de": "DE", "it": "
 const AFLAG = Object.fromEntries(Object.entries(ACC).map(([k,c])=>[k,[...c].map(ch=>String.fromCodePoint(0x1F1E6+ch.charCodeAt(0)-65)).join('')]));
 const ANAME = {"he": ["Hebrew", "עברית"], "en": ["English", "אנגלית"], "es": ["Spanish", "ספרדית"], "fr": ["French", "צרפתית"], "de": ["German", "גרמנית"], "it": ["Italian", "איטלקית"], "pt": ["Portuguese", "פורטוגזית"], "nl": ["Dutch", "הולנדית"], "sv": ["Swedish", "שוודית"], "no": ["Norwegian", "נורווגית"], "pl": ["Polish", "פולנית"], "ru": ["Russian", "רוסית"], "tr": ["Turkish", "טורקית"], "ja": ["Japanese", "יפנית"], "ko": ["Korean", "קוריאנית"], "ar": ["Arabic", "ערבית"], "da": ["Danish", "דנית"], "fi": ["Finnish", "פינית"], "cs": ["Czech", "צ׳כית"], "sk": ["Slovak", "סלובקית"], "uk": ["Ukrainian", "אוקראינית"], "el": ["Greek", "יוונית"], "hu": ["Hungarian", "הונגרית"], "ro": ["Romanian", "רומנית"], "bg": ["Bulgarian", "בולגרית"], "hr": ["Croatian", "קרואטית"], "sr": ["Serbian", "סרבית"], "sl": ["Slovenian", "סלובנית"], "lt": ["Lithuanian", "ליטאית"], "lv": ["Latvian", "לטבית"], "et": ["Estonian", "אסטונית"], "hi": ["Hindi", "הינדי"], "zh": ["Chinese", "סינית"], "id": ["Indonesian", "אינדונזית"], "ms": ["Malay", "מלאית"], "th": ["Thai", "תאית"], "vi": ["Vietnamese", "וייטנאמית"], "fa": ["Persian", "פרסית"], "ur": ["Urdu", "אורדו"], "bn": ["Bengali", "בנגלית"], "ta": ["Tamil", "טמילית"], "te": ["Telugu", "טלוגו"], "mr": ["Marathi", "מרטהי"], "af": ["Afrikaans", "אפריקאנס"], "ga": ["Irish", "אירית"], "is": ["Icelandic", "איסלנדית"], "mt": ["Maltese", "מלטזית"], "sq": ["Albanian", "אלבנית"], "mk": ["Macedonian", "מקדונית"], "be": ["Belarusian", "בלארוסית"], "az": ["Azerbaijani", "אזרית"], "ka": ["Georgian", "גאורגית"], "hy": ["Armenian", "ארמנית"], "kk": ["Kazakh", "קזחית"], "uz": ["Uzbek", "אוזבקית"], "mn": ["Mongolian", "מונגולית"], "my": ["Burmese", "בורמזית"], "sw": ["Swahili", "סוואהילית"], "fil": ["Filipino", "פיליפינית"]};
 const afl = a => AFLAG[a.lang] ? '<span class="aflag" title="'+(EN?'Audio language: ':'שפת האודיו: ')+ANAME[a.lang][EN?0:1]+'">'+AFLAG[a.lang]+'</span>' : '';
+const afi = a => AFLAG[a.lang] ? '<span class="afi" title="'+(EN?'Audio language: ':'שפת האודיו: ')+ANAME[a.lang][EN?0:1]+'">'+AFLAG[a.lang]+'</span>' : '';
 const im = (a, cls) => '<div class="im '+(cls||'')+'" data-vid="'+a.vid+'" data-img="'+esc(a.image||'')+'" style="background-image:'+tone(a)+'">'+(pfi(a)||afl(a)?'<div class="pfbar">'+pfi(a)+afl(a)+'</div>':'')+'</div>';
 const when2 = a => esc(rel(a));
 // an article can sit in up to 3 sections (a.topics, primary first); the home page groups by the primary one
@@ -490,7 +492,7 @@ const tagOf = a => '<span class="tg" style="color:'+col(a.topic)+'">'+esc(TN(a.t
 function hero(a, subs){
   return '<section class="hero2"><div class="hero2-t"><div class="hero2-k">'+tagOf(a)+' · '+when2(a)+'</div>'
     +'<a href="'+href(a)+'"><h1>'+esc(a.title)+'</h1><p>'+esc(a.lead)+'</p></a><div class="hero2-m">'+meta(a)+'</div>'
-    +(subs.length?'<ul class="hero2-s">'+subs.map(x=>'<li><a href="'+href(x)+'">'+esc(x.title)+'</a>'+pfi(x)+'</li>').join('')+'</ul>':'')+'</div>'
+    +(subs.length?'<ul class="hero2-s">'+subs.map(x=>'<li><a href="'+href(x)+'">'+esc(x.title)+'</a>'+pfi(x)+afi(x)+'</li>').join('')+'</ul>':'')+'</div>'
     +'<a class="hero2-i" href="'+href(a)+'">'+im(a)+'</a></section>';
 }
 // dense coloured banner tile: headline block in the topic colour + image on the side
@@ -502,7 +504,7 @@ function cd(a, big){
   return '<a class="cd'+(big?' big':'')+'" href="'+href(a)+'">'+im(a)+'<div class="cd-b">'+tagOf(a)+'<h3>'+esc(a.title)+'</h3>'+(big?'<p>'+esc(a.lead)+'</p>':'')+'<small>'+meta(a)+'</small></div></a>';
 }
 // text row with time stamp (news list)
-function tr(a){ return '<a class="tr" href="'+href(a)+'"><h4>'+esc(a.title)+'</h4><small>'+when2(a)+' · '+esc(a.channel||'')+pfi(a)+'</small></a>'; }
+function tr(a){ return '<a class="tr" href="'+href(a)+'"><h4>'+esc(a.title)+'</h4><small>'+when2(a)+' · '+esc(a.channel||'')+pfi(a)+afi(a)+'</small></a>'; }
 // small card for side stacks
 function sm(a){ return '<a class="sm" href="'+href(a)+'">'+im(a)+'<h4>'+esc(a.title)+'</h4><small>'+esc(TN(a.topic))+' · '+when2(a)+'</small></a>'; }
 
