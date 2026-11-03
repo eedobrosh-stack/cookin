@@ -369,7 +369,7 @@
   <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live" data-i="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles" data-i="all">כל הסיכומים</a><a class="admin-only" href="/vidsum/logs" data-i="log">יומן</a><a class="admin-only" href="/vidsum/stats">Stats</a><a class="admin-only" href="/podscanner">PodScanner</a></div></div></div>
   <header class="masthead">
     <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
-    <div class="masthead-actions"><div class="cta" id="cta" hidden><a class="cta-btn" href="/auth/login?next=%2Fvidsum" data-i="cta1">התחברו והוסיפו את הפודקאסטים שלכם</a><div class="cta-sub"><b data-i="cta2">התחברו ל-Pawed והתאימו את הפודים שלכם</b><br><span data-i="cta3">הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</span></div></div></div>
+    <div class="masthead-actions"></div>
   </header>
   <div class="nav-wrap"><nav class="nav" id="nav" aria-label="Topics"></nav></div>
   <main id="main"><p class="empty" data-i="loading">טוען…</p></main>
@@ -756,7 +756,6 @@ fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
   applyStatic();
   DATA=j; PLAT=j.platform||''; const h=decodeURIComponent(location.hash.slice(1)); if(j.topics.includes(h) || h===LIVE || h===COOK || h==='Live Shows') FILTER = h==='Live Shows' ? LIVE : h;
   const ul=document.querySelector('.utility-links');
-  document.getElementById('cta').hidden = !!j.me;
   if(j.me) showSourcesHint();
   nav(); render();
 }).catch(()=>{document.getElementById('main').innerHTML='<p class="empty">'+t('loadErr')+'</p>';});
