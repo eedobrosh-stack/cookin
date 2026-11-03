@@ -8,6 +8,11 @@ KNOWN = [
     (r"caption service QUOTA|quota exhausted", "supadata-quota", "crit",
      "Supadata (YouTube captions) plan is used up. The server pauses it 30 min at a time and the Mac covers, slower.",
      "Upgrade or wait for the reset in the Supadata dashboard; nothing to change in code.", "Eedo"),
+    (r"vidsum rss: .+ -> ", "rss-new-episode", "info", "Log line, not an error: a new podcast episode was found on its feed and queued.", "None.", "-"),
+    (r" DONE slug=", "article-done", "info", "Log line, not an error: an article finished.", "None.", "-"),
+    (r"podcast stt .* failed, leaving it to the Mac", "stt-to-mac", "info",
+     "Server transcription of a podcast failed (usually the audio URL returned 404 or timed out); the Mac relay takes the episode.",
+     "None unless more than a third of server-transcribed podcasts fall to the Mac, then review the audio path.", "-"),
     (r"Ran out of memory|out of memory", "oom", "crit",
      "The instance ran out of memory and was killed. Pawed restarts by itself but anything running was lost.",
      "Look at the memory graph (Render > Metrics, 7 days): a baseline above ~65% of the cap means a leak or too many parallel jobs. Deploy 8ef37a7 lowered the baseline; if it returns, profile article loading and podcast jobs.", "Claude + Eedo"),
@@ -49,6 +54,47 @@ KNOWN = [
      "The Mac's yt-dlp could not read the video; the real reason is now printed after 'no metadata:'.", "Read the reason; usually a live stream or a private video.", "-"),
     (r"watcher error|loop error|sweep error", "loop-error", "warn", "A background loop raised an exception and continued.", "Read the line; fix if it repeats.", "Claude"),
 ]
+
+# Three tiers. decision = only Eedo can change it, and there is a real tradeoff (options below);
+# handled = Claude investigates and fixes, Eedo only gets a one-line note; auto = expected, self-heals, counted not listed.
+# Options are [what you would do, what it costs / what you give up].
+DECISIONS = {
+    "supadata-quota": [["Upgrade the Supadata plan", "Costs money per month; server fetches YouTube captions fast again."],
+                       ["Wait for the quota reset", "Free; the Mac relay covers captions, slower and only while the Mac is awake."],
+                       ["Reduce YouTube sources", "Free; fewer new articles but the quota lasts longer."]],
+    "oom": [["Raise the Render plan again", "Costs money; the cleanest cure if the baseline keeps growing."],
+            ["Cap parallel podcast and translation jobs", "Free; slower throughput, fewer articles per hour."],
+            ["Have Claude profile article loading", "Free; takes a session and may find nothing."]],
+    "memory-high": [["Raise the Render plan", "Costs money; removes the pressure at once."],
+                    ["Cap parallel jobs", "Free; slower throughput."],
+                    ["Have Claude profile what grew", "Free; takes a session."]],
+    "disk-low": [["Enlarge the Render disk", "Costs money; keeps everything."],
+                 ["Let Claude prune old data (logs, caches, old audio)", "Free; old material is gone for good."]],
+    "mac-silent": [["Restart the relay on the Mac (launchctl bootstrap com.eedob.vidsum-relay and -rss)", "Free, one minute; long podcasts resume."],
+                   ["Leave it", "Free; the server only handles short videos and podcast summaries stall."]],
+    "watcher-stalled": [["Restart the Render service", "Free, one minute; running jobs are lost and retried."],
+                        ["Wait one more cycle", "Free; new YouTube videos are delayed meanwhile."]],
+    "luna-down": [["Wait for LunaRoute", "Free; articles are delayed."],
+                  ["Let Gemini text cover (capped per day)", "Costs a little Gemini spend; articles keep flowing, slightly different style."]],
+    "yt-api": [["Raise the YouTube Data API quota or replace the key in Google Cloud", "Free to small cost; new videos are found again."],
+               ["Leave it", "Free; discovery falls back to slower paths."]],
+}
+
+
+def tier_of(kid, severity):
+    if severity == "info":
+        return "auto"
+    if kid == "memory-high" and severity == "warn":
+        return "handled"                  # a slow rise is Claude's to profile; only a critical level needs a spending decision
+    return "decision" if kid in DECISIONS else "handled"
+
+
+def decorate(a):
+    """Add tier and options to an alert dict that has id + severity."""
+    a["tier"] = tier_of(a["id"], a["severity"])
+    a["options"] = DECISIONS.get(a["id"], []) if a["tier"] == "decision" else []
+    return a
+
 
 def classify(text):
     for rx, kid, sev, meaning, step, who in KNOWN:

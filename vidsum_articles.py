@@ -2300,6 +2300,8 @@ def health_report(qs=None):
                     a["severity"], a["title"] = "info", f"Earlier: {a['title']} (last seen {int(age // 60)} h {int(age % 60)} min ago, not since)"
             except Exception:
                 pass
+    for a in rep["alerts"]:
+        pawed_alerts.decorate(a)
     order = {"crit": 0, "warn": 1, "info": 2}
     rep["alerts"].sort(key=lambda a: (order[a["severity"]], -a["count"]))
     return rep
