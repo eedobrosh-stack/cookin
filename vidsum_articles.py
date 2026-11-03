@@ -1503,6 +1503,67 @@ def news_items():
 
 
 
+LANG_NAMES = {"he": "Hebrew", "en": "English", "de": "German", "fr": "French", "it": "Italian", "es": "Spanish", "pt": "Portuguese", "nl": "Dutch", "ru": "Russian",
+              "ar": "Arabic", "tr": "Turkish", "pl": "Polish", "ja": "Japanese", "ko": "Korean", "zh": "Chinese", "hi": "Hindi", "sv": "Swedish", "da": "Danish",
+              "no": "Norwegian", "fi": "Finnish", "uk": "Ukrainian", "ro": "Romanian", "el": "Greek", "cs": "Czech", "hu": "Hungarian", "id": "Indonesian", "other": "Other"}
+STAT_FRAMES = [("24h", 1), ("7d", 7), ("30d", 30), ("90d", 90), ("all", None)]
+
+
+def stats_report():
+    """Coverage numbers for the Stats page: what was added to Pawed (by creation time) per time frame, by source language, podcast vs video,
+    translations available, and per source. All from the article index, no extra reads."""
+    now = time.time()
+    items = news_items()
+    cut = {k: (now - d * 86400 if d else None) for k, d in STAT_FRAMES}
+
+    def ts(i):
+        for f in (i.get("created"), i.get("released")):
+            if f:
+                try:
+                    return time.mktime(time.strptime(f[:19], "%Y-%m-%d %H:%M:%S"))
+                except ValueError:
+                    pass
+        return 0
+    tot = {k: {"articles": 0, "podcasts": 0, "videos": 0} for k, _ in STAT_FRAMES}
+    by_lang, sources, trans = {}, {}, {k: {"he": 0} for k, _ in STAT_FRAMES}
+    daily = {}
+    for i in items:
+        t = ts(i)
+        pod = i["kind"] == "rss"
+        lang = (i.get("lang") or "other").split("-")[0].lower() or "other"
+        src = (i["channel"] or "?").strip()
+        langs_have = ["he"] + (["en"] if i.get("title_en") else []) + [l for l in (i.get("tr") or {}) if l not in ("he", "en")]
+        sd = sources.setdefault(src, {"name": src, "kind": "podcast" if pod else "video", "lang": lang, "counts": {k: 0 for k, _ in STAT_FRAMES}, "last": ""})
+        ld = by_lang.setdefault(lang, {"lang": lang, "name": LANG_NAMES.get(lang, lang), "counts": {k: 0 for k, _ in STAT_FRAMES}, "podcasts": {k: 0 for k, _ in STAT_FRAMES}})
+        if t and time.strftime("%Y-%m-%d %H:%M", time.localtime(t)) > sd["last"]:
+            sd["last"] = time.strftime("%Y-%m-%d %H:%M", time.localtime(t))
+        if t and t >= now - 60 * 86400:
+            dd = daily.setdefault(time.strftime("%Y-%m-%d", time.localtime(t)), {"pod": 0, "vid": 0})
+            dd["pod" if pod else "vid"] += 1
+        for k, _ in STAT_FRAMES:
+            if cut[k] is not None and t < cut[k]:
+                continue
+            tot[k]["articles"] += 1
+            tot[k]["podcasts" if pod else "videos"] += 1
+            ld["counts"][k] += 1
+            if pod:
+                ld["podcasts"][k] += 1
+            sd["counts"][k] += 1
+            for l in langs_have:
+                if l != "he":
+                    trans[k][l] = trans[k].get(l, 0) + 1
+            trans[k]["he"] += 1
+    days = []
+    for n in range(59, -1, -1):
+        d = time.strftime("%Y-%m-%d", time.localtime(now - n * 86400))
+        days.append({"d": d, **(daily.get(d) or {"pod": 0, "vid": 0})})
+    return {"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "frames": [k for k, _ in STAT_FRAMES], "totals": tot,
+            "by_lang": sorted(by_lang.values(), key=lambda x: -x["counts"]["all"]),
+            "translations": {k: [{"lang": l, "name": LANG_NAMES.get(l, l), "count": n} for l, n in sorted(v.items(), key=lambda kv: -kv[1])] for k, v in trans.items()},
+            "sources": sorted(sources.values(), key=lambda x: -x["counts"]["all"]), "daily": days,
+            "note": "Added = when Pawed created the article. Podcast = RSS episode; video = YouTube episode (a podcast that publishes on YouTube counts as video)."}
+
+
 def removed_topics(viewer):
     """Sections a signed-in user has switched off: every Pawed-roster source of that section is off and none of their own sources
     in that section is on. Picking even one source (roster or their own) in a section brings the section back."""
@@ -2312,6 +2373,7 @@ NEWS_PAGE = os.path.join(_ASSETS, "vidsum_news.html")
 V1_PAGE = os.path.join(_ASSETS, "vidsum_discover.html")
 SOURCES_PAGE = os.path.join(_ASSETS, "vidsum_sources.html")
 BOOKMARKS_PAGE = os.path.join(_ASSETS, "vidsum_bookmarks.html")
+STATS_PAGE = os.path.join(_ASSETS, "vidsum_stats.html")
 LOGS_PAGE = os.path.join(_ASSETS, "vidsum_logs.html")
 
 
@@ -2698,6 +2760,16 @@ def handle_get(handler, path, qs):
         else:
             import pawed_legal
             handler._json({"ok": True, "requests": pawed_legal.list_requests()})
+        return True
+    if path in ("/vidsum/stats", "/vidsum/stats/"):
+        _serve(handler, STATS_PAGE)
+        return True
+    if path == "/api/vidsum/admin/stats":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            handler._json(stats_report())
         return True
     if path in ("/vidsum/logs", "/vidsum/logs/"):
         _serve(handler, LOGS_PAGE)

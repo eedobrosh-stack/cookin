@@ -366,7 +366,7 @@
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live" data-i="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles" data-i="all">כל הסיכומים</a><a href="/vidsum/sources" data-i="sources">מקורות</a><a class="admin-only" href="/vidsum/logs" data-i="log">יומן</a><a class="admin-only" href="/podscanner">PodScanner</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><span class="live" data-i="live">● מתעדכן אוטומטית</span><a class="admin-only" href="/vidsum/articles" data-i="all">כל הסיכומים</a><a class="admin-only" href="/vidsum/logs" data-i="log">יומן</a><a class="admin-only" href="/vidsum/stats">Stats</a><a class="admin-only" href="/podscanner">PodScanner</a></div></div></div>
   <header class="masthead">
     <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
     <div class="masthead-actions"><div class="cta" id="cta" hidden><a class="cta-btn" href="/auth/login?next=%2Fvidsum" data-i="cta1">התחברו והוסיפו את הפודקאסטים שלכם</a><div class="cta-sub"><b data-i="cta2">התחברו ל-Pawed והתאימו את הפודים שלכם</b><br><span data-i="cta3">הוסיפו ערוץ לפי שם וקישור YouTube, והסירו ערוצים קיימים עם ✕</span></div></div></div>
@@ -736,7 +736,7 @@ function showSourcesHint(){
   if(seen) return;
   let tries=0;
   const iv=setInterval(()=>{
-    const a=document.querySelector('.utility-links a[href="/vidsum/sources"]');
+    const a=document.querySelector('.pu-res');
     if(!a || !a.offsetParent){ if(++tries>30) clearInterval(iv); return; }
     clearInterval(iv);
     const done=()=>{ try{ localStorage.setItem('pawed_srchint','1'); }catch(e){} a.classList.remove('hint-pulse'); const b=document.getElementById('srchint'); if(b) b.remove(); removeEventListener('resize',place); removeEventListener('scroll',place); };
@@ -756,7 +756,6 @@ fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
   applyStatic();
   DATA=j; PLAT=j.platform||''; const h=decodeURIComponent(location.hash.slice(1)); if(j.topics.includes(h) || h===LIVE || h===COOK || h==='Live Shows') FILTER = h==='Live Shows' ? LIVE : h;
   const ul=document.querySelector('.utility-links');
-  if(ul && j.me){ const a=document.createElement('a'); a.href='/vidsum/sources'; a.textContent = t('hello')+j.me.name+(j.personal?t('personal'):''); a.style.fontWeight='700'; ul.appendChild(a); }
   document.getElementById('cta').hidden = !!j.me;
   if(j.me) showSourcesHint();
   nav(); render();
