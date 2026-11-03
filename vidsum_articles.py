@@ -7,6 +7,7 @@ import urllib.request, urllib.parse, urllib.error
 import multiuser
 import geo_suites
 import pawed_i18n
+import pawed_bm
 from multiuser import secret, GEMINI_MODEL, BudgetExhausted, current_user
 from multiuser import log as _mlog
 
@@ -1587,6 +1588,50 @@ def rate_article(uid, slug, rating, remove_source=False):
     return {"rating": new, "removed": removed, "plus": source_plus(uid).get(sid, 0)}
 
 
+# ------------------------------------------------- short links + bookmarks ---
+_SID_MAP = {"n": -1, "m": {}}
+
+
+def slug_for_sid(sid):
+    """/a/<8 chars> -> article slug (map rebuilt when the article count changes)."""
+    idx = _article_index()
+    if _SID_MAP["n"] != len(idx):
+        _SID_MAP["m"] = {pawed_bm.short_id(a["slug"]): a["slug"] for a in idx}
+        _SID_MAP["n"] = len(idx)
+    return _SID_MAP["m"].get(sid)
+
+
+def _bm_db():
+    c = multiuser.db()
+    c.execute("CREATE TABLE IF NOT EXISTS vidsum_bookmarks(user_id TEXT PRIMARY KEY, ids TEXT DEFAULT '[]')")
+    return c
+
+
+def get_bookmarks(uid):
+    with _bm_db() as c:
+        r = c.execute("SELECT ids FROM vidsum_bookmarks WHERE user_id=?", (uid,)).fetchone()
+    try:
+        return json.loads((r["ids"] if r else None) or "[]")
+    except ValueError:
+        return []
+
+
+def set_bookmarks(uid, ids):
+    out, seen = [], set()
+    for x in ids or []:
+        x = str(x)
+        if re.fullmatch(r"[0-9a-z]{8}", x) and x not in seen:
+            seen.add(x); out.append(x)
+    out = out[-2000:]
+    with _bm_db() as c:
+        c.execute("INSERT INTO vidsum_bookmarks(user_id,ids) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET ids=excluded.ids", (uid, json.dumps(out)))
+    return out
+
+
+def _real_user(user):
+    return user if user and user.get("id") and user.get("id") != "admin-token" else None
+
+
 def get_vprefs(uid):
     with _vdb() as c:
         r = c.execute("SELECT * FROM vidsum_prefs WHERE user_id=?", (uid,)).fetchone()
@@ -2264,6 +2309,7 @@ _ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 NEWS_PAGE = os.path.join(_ASSETS, "vidsum_news.html")
 V1_PAGE = os.path.join(_ASSETS, "vidsum_discover.html")
 SOURCES_PAGE = os.path.join(_ASSETS, "vidsum_sources.html")
+BOOKMARKS_PAGE = os.path.join(_ASSETS, "vidsum_bookmarks.html")
 LOGS_PAGE = os.path.join(_ASSETS, "vidsum_logs.html")
 
 
@@ -2592,6 +2638,46 @@ def handle_get(handler, path, qs):
         return True
     if path in ("/vidsum/v1", "/vidsum/v1/"):
         _serve(handler, V1_PAGE)
+        return True
+    m_ = re.fullmatch(r"/a/([0-9a-z]{8})/?", path)
+    if m_:
+        slug = slug_for_sid(m_.group(1))
+        if not slug:
+            handler._json({"error": "not found"}, 404)
+        else:
+            handler.send_response(302)
+            handler.send_header("Location", "/vidsum/article/" + urllib.parse.quote(slug))
+            handler.send_header("Content-Length", "0")
+            handler.end_headers()
+        return True
+    if path in ("/vidsum/bookmarks", "/vidsum/bookmarks/"):
+        _serve(handler, BOOKMARKS_PAGE, default_lang(handler))
+        return True
+    if path == "/api/vidsum/bookmarks":
+        user = _real_user(current_user(handler))
+        handler._json({"ok": True, "signed": bool(user), "ids": get_bookmarks(user["id"]) if user else []})
+        return True
+    if path == "/api/vidsum/bookmarks/items":
+        user = current_user(handler)
+        want = [x for x in (qs.get("ids") or [""])[0].split(",") if re.fullmatch(r"[0-9a-z]{8}", x)][-300:]
+        ul = request_lang(handler, qs)
+        vis = _visible_source_ids(user)
+        uid = user["id"] if user else None
+        pr = get_vprefs(uid) if uid and uid != "admin-token" else {"hideBase": False, "hiddenBase": []}
+        by = {}
+        for i in news_items():
+            k = pawed_bm.short_id(i["slug"])
+            if k not in want:
+                continue
+            if vis is not None and not ((i["source_id"] in vis) or (not i["source_id"] and not i.get("submitted_by") and not pr["hideBase"] and not pr["hiddenBase"])
+                                        or (uid and i.get("submitted_by") == uid)):
+                continue                                  # private sources stay private; geo and language filters do not apply to what you saved
+            trs = i.get("tr") or {}
+            if ul in trs:
+                i["title_en"], i["lead_en"] = trs[ul]
+            by[k] = {"id": k, "slug": i["slug"], "title": i["title"], "title_en": i["title_en"], "lead": i["lead"], "lead_en": i["lead_en"], "channel": i["channel"],
+                     "topic": i["topic"], "vid": i["vid"], "kind": i["kind"], "image": i["image"], "released": i["released"], "minutes": i["minutes"], "lang": i["lang"]}
+        handler._json({"ok": True, "items": [by[k] for k in reversed(want) if k in by]})
         return True
     if path in ("/vidsum/sources", "/vidsum/sources/"):
         _serve(handler, SOURCES_PAGE, default_lang(handler))
@@ -3186,6 +3272,13 @@ def handle_post(handler, path, req):
             handler._json({"ok": True, **rate_article(user["id"], str(req.get("slug") or ""), rating, bool(req.get("remove_source")))})
         except ValueError as e:
             handler._json({"ok": False, "error": str(e)}, 400)
+        return True
+    if path == "/api/vidsum/bookmarks":
+        user = _real_user(current_user(handler))
+        if not user:
+            handler._json({"ok": False, "error": "sign in with Google first"}, 401)
+        else:
+            handler._json({"ok": True, "ids": set_bookmarks(user["id"], req.get("ids"))})
         return True
     if path == "/api/vidsum/prefs":
         user = current_user(handler)

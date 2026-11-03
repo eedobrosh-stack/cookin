@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <script>(function(){var m=document.cookie.match(/(?:^|;\s*)pawed_lang=(he|en)/),l=m?m[1]:"he";window.LANG=l;var d=document.documentElement;d.lang=l;d.dir=l==="he"?"rtl":"ltr";})();</script>
+  <script src="/vidsum/i18n.js"></script>
+  <meta name="theme-color" content="#e3222b">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Bookmarks | Pawed</title>
+  <style>
+    :root { --red:#e3222b; --ink:#171717; --muted:#6c6c6c; --line:#e5e5e5; --soft:#f4f4f4; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:#fff; font-family:Arial, "Noto Sans Hebrew", sans-serif; }
+    a { color:inherit; text-decoration:none; }
+    .topline { height:5px; background:var(--red); }
+    .masthead, main { max-width:980px; margin:auto; padding-inline:22px; }
+    .masthead { height:88px; display:flex; align-items:center; }
+    .brand-wordmark { height:46px; }
+    h1 { font-size:30px; margin:8px 0 4px; letter-spacing:-.5px; }
+    .sub { color:var(--muted); margin:0 0 20px; font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:18px; }
+    .card { position:relative; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff; display:flex; flex-direction:column; }
+    .card .im { aspect-ratio:16/9; background:var(--soft) center/cover no-repeat; display:block; }
+    .card .b { padding:12px 14px 14px; display:flex; flex-direction:column; gap:6px; flex:1; }
+    .card h3 { margin:0; font-size:18px; line-height:1.25; }
+    .card h3 a:hover { text-decoration:underline; }
+    .card p { margin:0; font-size:13.5px; line-height:1.4; color:#444; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+    .card small { color:var(--muted); font-size:12px; }
+    .acts { display:flex; gap:8px; margin-top:auto; padding-top:6px; }
+    .acts button { border:1px solid #d8d8d8; background:#fff; border-radius:999px; padding:6px 12px; font:inherit; font-size:13px; cursor:pointer; color:#444; }
+    .acts button:hover { border-color:var(--red); color:var(--red); }
+    .empty { text-align:center; color:var(--muted); padding:60px 12px; grid-column:1/-1; }
+    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#222; color:#fff; padding:10px 16px; border-radius:10px; font:14px/1.4 system-ui,sans-serif; max-width:92vw; z-index:99999; display:none; text-align:center; }
+  </style>
+</head>
+<body>
+<div class="topline"></div>
+<header class="masthead"><a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a></header>
+<main>
+  <h1 id="h"></h1>
+  <p class="sub" id="sub"></p>
+  <div class="grid" id="grid"></div>
+</main>
+<div id="toast"></div>
+<script>
+const EN = (window.LANG||'he') !== 'he';
+const S = EN ? {h:'My Bookmarks', sub:'Articles you saved. Guests: saved on this device; signed-in: saved in your account.', empty:'No bookmarks yet. Press the bookmark on any article to save it here.',
+                rm:'Remove', share:'Share', copied:'Link copied', mins:'min'}
+             : {h:'הסימניות שלי', sub:'כתבות ששמרתם. אורחים: נשמר במכשיר הזה. משתמשים מחוברים: נשמר בחשבון.', empty:'עוד אין סימניות. לחצו על הסימנייה בכתבה כדי לשמור אותה כאן.',
+                rm:'הסרה', share:'שיתוף', copied:'הקישור הועתק', mins:'דק׳'};
+document.title = S.h + ' | Pawed'; document.getElementById('h').textContent = S.h; document.getElementById('sub').textContent = S.sub;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast = m => { const t = document.getElementById('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2600); };
+let items = [];
+const img = a => a.image || ((a.kind === 'yt' || a.kind === 'youtube') && a.vid ? 'https://i.ytimg.com/vi/' + a.vid + '/hqdefault.jpg' : '');
+function draw() {
+  const g = document.getElementById('grid');
+  if (!items.length) { g.innerHTML = '<div class="empty">' + esc(S.empty) + '</div>'; return; }
+  g.innerHTML = items.map(a => {
+    const t = EN ? (a.title_en || a.title) : a.title, l = EN ? (a.lead_en || a.lead) : a.lead, u = '/vidsum/article/' + encodeURIComponent(a.slug), im = img(a);
+    return '<div class="card" data-id="' + a.id + '"><a class="im" href="' + u + '"' + (im ? ' style="background-image:url(' + esc(im) + ')"' : '') + '></a>'
+      + '<div class="b"><small>' + esc(a.channel || '') + (a.minutes ? ' · ' + a.minutes + ' ' + S.mins : '') + '</small><h3><a href="' + u + '">' + esc(t) + '</a></h3><p>' + esc(l) + '</p>'
+      + '<div class="acts"><button data-sh="' + a.id + '">' + S.share + '</button><button data-rm="' + a.id + '">' + S.rm + '</button></div></div></div>';
+  }).join('');
+}
+function copy(url) {
+  const done = () => toast(S.copied + ': ' + url);
+  if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) { navigator.share({url}).catch(() => {}); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, done); else done();
+}
+document.getElementById('grid').addEventListener('click', e => {
+  const rm = e.target.closest('[data-rm]'), sh = e.target.closest('[data-sh]');
+  if (rm) { window.pawedBM.toggle(rm.dataset.rm); items = items.filter(a => a.id !== rm.dataset.rm); draw(); }
+  if (sh) copy(location.origin + '/a/' + sh.dataset.sh);
+});
+async function load() {
+  await window.pawedBM.ready;
+  const ids = window.pawedBM.ids();
+  if (!ids.length) { draw(); return; }
+  const j = await (await fetch('/api/vidsum/bookmarks/items?ids=' + ids.join(','), {credentials:'same-origin'})).json();
+  items = j.items || []; draw();
+}
+load().catch(() => draw());
+</script>
+</body>
+</html>
