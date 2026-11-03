@@ -17,6 +17,7 @@ import cands
 import vidsum_articles
 import geo_suites
 import podscanner
+import bernard
 
 # Category landing pages: /salads serves the gallery with the Salads category
 # preselected, so browser "back" from a dish returns to that category rather
@@ -41,6 +42,8 @@ GAME_PATH = os.path.join(ASSETS, "lielmali.html")
 SUMMER_PATH = os.path.join(ASSETS, "ilsummer.html")
 BARRACE_PATH = os.path.join(ASSETS, "barrace.html")
 SKI2027_PATH = os.path.join(ASSETS, "ski2027.html")
+BERNARD_PATH = os.path.join(ASSETS, "bernard.html")
+bernard.init(os.path.join(ASSETS, "bernard_db.json"), DATA_DIR)
 VIDEOS_DIR = os.path.join(DATA_DIR, "videos")
 STATE_PATH = os.path.join(DATA_DIR, "family.json")
 LOCK = threading.Lock()
@@ -531,6 +534,7 @@ SUMMER_PREFIX = (
 
 # Same wrapper for other artifact-style assets, different favicon.
 BARRACE_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127937;")
+BERNARD_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#128722;")
 SKI2027_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127935;")
 
 JARCUD_LANDING = """<!doctype html>
@@ -579,6 +583,7 @@ JARCUD_ARTIFACTS = """<!doctype html>
 <a class="card" href="/lielmali"><span class="e">&#128373;&#65039;</span><span>Where in the World are Liel &amp; Mali?<small>The detective game</small></span></a>
 <a class="card" href="/barrace"><span class="e">&#127937;</span><span>Bar Race<small>7-color racing game</small></span></a>
 <a class="card" href="/ski2027"><span class="e">&#127935;</span><span>Ski 2027<small>chalet candidates, 17–22 Feb 2027</small></span></a>
+<a class="card" href="/bernard"><span class="e">&#128722;</span><span>Bernard<small>רשימת קניות משפחתית</small></span></a>
 <a class="card" href="/vidsum"><span class="e">&#127916;</span><span>Pawed<small>News from podcast &amp; video summaries</small></span></a>
 <a class="home" href="/">&#128081; Jarcud</a>
 """
@@ -967,6 +972,15 @@ class Handler(SimpleHTTPRequestHandler):
             except OSError:
                 self._json({"error": "ski2027 page not found"}, 404)
             return
+        if self._is_main_host() and p in ("/bernard", "/bernard/"):
+            try:
+                with open(BERNARD_PATH, encoding="utf-8") as f:
+                    self._html(f.read(), "no-store")
+            except OSError:
+                self._json({"error": "bernard not found"}, 404)
+            return
+        if self._is_main_host() and p.startswith("/bernard/api/") and bernard.handle_get(self, p):
+            return
         if self._is_main_host() and p in ("/barrace", "/barrace/", "/race", "/race/"):
             try:
                 with open(BARRACE_PATH, encoding="utf-8") as f:
@@ -1068,6 +1082,9 @@ class Handler(SimpleHTTPRequestHandler):
         p = self.path.split("?")[0]
         if p in ("/api/vidsum/summarize", "/api/vidsum/article/delete", "/api/vidsum/article/import", "/api/vidsum/article/release", "/api/vidsum/article/topic", "/api/vidsum/article/source", "/api/vidsum/links/set", "/api/vidsum/topics/backfill", "/api/vidsum/submit") or p.startswith(("/api/vidsum/channels/", "/api/vidsum/relay/", "/api/vidsum/sources/", "/api/vidsum/admin/")) or p in ("/api/vidsum/bulk", "/api/vidsum/prefs", "/api/vidsum/bookmarks", "/api/vidsum/lang", "/api/vidsum/rate", "/api/vidsum/takedown"):
             if vidsum_articles.handle_post(self, p, self._read_json()):
+                return
+        if p.startswith("/bernard/api/") and self._is_main_host():
+            if bernard.handle_post(self, p, self._read_json()):
                 return
         if p.startswith("/api/podscanner/"):
             if podscanner.handle_post(self, p, self._read_json()):
