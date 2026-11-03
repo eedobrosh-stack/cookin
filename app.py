@@ -896,7 +896,7 @@ class Handler(SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if cands.handle_get(self, p, qs):
                 return
-        if p.startswith(("/auth/", "/api/me", "/api/shopping", "/api/dishes", "/api/admin/", "/d/")):
+        if p.startswith(("/auth/", "/api/me", "/api/shopping", "/api/favs", "/api/dishes", "/api/admin/", "/d/")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if multiuser.handle_get(self, p, qs):
                 return
@@ -1076,7 +1076,7 @@ class Handler(SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if cands.handle_post(self, p, qs, self._read_json):
                 return
-        if p.startswith(("/auth/", "/api/prefs", "/api/shopping", "/api/dishes", "/api/admin/", "/api/claim/")):
+        if p.startswith(("/auth/", "/api/prefs", "/api/shopping", "/api/favs", "/api/dishes", "/api/admin/", "/api/claim/")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if multiuser.handle_post(self, p, qs, self._read_json):
                 return

@@ -304,6 +304,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <script src="ing.js"></script>
 <script src="sections.js"></script>
 <script src="shopping.js"></script>
+<script src="favs.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 function retryImg(img){
@@ -406,13 +407,13 @@ function renderGallery(){
   let items = VIS(true).filter(r =>
     (activeCat==="הכל" || r.category===activeCat) && (!gfOn || isGlutenFree(r)) &&
     (!dietMode || (dietMode==="vegan" ? isVegan(r) : isVegetarian(r))) &&
-    (!q || (r.name+r.creator+(r.searchAlias||"")).includes(q)));
+    (!q || (r.name+r.creator+(r.searchAlias||"")).includes(q)) && (!(window.cookinFav&&cookinFav.only()) || cookinFav.has(r.id)));
   items = items.slice().sort((a,b)=>shuffleRank.get(a.id)-shuffleRank.get(b.id));
   $("#gfNote").style.display = gfOn ? "block" : "none";
   $("#veganNote").style.display = dietMode==="vegan" ? "block" : "none";
   $("#grid").innerHTML = items.map(r => `
     <div class="card${cardClass(r)}" onclick="openDish('${r.id}')">
-      ${r._user && r._status!=="ready" ? `<div class="thumb"></div>` : `<img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">`}${cardExtras(r)}
+      ${r._user && r._status!=="ready" ? `<div class="thumb"></div>` : `<img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">`}${cardExtras(r)}${window.favBtn?favBtn(r.id):""}
       <div class="cbody">
         <div class="cname">${r.name}</div>
         <div class="cmeta">
@@ -423,7 +424,7 @@ function renderGallery(){
           <span>${r.creator}</span>
         </div>
       </div>
-    </div>`).join("") || `<div class="empty">לא נמצאו מנות.</div>`;
+    </div>`).join("") || (window.cookinFav&&cookinFav.only() ? cookinFav.emptyMsg() : `<div class="empty">לא נמצאו מנות.</div>`);
 }
 
 function ingLabel(key){ return (INGREDIENTS[key]||{}).label || key; }

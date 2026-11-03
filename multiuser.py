@@ -130,6 +130,8 @@ def init():
         cols = {r["name"] for r in c.execute("PRAGMA table_info(prefs)")}
         if "muted" not in cols:
             c.execute("ALTER TABLE prefs ADD COLUMN muted TEXT DEFAULT '[]'")
+        if "favs" not in cols:   # bookmarked dish ids (base numeric ids and u<hex> community ids)
+            c.execute("ALTER TABLE prefs ADD COLUMN favs TEXT DEFAULT '[]'")
         dcols = {r["name"] for r in c.execute("PRAGMA table_info(dishes)")}
         if "creator_ok" not in dcols:   # 0 = no answer, 1 = creator approved, -1 = creator asked for removal
             c.execute("ALTER TABLE dishes ADD COLUMN creator_ok INTEGER DEFAULT 0")
@@ -464,6 +466,33 @@ def api_prefs(handler, user, req):
                   (user["id"], json.dumps(prefs["hidden"]), int(prefs["hideBase"]),
                    json.dumps(prefs["muted"])))
     return handler._json({"ok": True, "prefs": prefs})
+
+
+FAV_ID_RE = re.compile(r"\d+|u[0-9a-f]{10}")
+
+
+def api_favs_get(handler, user):
+    if not user:
+        return handler._json({"error": "sign in"}, 401)
+    with db() as c:
+        r = c.execute("SELECT favs FROM prefs WHERE user_id=?", (user["id"],)).fetchone()
+    return handler._json({"favs": json.loads((r["favs"] if r else None) or "[]")})
+
+
+def api_favs_set(handler, user, req):
+    """Replace the signed-in user's favorites (client sends the merged full list)."""
+    if not user:
+        return handler._json({"error": "sign in"}, 401)
+    out, seen = [], set()
+    for x in (req or {}).get("favs") or []:
+        x = str(x)
+        if FAV_ID_RE.fullmatch(x) and x not in seen:
+            seen.add(x); out.append(x)
+    out = out[-2000:]
+    with db() as c:
+        c.execute("INSERT OR IGNORE INTO prefs(user_id) VALUES(?)", (user["id"],))
+        c.execute("UPDATE prefs SET favs=? WHERE user_id=?", (json.dumps(out), user["id"]))
+    return handler._json({"ok": True, "favs": out})
 
 
 def api_shopping_get(handler, user):
@@ -1363,7 +1392,7 @@ def dish_page(handler, user, did, qs):
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Cookin 🍳</title><style>{DISH_CSS}</style></head>
 <body><div class="wrap"><div class="topbar"><a class="back" href="{t['home']}">{t['back']}</a>{own}</div>
 <div class="dish"><div class="dhead"><h1>{msg}</h1>{err}<div class="dsub">{e(r['source_url'] or '')}</div></div></div></div>
-<script>{_ACT_JS}</script><script src="/ing.js"></script><script src="/sections.js"></script><script src="/shopping.js"></script></body></html>"""
+<script>{_ACT_JS}</script><script src="/ing.js"></script><script src="/sections.js"></script><script src="/shopping.js"></script><script src="/favs.js"></script></body></html>"""
         return handler._html(body, "no-store")
     # Visitors (not signed in) get the official embed unless the creator approved; members get the rehosted video.
     creator_ok = int(r["creator_ok"] or 0)
@@ -1424,7 +1453,7 @@ def dish_page(handler, user, did, qs):
     <div class="dimg">{hero}</div>
     <div class="dmain">
       <div class="dhead">
-        <div id="rv-stars" class="rv-stars" data-dish="{did}"></div>
+        <div class="dishtools" data-dish="{did}"></div>
         <h1>{e(rec.get('name', ''))}</h1>
         <div class="dsub">{meta}</div>
         <div><span class="badge {cls}">{emoji} {e(diet)}</span><span class="badge">{e(rec.get('category', ''))}</span></div>
@@ -1493,6 +1522,8 @@ def handle_get(handler, path, qs):
         api_me(handler, current_user(handler)); return True
     if path == "/api/shopping":
         api_shopping_get(handler, current_user(handler)); return True
+    if path == "/api/favs":
+        api_favs_get(handler, current_user(handler)); return True
     if path.startswith("/api/dishes/"):
         api_dish_get(handler, current_user(handler), path.rsplit("/", 1)[1]); return True
     if path == "/api/admin/queue":
@@ -1515,6 +1546,8 @@ def handle_post(handler, path, qs, read_json):
         api_prefs(handler, current_user(handler), read_json()); return True
     if path == "/api/shopping":
         api_shopping_set(handler, current_user(handler), read_json()); return True
+    if path == "/api/favs":
+        api_favs_set(handler, current_user(handler), read_json()); return True
     if path == "/api/dishes":
         api_dish_create(handler, current_user(handler), read_json()); return True
     if path == "/api/dishes/bulk-visibility":

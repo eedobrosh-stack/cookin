@@ -247,6 +247,7 @@ footer{max-width:1200px; margin:0 auto; padding:10px 20px 30px; color:var(--mute
 <script src="ing.js"></script>
 <script src="sections.js"></script>
 <script src="shopping.js"></script>
+<script src="favs.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 function retryImg(img){
@@ -334,13 +335,13 @@ function renderGallery(){
   let items = VIS(true).filter(r =>
     (activeCat==="All" || r.category===activeCat) && (!gfOn || isGlutenFree(r)) &&
     (!dietMode || (dietMode==="vegan" ? isVegan(r) : isVegetarian(r))) &&
-    (!q || (r.name+r.creator+(r.searchAlias||"")).toLowerCase().includes(q)));
+    (!q || (r.name+r.creator+(r.searchAlias||"")).toLowerCase().includes(q)) && (!(window.cookinFav&&cookinFav.only()) || cookinFav.has(r.id)));
   if(shuffleOrder) items = items.slice().sort((a,b)=>shuffleOrder.indexOf(a.id)-shuffleOrder.indexOf(b.id));
   $("#gfNote").style.display = gfOn ? "block" : "none";
   $("#veganNote").style.display = dietMode==="vegan" ? "block" : "none";
   $("#grid").innerHTML = items.map(r => `
     <div class="card${cardClass(r)}" onclick="openDish('${r.id}')">
-      ${r._user && r._status!=="ready" ? `<div class="thumb"></div>` : `<img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">`}${cardExtras(r)}
+      ${r._user && r._status!=="ready" ? `<div class="thumb"></div>` : `<img class="thumb" src="images/${r.image}" alt="" onerror="retryImg(this)">`}${cardExtras(r)}${window.favBtn?favBtn(r.id):""}
       <div class="cbody">
         <div class="cname">${r.name}</div>
         <div class="cmeta">
@@ -351,7 +352,7 @@ function renderGallery(){
           <span>${r.creator}</span>
         </div>
       </div>
-    </div>`).join("") || `<div class="empty">No dishes found.</div>`;
+    </div>`).join("") || (window.cookinFav&&cookinFav.only() ? cookinFav.emptyMsg() : `<div class="empty">No dishes found.</div>`);
 }
 
 function ingLabel(key){ return (INGREDIENTS[key]||{}).label || key; }
@@ -371,6 +372,7 @@ function openDish(id, skipPush){
     <div class="dimg">${hero}</div>
     <div class="dmain">
       <div class="dhead">
+        <div class="dishtools" data-dish="${r.id}"></div>
         <h2>${r.name}</h2>
         <div class="dsub">By ${r.creator}${r.serves?` · ${r.serves}`:""}${r.time?` · ⏱ ${r.time}`:""}</div>
         <div><span class="badge cat-b">${r.category}</span> ${dietBadge(r)}</div>
