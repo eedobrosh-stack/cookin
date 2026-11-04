@@ -9,16 +9,20 @@
 }
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);
-  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  display:flex;flex-direction:column;align-items:center;gap:10px;overflow-x:hidden}
+  padding-block:6px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;align-items:center;gap:6px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 canvas{display:block;background:#02030a;border-radius:6px;box-shadow:0 0 0 1px #1a2350,0 0 40px #0a2a5a66;touch-action:none;cursor:none}
 .bar{display:flex;gap:10px;align-items:center;justify-content:space-between;width:100%;max-width:480px}
 h1{font:700 14px var(--font-display);letter-spacing:.18em;text-transform:uppercase;margin:0;color:var(--cyan)}
 button{font:500 12px var(--font-body);background:var(--panel);color:var(--ink);border:1px solid #1d2a5c;border-radius:6px;padding:5px 10px;cursor:pointer}
 button:focus-visible{outline:2px solid var(--cyan)}
-.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:6px 12px;width:100%;max-width:480px;font-size:12px;color:var(--dim)}
-.legend div{display:flex;align-items:center;gap:7px;min-width:0}
-.pill{flex:none;width:26px;height:14px;border-radius:7px;display:grid;place-items:center;font:700 9px var(--font-display);color:#04060f}
+.legend{display:grid;grid-template-columns:repeat(5,1fr);gap:5px 4px;width:100%;max-width:480px;font-size:10px;color:var(--dim)}
+.stage{position:relative;line-height:0}
+.mini{position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+.mini button{width:28px;height:24px;padding:0;font-size:11px;line-height:1;opacity:.85;touch-action:manipulation}
+@media (hover:none),(pointer:coarse){.hint{display:none}}
+.legend div{display:flex;align-items:center;gap:4px;min-width:0;white-space:nowrap}
+.pill{flex:none;width:22px;height:13px;border-radius:7px;display:grid;place-items:center;font:700 9px var(--font-display);color:#04060f}
 .btns{display:flex;gap:8px}
 .scores{width:100%;max-width:480px}
 .scores h2{font:700 12px var(--font-display);letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin:4px 0 6px}
@@ -33,18 +37,20 @@ button:focus-visible{outline:2px solid var(--cyan)}
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rubik:wght@400;500&display=swap">
 
-<div class="bar"><h1>Neon Paddle</h1><div class="btns"><button id="pause" type="button">❚❚ Pause</button><button id="mute" type="button">Sound: on</button></div></div>
-<canvas id="c" width="480" height="720"></canvas>
-<div class="hint">Move: mouse, touch or ← →. Launch / shoot: click, tap or space. Pause: P. Mute: M.</div>
-<div class="scores"><h2>High scores</h2><div id="sc"></div></div>
+<div class="stage" id="stage"><canvas id="c" width="480" height="720"></canvas><div class="mini"><button id="pause" type="button" aria-label="Pause or play">❚❚</button><button id="mute" type="button" aria-label="Sound on or off">♪</button></div></div>
 <div class="legend" id="legend"></div>
+<div class="hint">Mouse or ← → to move. Click or space to launch and shoot. Double click or P to pause. M to mute.</div>
 
 <script>
 (()=>{
 const W=480,H=720,CELL=24,COLS=18,ROWS=14,PX=24,PY=84,PADY=660;
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
-function fit(){const w=Math.max(220,Math.min(innerWidth-32,480,(innerHeight-150)*2/3));cv.style.width=w+'px';cv.style.height=(w*1.5)+'px'}
-addEventListener('resize',fit);fit();
+function fit(){
+  const st=document.getElementById('stage');let res=0;
+  for(const k of document.body.children){if(k!==st&&k.offsetHeight>0)res+=k.offsetHeight+6}
+  const cs=getComputedStyle(document.documentElement);res+=(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0)+12;
+  const w=Math.max(220,Math.min(innerWidth-32,480,(innerHeight-res)*2/3));cv.style.width=w+'px';cv.style.height=(w*1.5)+'px'}
+addEventListener('resize',fit);addEventListener('load',fit);fit();
 
 /* ---------- power-ups ---------- */
 const PU={
@@ -59,7 +65,8 @@ const PU={
  V:{c:'#ff6a3d',name:'Fast ball',good:0},
  X:{c:'#f4f7ff',name:'Explosive ball',good:1}
 };
-document.getElementById('legend').innerHTML=Object.entries(PU).map(([k,v])=>`<div><span class="pill" style="background:${v.c}">${k}</span><span>${v.name}</span></div>`).join('');
+const SHORT={W:'Wide',S:'Shrink',M:'Multi',F:'Fire',L:'Laser',C:'Sticky',H:'Life',Z:'Slow',V:'Fast',X:'Boom'};
+document.getElementById('legend').innerHTML=Object.entries(PU).map(([k,v])=>`<div><span class="pill" style="background:${v.c}">${k}</span><span>${SHORT[k]}</span></div>`).join('');fit();
 
 /* ---------- audio ---------- */
 let AC=null,muted=false;
@@ -93,7 +100,7 @@ const S={
  win(){[523,659,784,659,784,1047,1319].forEach((f,i)=>tone(f,.16,'square',.07,0,i*.09))},
  over(){[294,277,262,247,196].forEach((f,i)=>tone(f,.3,'triangle',.12,0,i*.22))}
 };
-document.getElementById('mute').onclick=e=>{muted=!muted;e.target.textContent='Sound: '+(muted?'off':'on')};
+document.getElementById('mute').onclick=e=>{muted=!muted;e.currentTarget.style.opacity=muted?.35:.85;e.currentTarget.blur()};
 
 /* ---------- levels ---------- */
 const HPC={1:['#52d4ff','#1b9ae0','#bfefff'],2:['#8a7bff','#5646d8','#d4ceff'],3:['#ff5fb8','#c52a86','#ffc2e6']};
@@ -168,7 +175,7 @@ function applyPill(t){
 /* ---------- update ---------- */
 function update(dt){
   if(paused)return;
-  if(keys.ArrowLeft)tx-=520*dt;if(keys.ArrowRight)tx+=520*dt;
+  if(keys.ArrowLeft)tx-=520*dt;if(keys.ArrowRight)tx+=520*dt;tx+=hold*900*dt;
   for(const k in fx)if(fx[k]>0)fx[k]=Math.max(0,fx[k]-dt);
   pw=fx.wide>0?136:fx.shrink>0?52:84;
   tx=Math.max(PX+pw/2,Math.min(W-PX-pw/2,tx));px+=(tx-px)*Math.min(1,dt*22);
@@ -287,14 +294,18 @@ function draw(){
     ctx.fillStyle='#d7e6ff';ctx.font='500 14px Rubik, sans-serif';ctx.fillText('Click or space for level '+(level+1),W/2,H*.4+84)}
   if(state==='over'){ctx.fillStyle='#02030ae6';ctx.fillRect(0,H*.36,W,170);ctx.fillStyle='#ff4455';ctx.font='700 30px Orbitron, sans-serif';ctx.fillText('GAME OVER',W/2,H*.36+44);
     ctx.fillStyle='#d7e6ff';ctx.font='500 15px Rubik, sans-serif';ctx.fillText('Score '+score+'   Best '+best,W/2,H*.36+90);ctx.fillStyle='#6f7fa6';ctx.font='500 13px Rubik, sans-serif';ctx.fillText('Click or space to play again',W/2,H*.36+128)}
-  if(paused){ctx.fillStyle='#02030acc';ctx.fillRect(0,0,W,H);ctx.fillStyle='#27c4ff';ctx.font='700 30px Orbitron, sans-serif';ctx.textAlign='center';ctx.fillText('PAUSED',W/2,H*.45);ctx.fillStyle='#6f7fa6';ctx.font='500 13px Rubik, sans-serif';ctx.fillText('Press Play, P, or tap to resume',W/2,H*.5)}
+  if(((state==='ready'&&level===1&&score===0)||state==='over')&&scores.length){
+    const y0=state==='over'?H*.36+205:H*.68;ctx.textAlign='center';ctx.fillStyle='#27c4ff';ctx.font='700 12px Orbitron, sans-serif';ctx.fillText('HIGH SCORES',W/2,y0);
+    ctx.font='500 14px Rubik, sans-serif';
+    scores.slice(0,5).forEach((e,i)=>{ctx.fillStyle=(state==='over'&&i===lastIdx)?'#ffa322':'#8fa0cc';ctx.textAlign='right';ctx.fillText((i+1)+'.  '+e.s,W/2+10,y0+24+i*20);ctx.textAlign='left';ctx.fillText('lvl '+e.l+'   '+e.d,W/2+26,y0+24+i*20)})}
+  if(paused){ctx.fillStyle='#02030acc';ctx.fillRect(0,0,W,H);ctx.fillStyle='#27c4ff';ctx.font='700 30px Orbitron, sans-serif';ctx.textAlign='center';ctx.fillText('PAUSED',W/2,H*.45);ctx.fillStyle='#6f7fa6';ctx.font='500 13px Rubik, sans-serif';ctx.fillText('Double tap, press P or use the button to resume',W/2,H*.5)}
   ctx.restore();
 }
 
 /* ---------- input ---------- */
 function act(){
   ac();
-  if(paused){setPaused(false);return}
+  if(paused)return;
   if(state==='over'){reset();return}
   if(state==='won'){level++;startLevel();return}
   if(state==='ready'){state='play';for(const b of balls)if(b.stuck)launch(b);return}
@@ -303,8 +314,26 @@ function act(){
   if(fx.laser>0&&(fx._cd||0)<=0){fx._cd=.28;S.laser();bullets.push({x:px-pw/2+6,y:PADY-6},{x:px+pw/2-6,y:PADY-6})}
 }
 function toX(e){const r=cv.getBoundingClientRect();return (e.clientX-r.left)/r.width*W}
-cv.addEventListener('pointermove',e=>{tx=toX(e)});
-cv.addEventListener('pointerdown',e=>{tx=toX(e);act();e.preventDefault()});
+// touch: hold anywhere left or right of centre to move; double tap = pause / play
+let hold=0,lastTap=0;const holds=new Map();
+function recalc(){let d=0;for(const v of holds.values())d+=v;hold=Math.max(-1,Math.min(1,d))}
+const side=e=>e.clientX<innerWidth/2?-1:1;
+addEventListener('pointerdown',e=>{
+  if(e.target.closest&&e.target.closest('button'))return;
+  ac();e.preventDefault();
+  if(state==='over'||state==='won'){lastTap=0;act();return}
+  const now=performance.now();
+  if(now-lastTap<320){lastTap=0;holds.clear();recalc();setPaused(!paused);return}
+  lastTap=now;
+  if(e.pointerType==='mouse')tx=toX(e);else{holds.set(e.pointerId,side(e));recalc()}
+  act();
+});
+addEventListener('pointermove',e=>{
+  if(e.pointerType==='mouse')tx=toX(e);
+  else if(holds.has(e.pointerId)){holds.set(e.pointerId,side(e));recalc()}
+});
+for(const t of ['pointerup','pointercancel'])addEventListener(t,e=>{holds.delete(e.pointerId);recalc()});
+addEventListener('blur',()=>{holds.clear();recalc()});
 addEventListener('keydown',e=>{
   if(e.key===' '){act();e.preventDefault();return}
   if(e.key==='p'||e.key==='P'){document.getElementById('pause').click();return}
@@ -314,7 +343,7 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{keys[e.key]=false});
 
 let paused=false;
-function setPaused(v){if(state==='over')v=false;paused=v;document.getElementById('pause').textContent=v?'▶ Play':'❚❚ Pause'}
+function setPaused(v){if(state==='over')v=false;paused=v;document.getElementById('pause').textContent=v?'▶':'❚❚'}
 document.getElementById('pause').onclick=e=>{ac();setPaused(!paused);e.target.blur()};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='play')setPaused(true)});
 let scores=[],lastIdx=-1;
@@ -322,6 +351,7 @@ try{scores=JSON.parse(localStorage.getItem('neonPaddleScores')||'[]')}catch(e){}
 if(scores[0])best=Math.max(best,scores[0].s);
 function renderScores(){
   const el=document.getElementById('sc');
+  if(!el)return;
   if(!scores.length){el.innerHTML='<p>No scores yet. Finish a game to set the first one.</p>';return}
   el.innerHTML='<ol>'+scores.map((e,i)=>`<li class="${i===lastIdx?'new':''}"><span><b>${e.s}</b><span>level ${e.l}</span><span>${e.d}</span></span></li>`).join('')+'</ol>';
 }
