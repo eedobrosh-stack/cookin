@@ -21,6 +21,11 @@ button:focus-visible{outline:2px solid var(--cyan)}
 .mini{position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
 .mini button{width:28px;height:24px;padding:0;font-size:11px;line-height:1;opacity:.85;touch-action:manipulation}
 @media (hover:none),(pointer:coarse){.hint{display:none}}
+.entry{position:absolute;left:50%;top:62%;transform:translateX(-50%);width:80%;max-width:300px;display:flex;flex-direction:column;align-items:center;gap:8px;line-height:1.3;background:#060a1ef5;border:1px solid var(--cyan);border-radius:10px;padding:12px;z-index:5;touch-action:manipulation;user-select:text;-webkit-user-select:text}
+.entry label{font:700 12px var(--font-display);letter-spacing:.1em;color:var(--ball);text-transform:uppercase}
+.entry input{width:100%;box-sizing:border-box;font:500 16px var(--font-body);color:var(--ink);background:#02030a;border:1px solid #2a3a7a;border-radius:6px;padding:8px 10px;text-align:center}
+.entry .row{display:flex;gap:8px;width:100%}
+.entry .row button{flex:1;padding:8px 0;font-size:14px}
 .legend div{display:flex;align-items:center;gap:4px;min-width:0;white-space:nowrap}
 .pill{flex:none;width:22px;height:13px;border-radius:7px;display:grid;place-items:center;font:700 9px var(--font-display);color:#04060f}
 .btns{display:flex;gap:8px}
@@ -37,7 +42,8 @@ button:focus-visible{outline:2px solid var(--cyan)}
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rubik:wght@400;500&display=swap">
 
-<div class="stage" id="stage"><canvas id="c" width="480" height="720"></canvas><div class="mini"><button id="pause" type="button" aria-label="Pause or play">❚❚</button><button id="mute" type="button" aria-label="Sound on or off">♪</button></div></div>
+<div class="stage" id="stage"><canvas id="c" width="480" height="720"></canvas><div class="mini"><button id="pause" type="button" aria-label="Pause or play">❚❚</button><button id="mute" type="button" aria-label="Sound on or off">♪</button></div>
+<div class="entry" id="entry" hidden><label for="nm">Top 10 score! Your name</label><input id="nm" type="text" maxlength="12" autocomplete="off" autocapitalize="words" placeholder="Name"><div class="row"><button id="save" type="button">Save</button><button id="skip" type="button">Skip</button></div></div></div>
 <div class="legend" id="legend"></div>
 <div class="hint">Mouse or ← → to move. Click or space to launch and shoot. P to pause. M to mute.</div>
 
@@ -294,10 +300,11 @@ function draw(){
     ctx.fillStyle='#d7e6ff';ctx.font='500 14px Rubik, sans-serif';ctx.fillText('Click or space for level '+(level+1),W/2,H*.4+84)}
   if(state==='over'){ctx.fillStyle='#02030ae6';ctx.fillRect(0,H*.36,W,170);ctx.fillStyle='#ff4455';ctx.font='700 30px Orbitron, sans-serif';ctx.fillText('GAME OVER',W/2,H*.36+44);
     ctx.fillStyle='#d7e6ff';ctx.font='500 15px Rubik, sans-serif';ctx.fillText('Score '+score+'   Best '+best,W/2,H*.36+90);ctx.fillStyle='#6f7fa6';ctx.font='500 13px Rubik, sans-serif';ctx.fillText('Click or space to play again',W/2,H*.36+128)}
-  if(((state==='ready'&&level===1&&score===0)||state==='over')&&scores.length){
+  if(((state==='ready'&&level===1&&score===0)||state==='over')&&scores.length&&!entering){
     const y0=state==='over'?H*.36+205:H*.68;ctx.textAlign='center';ctx.fillStyle='#27c4ff';ctx.font='700 12px Orbitron, sans-serif';ctx.fillText('HIGH SCORES',W/2,y0);
     ctx.font='500 14px Rubik, sans-serif';
-    scores.slice(0,5).forEach((e,i)=>{ctx.fillStyle=(state==='over'&&i===lastIdx)?'#ffa322':'#8fa0cc';ctx.textAlign='right';ctx.fillText((i+1)+'.  '+e.s,W/2+10,y0+24+i*20);ctx.textAlign='left';ctx.fillText('lvl '+e.l+'   '+e.d,W/2+26,y0+24+i*20)})}
+    const n=state==='over'?10:5,stp=state==='over'?16:20;
+    scores.slice(0,n).forEach((e,i)=>{const yy=y0+24+i*stp;ctx.fillStyle=(state==='over'&&i===lastIdx)?'#ffa322':'#8fa0cc';ctx.textAlign='left';ctx.fillText((i+1)+'. '+(e.n||'Anon'),W/2-130,yy);ctx.textAlign='right';ctx.fillText(e.s,W/2+60,yy);ctx.textAlign='left';ctx.fillText('L'+e.l,W/2+76,yy)})}
   if(paused){ctx.fillStyle='#02030acc';ctx.fillRect(0,0,W,H);ctx.fillStyle='#27c4ff';ctx.font='700 30px Orbitron, sans-serif';ctx.textAlign='center';ctx.fillText('PAUSED',W/2,H*.45);ctx.fillStyle='#6f7fa6';ctx.font='500 13px Rubik, sans-serif';ctx.fillText('Press P or use the button to resume',W/2,H*.5)}
   ctx.restore();
 }
@@ -305,7 +312,7 @@ function draw(){
 /* ---------- input ---------- */
 function act(){
   ac();
-  if(paused)return;
+  if(paused||entering)return;
   if(state==='over'){reset();return}
   if(state==='won'){level++;startLevel();return}
   if(state==='ready'){state='play';for(const b of balls)if(b.stuck)launch(b);return}
@@ -319,7 +326,7 @@ let hold=0,lastTap=0;const holds=new Map();
 function recalc(){let d=0;for(const v of holds.values())d+=v;hold=Math.max(-1,Math.min(1,d))}
 const side=e=>e.clientX<innerWidth/2?-1:1;
 addEventListener('pointerdown',e=>{
-  if(e.target.closest&&e.target.closest('button'))return;
+  if(e.target.closest&&e.target.closest('button,.entry'))return;
   ac();e.preventDefault();
   if(state==='over'||state==='won'){lastTap=0;act();return}
   tx=toX(e);
@@ -332,6 +339,7 @@ function unlock(){const a=ac();if(!a)return;try{const b=a.createBuffer(1,1,22050
 for(const t of ['pointerup','touchend','click','keydown'])addEventListener(t,unlock,{passive:true});
 addEventListener('blur',()=>{holds.clear();recalc()});
 addEventListener('keydown',e=>{
+  if(e.target&&e.target.tagName==='INPUT')return;
   if(e.key===' '){act();e.preventDefault();return}
   if(e.key==='p'||e.key==='P'){document.getElementById('pause').click();return}
   if(e.key==='m'||e.key==='M'){document.getElementById('mute').click();return}
@@ -352,15 +360,38 @@ function renderScores(){
   if(!scores.length){el.innerHTML='<p>No scores yet. Finish a game to set the first one.</p>';return}
   el.innerHTML='<ol>'+scores.map((e,i)=>`<li class="${i===lastIdx?'new':''}"><span><b>${e.s}</b><span>level ${e.l}</span><span>${e.d}</span></span></li>`).join('')+'</ol>';
 }
-function addScore(){
-  if(score<=0)return;
-  const e={s:score,l:level,d:new Date().toISOString().slice(0,10)};
-  scores.push(e);scores.sort((a,b)=>b.s-a.s);scores=scores.slice(0,10);lastIdx=scores.indexOf(e);
-  best=Math.max(best,score);
-  try{localStorage.setItem('neonPaddleScores',JSON.stringify(scores))}catch(err){}
-  renderScores();
+// global top 10 lives on the server (jarcud.com/api/paddle/*); localStorage is only an offline fallback
+let entering=false;
+const API='/api/paddle/';
+function setScores(list){if(Array.isArray(list)){scores=list.slice(0,10);if(scores[0])best=Math.max(best,scores[0].s);try{localStorage.setItem('neonPaddleScores',JSON.stringify(scores))}catch(e){}}}
+function fetchScores(){return fetch(API+'scores',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(j=>setScores(j.scores)).catch(()=>{})}
+function qualifies(){return score>0&&(scores.length<10||score>scores[scores.length-1].s)}
+async function addScore(){
+  const sc=score;
+  await fetchScores();
+  if(state!=='over'||score!==sc||!qualifies())return;
+  entering=true;lastIdx=-1;
+  const nm=document.getElementById('nm');
+  document.getElementById('entry').hidden=false;
+  try{nm.value=localStorage.getItem('neonPaddleName')||''}catch(e){}
+  nm.focus();
 }
-renderScores();
+async function submitName(skip){
+  if(!entering)return;
+  const name=document.getElementById('nm').value.trim().slice(0,12)||'Anon';
+  const sc=score,lv=level;
+  entering=false;document.getElementById('entry').hidden=true;
+  if(skip)return;
+  try{localStorage.setItem('neonPaddleName',name)}catch(e){}
+  try{
+    const r=await fetch(API+'score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,score:sc,level:lv})});
+    if(!r.ok)throw 0;const j=await r.json();setScores(j.scores);lastIdx=typeof j.rank==='number'?j.rank:-1;
+  }catch(e){const en={n:name,s:sc,l:lv};scores.push(en);scores.sort((a,b)=>b.s-a.s);scores=scores.slice(0,10);lastIdx=scores.indexOf(en)}
+}
+document.getElementById('save').onclick=()=>submitName(false);
+document.getElementById('skip').onclick=()=>submitName(true);
+document.getElementById('nm').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submitName(false)}e.stopPropagation()});
+fetchScores();
 
 /* ---------- loop ---------- */
 reset();

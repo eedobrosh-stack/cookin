@@ -539,6 +539,40 @@ PADDLE_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127955;")
 BERNARD_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#128722;")
 SKI2027_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127935;")
 
+
+# ---- Neon Paddle: global top-10 high scores (persistent disk) ----
+PADDLE_SCORES_PATH = os.path.join(DATA_DIR, "paddle_scores.json")
+PADDLE_LOCK = threading.Lock()
+
+def paddle_load():
+    try:
+        with open(PADDLE_SCORES_PATH, encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, list) else []
+    except Exception:
+        return []
+
+def paddle_add(name, score, level):
+    """Insert a score; return (top10, rank or -1). Rank is the 0-based index."""
+    name = re.sub(r"[\x00-\x1f<>&\"'`]", "", str(name or "")).strip()[:12] or "Anon"
+    score = int(score)
+    level = max(1, min(int(level), 99))
+    if score <= 0 or score > 2_000_000:
+        raise ValueError("bad score")
+    entry = {"n": name, "s": score, "l": level, "d": time.strftime("%Y-%m-%d")}
+    with PADDLE_LOCK:
+        top = paddle_load()
+        top.append(entry)
+        top.sort(key=lambda e: -e.get("s", 0))  # stable: earlier score wins ties
+        top = top[:10]
+        rank = next((i for i, e in enumerate(top) if e is entry), -1)
+        os.makedirs(DATA_DIR, exist_ok=True)
+        tmp = PADDLE_SCORES_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(top, f)
+        os.replace(tmp, PADDLE_SCORES_PATH)
+    return top, rank
+
 JARCUD_LANDING = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1051,6 +1085,10 @@ class Handler(SimpleHTTPRequestHandler):
         if p in ("/privacy", "/privacy/", "/terms", "/terms/"):
             self._html(PRIVACY_HTML)
             return
+        if p == "/api/paddle/scores":
+            with PADDLE_LOCK:
+                self._json({"scores": paddle_load()})
+            return
         if p == "/api/family":
             with LOCK:
                 s = load_state()
@@ -1096,6 +1134,15 @@ class Handler(SimpleHTTPRequestHandler):
         if p.startswith("/bernard/api/") and self._is_main_host():
             if bernard.handle_post(self, p, self._read_json()):
                 return
+        if p == "/api/paddle/score":
+            req = self._read_json() or {}
+            try:
+                top, rank = paddle_add(req.get("name"), req.get("score"), req.get("level", 1))
+            except (ValueError, TypeError):
+                self._json({"error": "bad score"}, 400)
+                return
+            self._json({"scores": top, "rank": rank})
+            return
         if p.startswith("/api/podscanner/"):
             if podscanner.handle_post(self, p, self._read_json()):
                 return
