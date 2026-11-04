@@ -47,7 +47,7 @@ KNOWN = [
     (r"luna bad JSON|luna FAILED|luna kept returning", "luna-json", "warn", "LunaRoute returned unusable JSON for an article. The job retries.",
      "None for a single occurrence; if several a day, check LunaRoute and the prompt.", "Claude"),
     (r"LunaRoute unavailable|LunaRoute down|Gemini text cap", "luna-down", "warn", "LunaRoute was down; Gemini text wrote the article (capped per day).",
-     "Check LunaRoute's status if it lasts more than an hour.", "Eedo"),
+     "Only surfaced at 10 or more fallbacks in the log window (or when the daily Gemini cap is used up); check LunaRoute's status then.", "Eedo"),
     (r"yt-api list failed|yt-api watcher error", "yt-api", "warn", "The YouTube Data API call failed (key, quota or network).",
      "Check the YouTube API quota in Google Cloud if it repeats.", "Eedo"),
     (r"Python version 3\.9 has been deprecated|no metadata", "mac-ytdlp", "warn",
@@ -81,6 +81,9 @@ DECISIONS = {
 }
 
 
+LUNA_DOWN_MIN = 10   # LunaRoute fallbacks in the log window before it is worth a decision
+
+
 def tier_of(kid, severity):
     if severity == "info":
         return "auto"
@@ -92,6 +95,8 @@ def tier_of(kid, severity):
 def decorate(a):
     """Add tier and options to an alert dict that has id + severity."""
     a["tier"] = tier_of(a["id"], a["severity"])
+    if a["id"] == "luna-down" and a["tier"] == "decision" and (a.get("count") or 0) < LUNA_DOWN_MIN and "cap" not in (a.get("title") or ""):
+        a["tier"] = "auto"                # a few drops fall back to Gemini on their own; only a sustained outage or an exhausted cap needs a decision
     a["options"] = DECISIONS.get(a["id"], []) if a["tier"] == "decision" else []
     return a
 
