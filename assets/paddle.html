@@ -325,13 +325,10 @@ addEventListener('pointerdown',e=>{
   const now=performance.now();
   if(now-lastTap<320){lastTap=0;holds.clear();recalc();setPaused(!paused);return}
   lastTap=now;
-  if(e.pointerType==='mouse')tx=toX(e);else{holds.set(e.pointerId,side(e));recalc()}
+  tx=toX(e);
   act();
 });
-addEventListener('pointermove',e=>{
-  if(e.pointerType==='mouse')tx=toX(e);
-  else if(holds.has(e.pointerId)){holds.set(e.pointerId,side(e));recalc()}
-});
+addEventListener('pointermove',e=>{tx=toX(e)}); // paddle follows the finger / mouse horizontally, anywhere on screen
 for(const t of ['pointerup','pointercancel'])addEventListener(t,e=>{holds.delete(e.pointerId);recalc()});
 addEventListener('blur',()=>{holds.clear();recalc()});
 addEventListener('keydown',e=>{
