@@ -39,7 +39,7 @@ button:focus-visible{outline:2px solid var(--cyan)}
 
 <div class="stage" id="stage"><canvas id="c" width="480" height="720"></canvas><div class="mini"><button id="pause" type="button" aria-label="Pause or play">❚❚</button><button id="mute" type="button" aria-label="Sound on or off">♪</button></div></div>
 <div class="legend" id="legend"></div>
-<div class="hint">Mouse or ← → to move. Click or space to launch and shoot. Double click or P to pause. M to mute.</div>
+<div class="hint">Mouse or ← → to move. Click or space to launch and shoot. P to pause. M to mute.</div>
 
 <script>
 (()=>{
@@ -298,7 +298,7 @@ function draw(){
     const y0=state==='over'?H*.36+205:H*.68;ctx.textAlign='center';ctx.fillStyle='#27c4ff';ctx.font='700 12px Orbitron, sans-serif';ctx.fillText('HIGH SCORES',W/2,y0);
     ctx.font='500 14px Rubik, sans-serif';
     scores.slice(0,5).forEach((e,i)=>{ctx.fillStyle=(state==='over'&&i===lastIdx)?'#ffa322':'#8fa0cc';ctx.textAlign='right';ctx.fillText((i+1)+'.  '+e.s,W/2+10,y0+24+i*20);ctx.textAlign='left';ctx.fillText('lvl '+e.l+'   '+e.d,W/2+26,y0+24+i*20)})}
-  if(paused){ctx.fillStyle='#02030acc';ctx.fillRect(0,0,W,H);ctx.fillStyle='#27c4ff';ctx.font='700 30px Orbitron, sans-serif';ctx.textAlign='center';ctx.fillText('PAUSED',W/2,H*.45);ctx.fillStyle='#6f7fa6';ctx.font='500 13px Rubik, sans-serif';ctx.fillText('Double tap, press P or use the button to resume',W/2,H*.5)}
+  if(paused){ctx.fillStyle='#02030acc';ctx.fillRect(0,0,W,H);ctx.fillStyle='#27c4ff';ctx.font='700 30px Orbitron, sans-serif';ctx.textAlign='center';ctx.fillText('PAUSED',W/2,H*.45);ctx.fillStyle='#6f7fa6';ctx.font='500 13px Rubik, sans-serif';ctx.fillText('Press P or use the button to resume',W/2,H*.5)}
   ctx.restore();
 }
 
@@ -322,14 +322,14 @@ addEventListener('pointerdown',e=>{
   if(e.target.closest&&e.target.closest('button'))return;
   ac();e.preventDefault();
   if(state==='over'||state==='won'){lastTap=0;act();return}
-  const now=performance.now();
-  if(now-lastTap<320){lastTap=0;holds.clear();recalc();setPaused(!paused);return}
-  lastTap=now;
   tx=toX(e);
   act();
 });
 addEventListener('pointermove',e=>{tx=toX(e)}); // paddle follows the finger / mouse horizontally, anywhere on screen
 for(const t of ['pointerup','pointercancel'])addEventListener(t,e=>{holds.delete(e.pointerId);recalc()});
+// iOS only unlocks audio inside touchend / click, so unlock on every kind of gesture end
+function unlock(){const a=ac();if(!a)return;try{const b=a.createBuffer(1,1,22050),s=a.createBufferSource();s.buffer=b;s.connect(a.destination);s.start(0)}catch(err){}}
+for(const t of ['pointerup','touchend','click','keydown'])addEventListener(t,unlock,{passive:true});
 addEventListener('blur',()=>{holds.clear();recalc()});
 addEventListener('keydown',e=>{
   if(e.key===' '){act();e.preventDefault();return}
