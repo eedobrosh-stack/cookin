@@ -714,6 +714,24 @@ def catalog_language(name):
     return _LANG_IDX["map"].get(_nname(name), "")
 
 
+_EN_COUNTRIES = ("us", "gb", "ca", "au", "ie", "nz")
+
+
+def catalog_origin(name):
+    """home country of an English-language catalog podcast: the English-speaking market where it charts best (US and UK first) ('GB' for The Rest Is Football), '' when unknown."""
+    pods = _catalog()
+    if _LANG_IDX.get("osrc") is not pods:
+        m = {}
+        for r in pods:
+            codes = [c for c in r.get("geo_codes") or [] if c in _EN_COUNTRIES]
+            # US vs UK decides first (a US show can chart higher in Canada); other markets only when it charts in neither
+            first = next((c for c in codes if c in ("us", "gb")), codes[0] if codes else "")
+            if first:
+                m[r["_n"]] = first.upper()
+        _LANG_IDX["omap"], _LANG_IDX["osrc"] = m, pods
+    return _LANG_IDX["omap"].get(_nname(name), "")
+
+
 def catalog_pod(pid):
     with LOCK:
         d = _load()

@@ -1479,6 +1479,22 @@ def audio_lang(a, ch=None):
     return ""
 
 
+def _origin_cc(a, ch):
+    """flag country for English audio: where the show comes from (GB, CA, AU...), '' = the default (US)"""
+    try:
+        import podscanner
+        cc = podscanner.catalog_origin((ch or {}).get("name") or a.get("channel") or "")
+    except Exception:
+        cc = ""
+    if not cc:
+        g = set((ch or {}).get("geos") or [])
+        for k in ("gb", "ca", "au"):
+            if k in g and "us" not in g:
+                cc = k.upper()
+                break
+    return "" if cc == "US" else cc
+
+
 def news_items():
     nd = vidsum_render.nodash
     chs = _load_ch()["channels"]
@@ -1495,7 +1511,8 @@ def news_items():
                     "source_id": sid, "image": a.get("image") or "", "kind": a.get("kind") or "yt", "daily": sid in daily_ids, "nohead": sid in nohead_ids,
                     "submitted_by": a.get("submitted_by"), "created": a.get("created"), "released": _rel(a),
                     "released_time": len((a.get("published_at") or "")) >= 19, "minutes": a["_min"] if "_min" in a else _length_min(a),
-                    "lang": audio_lang(a, chmap.get(sid)),
+                    "lang": (al := audio_lang(a, chmap.get(sid))),
+                    **({"afc": _origin_cc(a, chmap.get(sid))} if al == "en" else {}),
                     **({"tr": {l: [nd(e["title"]), nd(e.get("lead") or e.get("standfirst") or "")] for l, e in a["tr"].items()}} if a.get("tr") else {}),
                     "pf": (pl := vidsum_render.platform_links(a, a.get("kind") == "rss")),
                     "pfa": {k: ap for k, ap in ((k, vidsum_render._pf_app(k, u)) for k, u in pl.items()) if ap}})
