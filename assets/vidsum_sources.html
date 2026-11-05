@@ -389,14 +389,15 @@ async function renderGeo(){
   const rn = c => { try{ return new Intl.DisplayNames([window.LANG],{type:'region'}).of(c); }catch(e){ return c; } };
   const ln = l => { try{ return new Intl.DisplayNames([l],{type:'language'}).of(l); }catch(e){ return l; } };
   const flag = c => String.fromCodePoint(...[...c].map(ch=>0x1F1E6+ch.charCodeAt(0)-65));
-  const LANGS = [['he','IL'],['en','US'],['de','DE'],['fr','FR'],['es','ES'],['it','IT'],['pt','BR'],['nl','NL']];
+  const LANGS = [['en','US'],['fr','FR'],['es','ES'],['he','IL'],['de','DE'],['it','IT'],['pt','BR'],['nl','NL']];   // Hebrew sits mid-row, not first
+  const mid = a => { const r = a.filter(x=>x.slug!=='il'), i = a.find(x=>x.slug==='il'); if(i) r.splice(Math.floor(r.length/2), 0, i); return r; };   // Israel mid-row, not first
   const signed = !!(D && D.me && D.prefs);
   const curLang = (signed && D.prefs.lang) || g.lang || window.LANG, sel = g.sel || [];
   const big = f => '<span style="font-size:22px;line-height:1">'+f+'</span>';
   el.hidden = false;
   el.innerHTML = '<b>שפה</b><div class="opts">' + LANGS.map(([l,c])=>'<label class="'+(l===curLang?'on':'')+'"><input type="radio" name="lang" value="'+l+'"'+(l===curLang?' checked':'')+'>'+big(flag(c))+esc(ln(l))+'</label>').join('') + '</div>'
     + '<small>שפת הממשק ושפת סיכומי הכתבות בכל המסכים. ברירת המחדל נקבעת לפי הדפדפן.</small>'
-    + '<b style="margin-top:14px">מקור התוכן</b><div class="opts">' + g.geos.map(x=>'<label class="'+(sel.includes(x.slug)?'on':'')+'" title="'+esc(rn(x.cc))+'"><input type="checkbox" name="geo" value="'+x.slug+'"'+(sel.includes(x.slug)?' checked':'')+'>'+big(flag(x.cc))+esc(rn(x.cc))+'</label>').join('') + '</div>'
+    + '<b style="margin-top:14px">מקור התוכן</b><div class="opts">' + mid(g.geos).map(x=>'<label class="'+(sel.includes(x.slug)?'on':'')+'" title="'+esc(rn(x.cc))+'"><input type="checkbox" name="geo" value="'+x.slug+'"'+(sel.includes(x.slug)?' checked':'')+'>'+big(flag(x.cc))+esc(rn(x.cc))+'</label>').join('') + '</div>'
     + '<small>אפשר לבחור כמה מדינות. ברירת המחדל: המדינה שזוהתה ו-ארצות הברית. '+(signed?'השינויים נשמרים בפרופיל.':'השינויים נשמרים בדפדפן.')+'</small>'
     + (g.sel.some(x=>x!=='il' && !g.geos.find(y=>y.slug===x).live) ? '<small class="warn">לחלק מהמדינות עוד אין סט פעיל, מוצג במקומן הסט הכללי.</small>' : '');
   const ck = (k,v) => { document.cookie = k+'='+v+';path=/;max-age=31536000;samesite=lax'; };
