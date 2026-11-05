@@ -553,14 +553,43 @@ def paddle_load():
     except Exception:
         return []
 
-def paddle_add(name, score, level):
+PADDLE_GAMES_PATH = os.path.join(DATA_DIR, "paddle_games.json")
+
+def paddle_games_load():
+    """All finished-game scores (ints), for the live all-time rank. Seeded from the top 10 on first use."""
+    try:
+        with open(PADDLE_GAMES_PATH, encoding="utf-8") as f:
+            d = json.load(f)
+        if isinstance(d, list):
+            return d
+    except Exception:
+        pass
+    return [e.get("s", 0) for e in paddle_load()]
+
+def paddle_game_add(score):
+    score = int(score)
+    if score <= 0 or score > 2_000_000:
+        raise ValueError("bad score")
+    with PADDLE_LOCK:
+        g = paddle_games_load()
+        g.append(score)
+        g.sort(reverse=True)
+        os.makedirs(DATA_DIR, exist_ok=True)
+        tmp = PADDLE_GAMES_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(g, f)
+        os.replace(tmp, PADDLE_GAMES_PATH)
+    return g
+
+def paddle_add(name, score, level, platform=None):
     """Insert a score; return (top10, rank or -1). Rank is the 0-based index."""
     name = re.sub(r"[\x00-\x1f<>&\"'`]", "", str(name or "")).strip()[:12] or "Anon"
     score = int(score)
     level = max(1, min(int(level), 99))
     if score <= 0 or score > 2_000_000:
         raise ValueError("bad score")
-    entry = {"n": name, "s": score, "l": level, "d": time.strftime("%Y-%m-%d")}
+    entry = {"n": name, "s": score, "l": level, "d": time.strftime("%Y-%m-%d"),
+             "ts": int(time.time() * 1000), "p": platform if platform in ("Desktop", "Mobile") else None}
     with PADDLE_LOCK:
         top = paddle_load()
         top.append(entry)
@@ -1094,6 +1123,9 @@ class Handler(SimpleHTTPRequestHandler):
         if p in ("/privacy", "/privacy/", "/terms", "/terms/"):
             self._html(PRIVACY_HTML)
             return
+        if p == "/api/paddle/games":
+            self._json({"games": paddle_games_load()})
+            return
         if p == "/api/paddle/scores":
             with PADDLE_LOCK:
                 self._json({"scores": paddle_load()})
@@ -1143,10 +1175,19 @@ class Handler(SimpleHTTPRequestHandler):
         if p.startswith("/bernard/api/") and self._is_main_host():
             if bernard.handle_post(self, p, self._read_json()):
                 return
+        if p == "/api/paddle/game":
+            req = self._read_json() or {}
+            try:
+                g = paddle_game_add(req.get("score"))
+            except (ValueError, TypeError):
+                self._json({"error": "bad score"}, 400)
+                return
+            self._json({"games": g})
+            return
         if p == "/api/paddle/score":
             req = self._read_json() or {}
             try:
-                top, rank = paddle_add(req.get("name"), req.get("score"), req.get("level", 1))
+                top, rank = paddle_add(req.get("name"), req.get("score"), req.get("level", 1), req.get("platform"))
             except (ValueError, TypeError):
                 self._json({"error": "bad score"}, 400)
                 return
