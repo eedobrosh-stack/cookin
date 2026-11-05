@@ -271,7 +271,7 @@ function draw(){
   ctx.fillStyle='#d7e6ff';ctx.font='700 15px Orbitron, sans-serif';ctx.textBaseline='middle';
   ctx.textAlign='left';ctx.fillText('SCORE '+score,14,26);
   ctx.textAlign='center';ctx.fillText('LVL '+level,W/2,52);
-  if(score>0&&games.length){const rk=rankNow();ctx.textAlign='right';ctx.font='500 12px Orbitron, sans-serif';ctx.fillStyle='#b8606f';ctx.fillText('ALL-TIME #'+rk+' OF '+(games.length+1),W-14,26);ctx.font='700 15px Orbitron, sans-serif'}
+  if(score>0&&games.length){const rk=rankNow();ctx.textAlign='right';ctx.font='500 12px Orbitron, sans-serif';ctx.fillStyle='#7fd4ff';ctx.fillText('ALL-TIME #'+rk+' OF '+(games.length+1),W-14,26);ctx.font='700 15px Orbitron, sans-serif'}
   ctx.textAlign='left';ctx.font='500 11px Rubik, sans-serif';ctx.fillStyle='#6f7fa6';ctx.fillText('BEST '+best,14,48);
   for(let i=0;i<lives;i++){ctx.fillStyle='#ffa322';ctx.beginPath();ctx.arc(W-18-i*18,48,5,0,6.28);ctx.fill()}
   // timers
@@ -310,7 +310,7 @@ function draw(){
     ctx.font='500 14px Rubik, sans-serif';
     const n=state==='over'?10:5,stp=state==='over'?16:20;
     ctx.font='500 12px Rubik, sans-serif';
-    scores.slice(0,n).forEach((e,i)=>{const yy=y0+24+i*stp,w=fmtWhen(e);ctx.fillStyle=(state==='over'&&i===lastIdx)?'#ffa322':'#8fa0cc';ctx.textAlign='left';ctx.fillText((i+1)+'. '+(e.n||'Anon'),60,yy);ctx.textAlign='right';ctx.fillText(e.s,232,yy);ctx.textAlign='left';ctx.fillText(w[0],244,yy);ctx.fillText(w[1],314,yy);ctx.fillText(w[2],368,yy)})}
+    scores.slice(0,n).forEach((e,i)=>{const yy=y0+24+i*stp,w=fmtWhen(e);ctx.fillStyle=(state==='over'&&i===lastIdx)?'#ffa322':'#8fa0cc';ctx.textAlign='left';ctx.fillText((i+1)+'. '+(e.n||'Anon'),58,yy);ctx.textAlign='right';ctx.fillText(e.s,208,yy);ctx.textAlign='left';ctx.fillText('L'+(e.l||'-'),218,yy);ctx.fillText(w[0],252,yy);ctx.fillText(w[1],320,yy);ctx.fillText(w[2],372,yy)})}
   if(paused){ctx.fillStyle='#02030acc';ctx.fillRect(0,0,W,H);ctx.fillStyle='#27c4ff';ctx.font='700 30px Orbitron, sans-serif';ctx.textAlign='center';ctx.fillText('PAUSED',W/2,H*.45);ctx.fillStyle='#6f7fa6';ctx.font='500 13px Rubik, sans-serif';ctx.fillText('Press P or use the button to resume',W/2,H*.5)}
   ctx.restore();
 }
@@ -368,7 +368,7 @@ function renderScores(){
   const el=document.getElementById('sc');
   if(!el)return;
   if(!scores.length){el.innerHTML='<p>No scores yet. Finish a game to set the first one.</p>';return}
-  el.innerHTML='<ol>'+scores.map((e,i)=>`<li class="${i===lastIdx?'new':''}"><span><b>${e.s}</b><span>${fmtWhen(e).join(' | ')}</span></span></li>`).join('')+'</ol>';
+  el.innerHTML='<ol>'+scores.map((e,i)=>`<li class="${i===lastIdx?'new':''}"><span><b>${e.s}</b><span>L${e.l} | ${fmtWhen(e).join(' | ')}</span></span></li>`).join('')+'</ol>';
 }
 // global top 10 lives on the server (jarcud.com/api/paddle/*); localStorage is only an offline fallback
 let entering=false,games=[];
