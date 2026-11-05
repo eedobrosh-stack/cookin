@@ -587,6 +587,7 @@ def _catalog():
             row["topic"] = _TOPIC_FIX.get(row["topic"], row["topic"])
             row["language"] = canon_lang(row["language"])
             row["_n"] = _nname(p["name"])
+            row["_geo_all"] = sorted((p.get("geo") or {}), key=lambda c: ((p["geo"].get(c) or 999), c))     # every charted country, best rank first (the row keeps only 6)
             # the same show can be charted under several Apple ids (re-listed feeds): keep one, the best scored / most recently active
             key = row["_n"]
             old_r = seen_n.get(key)
@@ -723,7 +724,7 @@ def catalog_origin(name):
     if _LANG_IDX.get("osrc") is not pods:
         m = {}
         for r in pods:
-            codes = r.get("geo_codes") or []
+            codes = r.get("_geo_all") or r.get("geo_codes") or []
             # Evidence of origin, never a guess: its single best chart is GB, CA or AU and it is not charted in the US at all.
             # (A US show can top the South African or Canadian chart; those stay on the default US flag.)
             first = codes[0] if codes and codes[0] in ("gb", "ca", "au") and "us" not in codes else ""
