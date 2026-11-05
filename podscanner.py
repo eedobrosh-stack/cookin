@@ -718,14 +718,15 @@ _EN_COUNTRIES = ("us", "gb", "ca", "au", "ie", "nz")
 
 
 def catalog_origin(name):
-    """home country of an English-language catalog podcast: the English-speaking market where it charts best (US and UK first) ('GB' for The Rest Is Football), '' when unknown."""
+    """home country of an English-language catalog podcast: GB / CA / AU when its best chart is there and it does not chart in the US ('GB' for The Rest Is Football), '' when unknown."""
     pods = _catalog()
     if _LANG_IDX.get("osrc") is not pods:
         m = {}
         for r in pods:
-            codes = [c for c in r.get("geo_codes") or [] if c in _EN_COUNTRIES]
-            # US vs UK decides first (a US show can chart higher in Canada); other markets only when it charts in neither
-            first = next((c for c in codes if c in ("us", "gb")), codes[0] if codes else "")
+            codes = r.get("geo_codes") or []
+            # Evidence of origin, never a guess: its single best chart is GB, CA or AU and it is not charted in the US at all.
+            # (A US show can top the South African or Canadian chart; those stay on the default US flag.)
+            first = codes[0] if codes and codes[0] in ("gb", "ca", "au") and "us" not in codes else ""
             if first:
                 m[r["_n"]] = first.upper()
         _LANG_IDX["omap"], _LANG_IDX["osrc"] = m, pods
