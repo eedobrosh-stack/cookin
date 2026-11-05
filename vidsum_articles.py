@@ -1486,12 +1486,6 @@ def _origin_cc(a, ch):
         cc = podscanner.catalog_origin((ch or {}).get("name") or a.get("channel") or "")
     except Exception:
         cc = ""
-    if not cc:
-        g = set((ch or {}).get("geos") or [])
-        for k in ("gb", "ca", "au"):
-            if k in g and "us" not in g:
-                cc = k.upper()
-                break
     return "" if cc == "US" else cc
 
 
