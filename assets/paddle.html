@@ -270,8 +270,8 @@ function draw(){
   // HUD
   ctx.fillStyle='#d7e6ff';ctx.font='700 15px Orbitron, sans-serif';ctx.textBaseline='middle';
   ctx.textAlign='left';ctx.fillText('SCORE '+score,14,26);
-  ctx.textAlign='right';ctx.fillText('LVL '+level,W-14,26);
-  {const rk=rankNow();ctx.textAlign='center';ctx.font='700 12px Orbitron, sans-serif';ctx.fillStyle=rk===1?'#ffa322':'#27c4ff';ctx.fillText('ALL-TIME #'+rk+(games.length?' OF '+(games.length+1):''),W/2,50);ctx.font='700 15px Orbitron, sans-serif'}
+  ctx.textAlign='center';ctx.fillText('LVL '+level,W/2,52);
+  if(score>0&&games.length){const rk=rankNow();ctx.textAlign='right';ctx.font='500 12px Orbitron, sans-serif';ctx.fillStyle='#b8606f';ctx.fillText('ALL-TIME #'+rk+' OF '+(games.length+1),W-14,26);ctx.font='700 15px Orbitron, sans-serif'}
   ctx.textAlign='left';ctx.font='500 11px Rubik, sans-serif';ctx.fillStyle='#6f7fa6';ctx.fillText('BEST '+best,14,48);
   for(let i=0;i<lives;i++){ctx.fillStyle='#ffa322';ctx.beginPath();ctx.arc(W-18-i*18,48,5,0,6.28);ctx.fill()}
   // timers
