@@ -310,7 +310,7 @@ function draw(){
     ctx.font='500 14px Rubik, sans-serif';
     const n=state==='over'?10:5,stp=state==='over'?16:20;
     ctx.font='500 12px Rubik, sans-serif';
-    scores.slice(0,n).forEach((e,i)=>{const yy=y0+24+i*stp,w=fmtWhen(e);ctx.fillStyle=(state==='over'&&i===lastIdx)?'#ffa322':'#8fa0cc';ctx.textAlign='left';ctx.fillText((i+1)+'. '+(e.n||'Anon'),24,yy);ctx.textAlign='right';ctx.fillText(e.s,196,yy);ctx.textAlign='left';ctx.fillText(w[0],208,yy);ctx.fillText(w[1],278,yy);ctx.fillText(w[2],332,yy)})}
+    scores.slice(0,n).forEach((e,i)=>{const yy=y0+24+i*stp,w=fmtWhen(e);ctx.fillStyle=(state==='over'&&i===lastIdx)?'#ffa322':'#8fa0cc';ctx.textAlign='left';ctx.fillText((i+1)+'. '+(e.n||'Anon'),60,yy);ctx.textAlign='right';ctx.fillText(e.s,232,yy);ctx.textAlign='left';ctx.fillText(w[0],244,yy);ctx.fillText(w[1],314,yy);ctx.fillText(w[2],368,yy)})}
   if(paused){ctx.fillStyle='#02030acc';ctx.fillRect(0,0,W,H);ctx.fillStyle='#27c4ff';ctx.font='700 30px Orbitron, sans-serif';ctx.textAlign='center';ctx.fillText('PAUSED',W/2,H*.45);ctx.fillStyle='#6f7fa6';ctx.font='500 13px Rubik, sans-serif';ctx.fillText('Press P or use the button to resume',W/2,H*.5)}
   ctx.restore();
 }
