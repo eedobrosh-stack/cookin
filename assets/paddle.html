@@ -11,6 +11,8 @@ html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);
   padding-block:6px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   display:flex;flex-direction:column;align-items:center;gap:6px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+input{-webkit-user-select:text;user-select:text}
 canvas{display:block;background:#02030a;border-radius:6px;box-shadow:0 0 0 1px #1a2350,0 0 40px #0a2a5a66;touch-action:none;cursor:none}
 .bar{display:flex;gap:10px;align-items:center;justify-content:space-between;width:100%;max-width:480px}
 h1{font:700 14px var(--font-display);letter-spacing:.18em;text-transform:uppercase;margin:0;color:var(--cyan)}
@@ -131,7 +133,7 @@ function build(level){
 }
 
 /* ---------- state ---------- */
-let bricks,level=1,score=0,lives=3,state='ready',combo=0,best=0;
+let sess=0,bricks,level=1,score=0,lives=3,state='ready',combo=0,best=0;
 try{best=+localStorage.getItem('neonPaddleBest')||0}catch(e){}
 let balls=[],pills=[],bullets=[],parts=[],fx={},px=W/2,tx=W/2,pw=84,shake=0,msg='',msgT=0;
 const keys={};
@@ -140,12 +142,12 @@ function remaining(){let n=0;for(const r of bricks)for(const h of r)if(h>0)n++;r
 function newBall(sticky=true){return{x:px,y:PADY-8,vx:0,vy:0,r:6,stuck:sticky,off:0,trail:[]}}
 function startLevel(){bricks=build(level);balls=[newBall()];pills=[];bullets=[];freshFx();state='ready';combo=0;banner('Level '+level)}
 function banner(t){msg=t;msgT=2}
-function speed(){let s=330+level*14;if(fx.slow>0)s*=.68;if(fx.fast>0)s*=1.35;return s}
+function speed(){let s=(330+level*14)*(1+sess/60*.05);if(fx.slow>0)s*=.68;if(fx.fast>0)s*=1.35;return s}
 const MINA=Math.PI/180; // paddle centre is never flat: at least 1 degree off vertical, either side
 function tilt(a,side){if(Math.abs(a)<MINA)a=(side>0||(side===0&&Math.random()<.5)?1:-1)*MINA;return a}
 function launch(b){const a=tilt((b.off/pw)*1.0,b.off);b.vx=Math.sin(a)*speed();b.vy=-Math.cos(a)*speed();b.stuck=false;S.launch()}
 function addPart(x,y,col,n=8,sp=140){for(let i=0;i<n;i++){const a=Math.random()*6.28,s=Math.random()*sp+30;parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:.5+Math.random()*.4,c:col})}}
-function reset(){level=1;score=0;lives=3;px=tx=W/2;startLevel()}
+function reset(){sess=0;level=1;score=0;lives=3;px=tx=W/2;startLevel()}
 
 /* ---------- bricks ---------- */
 function brickRect(r,c){return{x:PX+c*CELL,y:PY+r*CELL,w:CELL,h:CELL}}
@@ -202,6 +204,7 @@ function update(dt){
     if(bricks[r]&&bricks[r][c]!==undefined&&bricks[r][c]!==0){b.dead=1;hitBrick(r,c)}}
   bullets=bullets.filter(b=>!b.dead);
   // balls
+  if(state==='play'){sess+=dt;const s=speed();for(const b of balls)if(!b.stuck){const m=Math.hypot(b.vx,b.vy)||1;b.vx*=s/m;b.vy*=s/m}}
   const steps=4;
   for(const b of balls){
     if(b.stuck){b.x=px+b.off;b.y=PADY-8;continue}
@@ -238,8 +241,8 @@ function update(dt){
   }
   balls=balls.filter(b=>b.y<H+20);
   if(!balls.length&&state==='play'){
-    lives--;S.lose();shake=10;combo=0;
-    if(lives<=0){state='over';S.over();addScore()}
+    sess=0;lives--;S.lose();shake=10;combo=0;
+    if(lives<=0){state='over';S.over();const fs=score;(fs>0?fetch('/api/paddle/game',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({score:fs})}).then(r=>r.json()).then(j=>{if(Array.isArray(j.games))games=j.games}).catch(()=>{}):Promise.resolve()).then(addScore)}
     else{freshFx();pills=[];bullets=[];balls=[newBall()];state='ready'}
   }
   if(state==='play'&&remaining()===0){state='won';S.win();score+=500;banner('Level clear')}
@@ -268,6 +271,7 @@ function draw(){
   ctx.fillStyle='#d7e6ff';ctx.font='700 15px Orbitron, sans-serif';ctx.textBaseline='middle';
   ctx.textAlign='left';ctx.fillText('SCORE '+score,14,26);
   ctx.textAlign='right';ctx.fillText('LVL '+level,W-14,26);
+  {const rk=rankNow();ctx.textAlign='center';ctx.fillStyle=rk===1?'#ffa322':'#27c4ff';ctx.fillText('RANK #'+rk,W/2,26);ctx.font='500 10px Rubik, sans-serif';ctx.fillStyle='#6f7fa6';ctx.fillText('ALL TIME'+(games.length?' OF '+(games.length+1):''),W/2,45);ctx.font='700 15px Orbitron, sans-serif'}
   ctx.textAlign='left';ctx.font='500 11px Rubik, sans-serif';ctx.fillStyle='#6f7fa6';ctx.fillText('BEST '+best,14,48);
   for(let i=0;i<lives;i++){ctx.fillStyle='#ffa322';ctx.beginPath();ctx.arc(W-18-i*18,48,5,0,6.28);ctx.fill()}
   // timers
@@ -305,7 +309,8 @@ function draw(){
     const y0=state==='over'?H*.36+205:H*.68;ctx.textAlign='center';ctx.fillStyle='#27c4ff';ctx.font='700 12px Orbitron, sans-serif';ctx.fillText('HIGH SCORES',W/2,y0);
     ctx.font='500 14px Rubik, sans-serif';
     const n=state==='over'?10:5,stp=state==='over'?16:20;
-    scores.slice(0,n).forEach((e,i)=>{const yy=y0+24+i*stp;ctx.fillStyle=(state==='over'&&i===lastIdx)?'#ffa322':'#8fa0cc';ctx.textAlign='left';ctx.fillText((i+1)+'. '+(e.n||'Anon'),W/2-130,yy);ctx.textAlign='right';ctx.fillText(e.s,W/2+60,yy);ctx.textAlign='left';ctx.fillText('L'+e.l,W/2+76,yy)})}
+    ctx.font='500 12px Rubik, sans-serif';
+    scores.slice(0,n).forEach((e,i)=>{const yy=y0+24+i*stp,w=fmtWhen(e);ctx.fillStyle=(state==='over'&&i===lastIdx)?'#ffa322':'#8fa0cc';ctx.textAlign='left';ctx.fillText((i+1)+'. '+(e.n||'Anon'),24,yy);ctx.textAlign='right';ctx.fillText(e.s,196,yy);ctx.textAlign='left';ctx.fillText(w[0],208,yy);ctx.fillText(w[1],278,yy);ctx.fillText(w[2],332,yy)})}
   if(paused){ctx.fillStyle='#02030acc';ctx.fillRect(0,0,W,H);ctx.fillStyle='#27c4ff';ctx.font='700 30px Orbitron, sans-serif';ctx.textAlign='center';ctx.fillText('PAUSED',W/2,H*.45);ctx.fillStyle='#6f7fa6';ctx.font='500 13px Rubik, sans-serif';ctx.fillText('Press P or use the button to resume',W/2,H*.5)}
   ctx.restore();
 }
@@ -321,6 +326,10 @@ function act(){
   if(st.length){st.forEach(launch);return}
   if(fx.laser>0&&(fx._cd||0)<=0){fx._cd=.28;S.laser();bullets.push({x:px-pw/2+6,y:PADY-6},{x:px+pw/2-6,y:PADY-6})}
 }
+addEventListener('contextmenu',e=>{if(!(e.target.closest&&e.target.closest('input')))e.preventDefault()});
+addEventListener('selectstart',e=>{if(!(e.target.closest&&e.target.closest('input')))e.preventDefault()});
+cv.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});
+cv.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 function toX(e){const r=cv.getBoundingClientRect();return (e.clientX-r.left)/r.width*W}
 // touch: hold anywhere left or right of centre to move; double tap = pause / play
 let hold=0,lastTap=0;const holds=new Map();
@@ -359,10 +368,16 @@ function renderScores(){
   const el=document.getElementById('sc');
   if(!el)return;
   if(!scores.length){el.innerHTML='<p>No scores yet. Finish a game to set the first one.</p>';return}
-  el.innerHTML='<ol>'+scores.map((e,i)=>`<li class="${i===lastIdx?'new':''}"><span><b>${e.s}</b><span>level ${e.l}</span><span>${e.d}</span></span></li>`).join('')+'</ol>';
+  el.innerHTML='<ol>'+scores.map((e,i)=>`<li class="${i===lastIdx?'new':''}"><span><b>${e.s}</b><span>${fmtWhen(e).join(' | ')}</span></span></li>`).join('')+'</ol>';
 }
 // global top 10 lives on the server (jarcud.com/api/paddle/*); localStorage is only an offline fallback
-let entering=false;
+let entering=false,games=[];
+function fetchGames(){return fetch('/api/paddle/games',{cache:'no-store'}).then(r=>r.json()).then(j=>{if(Array.isArray(j.games))games=j.games}).catch(()=>{})}
+function rankNow(){let n=0;for(const g of games){if(g>score)n++;else break}return n+1}
+const PLAT=(matchMedia('(pointer:coarse)').matches||/iPhone|iPad|Android/i.test(navigator.userAgent))?'Mobile':'Desktop';
+function fmtWhen(e){if(!e.ts&&!e.d)return['','',''];let d,t='-';if(e.ts){d=new Date(e.ts);let h=d.getHours(),m=d.getMinutes();t=((h+11)%12+1)+'.'+String(m).padStart(2,'0')+(h<12?'am':'pm')}else{const a=e.d.split('-');d=new Date(+a[0],+a[1]-1,+a[2])}
+  return[d.toLocaleString('en-US',{month:'short'})+' '+d.getDate()+' '+String(d.getFullYear()).slice(2)+"'",t,e.p||'-']}
+
 const API='/api/paddle/';
 function setScores(list){if(Array.isArray(list)){scores=list.slice(0,10);if(scores[0])best=Math.max(best,scores[0].s);try{localStorage.setItem('neonPaddleScores',JSON.stringify(scores))}catch(e){}}}
 function fetchScores(){return fetch(API+'scores',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(j=>setScores(j.scores)).catch(()=>{})}
@@ -385,14 +400,14 @@ async function submitName(skip){
   if(skip)return;
   try{localStorage.setItem('neonPaddleName',name)}catch(e){}
   try{
-    const r=await fetch(API+'score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,score:sc,level:lv})});
+    const r=await fetch(API+'score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,score:sc,level:lv,platform:PLAT})});
     if(!r.ok)throw 0;const j=await r.json();setScores(j.scores);lastIdx=typeof j.rank==='number'?j.rank:-1;
-  }catch(e){const en={n:name,s:sc,l:lv};scores.push(en);scores.sort((a,b)=>b.s-a.s);scores=scores.slice(0,10);lastIdx=scores.indexOf(en)}
+  }catch(e){const en={n:name,s:sc,l:lv,ts:Date.now(),p:PLAT};scores.push(en);scores.sort((a,b)=>b.s-a.s);scores=scores.slice(0,10);lastIdx=scores.indexOf(en)}
 }
 document.getElementById('save').onclick=()=>submitName(false);
 document.getElementById('skip').onclick=()=>submitName(true);
 document.getElementById('nm').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submitName(false)}e.stopPropagation()});
-fetchScores();
+fetchScores();fetchGames();
 
 /* ---------- loop ---------- */
 reset();
