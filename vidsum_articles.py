@@ -1029,6 +1029,9 @@ def submit(url, admin, engine=DEFAULT_ENGINE, source=None, owner=None):
         cur = jobs.get(vid)
         if cur and cur.get("status") in ("queued", "running", "needs_transcript") and not (
                 engine == "gemini" and cur.get("status") == "needs_transcript"):
+            if not source and not cur.get("priority"):          # asked for by hand while it waits: move it to the front
+                cur["priority"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                _save_jobs(jobs)
             return 200, {"ok": True, "id": vid, "status": cur["status"]}
         active = sum(1 for j in jobs.values() if j.get("status") in ("queued", "running"))
         waiting = sum(1 for j in jobs.values() if j.get("status") == "needs_transcript")
@@ -1044,6 +1047,8 @@ def submit(url, admin, engine=DEFAULT_ENGINE, source=None, owner=None):
         status = "needs_transcript" if engine == "luna" else "queued"
         jobs[vid] = {"status": status, "engine": engine, "public": not admin, "source": source or (cur or {}).get("source"),
                      "submitted": time.strftime("%Y-%m-%d %H:%M:%S")}
+        if not jobs[vid]["source"]:                 # a single episode someone asked for: front of the queue
+            jobs[vid]["priority"] = jobs[vid]["submitted"]
         if owner:                                   # a standalone episode someone added by hand (not from a watched source)
             jobs[vid].update(owner=owner, standalone=not jobs[vid]["source"])
         _save_jobs(jobs)
@@ -1133,7 +1138,7 @@ def relay_queue(limit=15, for_mac=True):
     out = []
     fresh = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time() - 24 * 3600))
     new_src = {c["id"] for c in _load_ch()["channels"] if (c.get("added") or "") >= fresh}      # sources added in the last 24 h go first
-    for v, j in sorted(_load_jobs().items(), key=lambda kv: (0 if kv[1].get("source") in new_src else 1, kv[1].get("submitted", ""))):
+    for v, j in sorted(_load_jobs().items(), key=lambda kv: (0 if kv[1].get("priority") else 1, 0 if kv[1].get("source") in new_src else 1, kv[1].get("priority") or kv[1].get("submitted", ""))):
         if j.get("status") != "needs_transcript":
             continue
         if j.get("srv_claim") and time.time() - j["srv_claim"] < 240:              # the server is fetching this one itself
@@ -1145,7 +1150,7 @@ def relay_queue(limit=15, for_mac=True):
                     continue
             except ValueError:
                 pass
-        row = {"vid": v, "url": f"https://www.youtube.com/watch?v={v}", "submitted": j.get("submitted")}
+        row = {"vid": v, "url": f"https://www.youtube.com/watch?v={v}", "submitted": j.get("submitted"), "priority": bool(j.get("priority"))}
         if j.get("kind") == "rss":                  # podcast episode: the Mac downloads the audio and transcribes it (Whisper)
             row.update(kind="rss", url=j.get("page") or j.get("audio"), audio=j.get("audio"), title=j.get("title"), channel=j.get("channel"),
                        duration=j.get("duration"), published_at=j.get("published_at"), description=j.get("description"),
@@ -1187,7 +1192,7 @@ def queue_view(limit=80):
             delay = min(RETRY_MAX_MIN, RETRY_FIRST_MIN * (2 ** row["attempts"])) * 60
             row["retry_in_min"] = max(0, int((failed_at + delay - now) / 60) + 1)
             row["handler"] = "automatic retry"
-        row["_k"] = (rank[st], 0 if (chs.get(j.get("source")) or {}).get("added", "") >= time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(now - 86400)) else 1,
+        row["_k"] = (rank[st], 0 if j.get("priority") else 1, 0 if (chs.get(j.get("source")) or {}).get("added", "") >= time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(now - 86400)) else 1,
                      j.get("submitted", ""))
         rows.append(row)
     rows.sort(key=lambda r: r["_k"])
@@ -1520,6 +1525,10 @@ LANG_NAMES = {"he": "Hebrew", "en": "English", "de": "German", "fr": "French", "
 STAT_FRAMES = [("24h", 1), ("7d", 7), ("30d", 30), ("90d", 90), ("all", None)]
 
 
+_LANG_COUNTRY = {"he": "IL", "en": "US", "es": "ES", "fr": "FR", "de": "DE", "it": "IT", "pt": "BR", "nl": "NL", "sv": "SE", "no": "NO", "pl": "PL",
+                 "ru": "RU", "tr": "TR", "ja": "JP", "ko": "KR", "ar": "SA", "da": "DK", "fi": "FI", "hi": "IN", "zh": "CN"}   # mirrors ACC in vidsum_news.html
+
+
 def stats_report():
     """Coverage numbers for the Stats page: what was added to Pawed (by creation time) per time frame, by source language, podcast vs video,
     translations available, and per source. All from the article index, no extra reads."""
@@ -1537,6 +1546,7 @@ def stats_report():
         return 0
     tot = {k: {"articles": 0, "podcasts": 0, "videos": 0} for k, _ in STAT_FRAMES}
     by_lang, sources, trans = {}, {}, {k: {"he": 0} for k, _ in STAT_FRAMES}
+    by_origin = {}
     daily = {}
     for i in items:
         t = ts(i)
@@ -1546,6 +1556,8 @@ def stats_report():
         langs_have = ["he"] + (["en"] if i.get("title_en") else []) + [l for l in (i.get("tr") or {}) if l not in ("he", "en")]
         sd = sources.setdefault(src, {"name": src, "kind": "podcast" if pod else "video", "lang": lang, "counts": {k: 0 for k, _ in STAT_FRAMES}, "last": ""})
         ld = by_lang.setdefault(lang, {"lang": lang, "name": LANG_NAMES.get(lang, lang), "counts": {k: 0 for k, _ in STAT_FRAMES}, "podcasts": {k: 0 for k, _ in STAT_FRAMES}})
+        oc = (i.get("afc") or _LANG_COUNTRY.get(lang) or "??").upper()
+        od = by_origin.setdefault(oc, {"cc": oc, "counts": {k: 0 for k, _ in STAT_FRAMES}, "podcasts": {k: 0 for k, _ in STAT_FRAMES}})
         if t and time.strftime("%Y-%m-%d %H:%M", time.localtime(t)) > sd["last"]:
             sd["last"] = time.strftime("%Y-%m-%d %H:%M", time.localtime(t))
         if t and t >= now - 60 * 86400:
@@ -1557,8 +1569,10 @@ def stats_report():
             tot[k]["articles"] += 1
             tot[k]["podcasts" if pod else "videos"] += 1
             ld["counts"][k] += 1
+            od["counts"][k] += 1
             if pod:
                 ld["podcasts"][k] += 1
+                od["podcasts"][k] += 1
             sd["counts"][k] += 1
             for l in langs_have:
                 if l != "he":
@@ -1570,6 +1584,7 @@ def stats_report():
         days.append({"d": d, **(daily.get(d) or {"pod": 0, "vid": 0})})
     return {"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "frames": [k for k, _ in STAT_FRAMES], "totals": tot,
             "by_lang": sorted(by_lang.values(), key=lambda x: -x["counts"]["all"]),
+            "by_origin": sorted(by_origin.values(), key=lambda x: -x["counts"]["all"]),
             "translations": {k: [{"lang": l, "name": LANG_NAMES.get(l, l), "count": n} for l, n in sorted(v.items(), key=lambda kv: -kv[1])] for k, v in trans.items()},
             "sources": sorted(sources.values(), key=lambda x: -x["counts"]["all"]), "daily": days,
             "note": "Added = when Pawed created the article. Podcast = RSS episode; video = YouTube episode (a podcast that publishes on YouTube counts as video)."}
@@ -2178,7 +2193,7 @@ def server_captions_once(limit=6):
     todo = []
     with LOCK:
         jobs = _load_jobs()
-        for v, j in sorted(jobs.items(), key=lambda kv: kv[1].get("submitted", "")):
+        for v, j in sorted(jobs.items(), key=lambda kv: (0 if kv[1].get("priority") else 1, kv[1].get("submitted", ""))):
             if j.get("status") == "needs_transcript" and j.get("kind") != "rss" and not re.fullmatch(r"r[0-9a-f]{10}", v) and time.time() >= j.get("srv_next", 0) \
                     and not (j.get("srv_claim") and time.time() - j["srv_claim"] < 240):
                 j["srv_claim"] = time.time()

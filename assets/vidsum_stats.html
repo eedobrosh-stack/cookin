@@ -197,6 +197,7 @@
     .alerts .aopts { margin-top:6px; display:grid; gap:5px; } .alerts .aopt { border:1px solid var(--line); border-radius:6px; padding:6px 9px; background:#fafafa; }
     .alerts .aopt b { display:block; font-weight:600; } .alerts .aopt span { color:#555; font-size:12.5px; }
     .alerts .aline { font-size:12.5px; color:#555; padding:3px 0; border-top:1px solid var(--line); direction:ltr; text-align:left; } .alerts .aline span { color:#999; }
+    .atog { width:22px; height:22px; border:1px solid var(--line); background:#fff; border-radius:5px; cursor:pointer; font-size:14px; line-height:1; padding:0; }
     .alerts .aclear { color:#2e7d32; font-weight:700; padding:6px 0; }
     .qbox { background:#fff; border:1px solid var(--line); border-radius:8px; margin:0 0 16px; padding:10px 14px 12px; }
     .qbox h2 { margin:0 0 2px; font-size:17px; } .qbox .qsub { color:#777; font-size:12.5px; margin-bottom:8px; }
@@ -243,6 +244,7 @@
     <section class="panel"><h2>Added per day (last 60 days)</h2><p class="note">Podcast episodes vs YouTube videos.</p><div class="daily" id="daily"></div>
       <div class="legend"><i style="background:#e3222b"></i>Podcasts <i style="background:#1556d6;margin-inline-start:12px"></i>Videos</div></section>
     <section class="panel"><h2>By source language</h2><p class="note">The language spoken in the episode. Podcasts = RSS episodes.</p><div id="bylang"></div></section>
+    <section class="panel"><h2>By content origin</h2><p class="note">The country the show comes from (English shows from the UK, Canada or Australia are told apart from US ones; other languages map to their home country). 🌐 = unknown.</p><div id="byorigin"></div></section>
     <section class="panel"><h2>Translations available</h2><p class="note">How many of the articles in this time frame exist in each language. Hebrew is the base summary, so it is always 100%.</p><div id="trans"></div></section>
     <section class="panel"><h2>By source</h2><p class="note">Every source and how much it added in each time frame.</p><div class="scrollx" id="sources"></div></section>
   </main>
@@ -253,20 +255,23 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;
 $('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 fetch('/api/vidsum/me').then(r=>r.json()).then(j=>{ if(j.admin) document.body.classList.add('admin'); }).catch(()=>{});
 // ---- alerts panel: /api/vidsum/admin/health (admin only) -> three tiers: decisions for Eedo, handled by Claude, auto-healed ----
-let ALERTS = [];
+let ALERTS = [], OPEN = new Set();
 const ICON = {crit:'🔴', warn:'🟠', info:'⚪'}, SEV = {crit:'critical', warn:'to watch', info:'expected'};
 function renderAlerts(){
   const T = t => ALERTS.filter(a=>a.tier===t);
   const dec = T('decision'), han = T('handled'), aut = T('auto');
-  const row = a => '<div class="arow '+a.severity+'"><div>'+ICON[a.severity]+'</div><div><b>'+esc(a.title)+'</b><div>'+esc(a.meaning)+'</div>'
-      +(a.tier==='decision' ? '<div class="aopts">'+(a.options||[]).map(o=>'<div class="aopt"><b>'+esc(o[0])+'</b><span>'+esc(o[1])+'</span></div>').join('')+'</div>'
+  const row = a => { const dec = a.tier==='decision', k = a.id+'|'+a.title, open = dec || OPEN.has(k);
+    return '<div class="arow '+a.severity+'"><div>'+(dec ? ICON[a.severity] : '<button class="atog" data-k="'+esc(k)+'" title="'+(open?'Minimize':'Maximize')+'">'+(open?'−':'+')+'</button>')+'</div><div><b>'+esc(a.title)+'</b>'+(open ? '<div>'+esc(a.meaning)+'</div>' : '')
+      +(!open ? '' : a.tier==='decision' ? '<div class="aopts">'+(a.options||[]).map(o=>'<div class="aopt"><b>'+esc(o[0])+'</b><span>'+esc(o[1])+'</span></div>').join('')+'</div>'
                             : '<div class="anext"><i>Next:</i> '+esc(a.next)+' <span class="awho">('+esc(a.who)+')</span></div>')
-      +'</div><div class="ameta">'+(a.count>1?a.count+'× ':'')+esc((a.last||'').slice(5,16))+'<br>'+SEV[a.severity]+'</div></div>';
+      +'</div><div class="ameta">'+(a.count>1?a.count+'× ':'')+esc((a.last||'').slice(5,16))+'<br>'+SEV[a.severity]+'</div></div>'; };
   const sec = (title, list, cls) => '<div class="atier '+cls+'"><h3>'+title+' <span>'+list.length+'</span></h3>'+(list.length ? list.map(row).join('') : '<div class="aclear">✓ אין</div>')+'</div>';
   $('achips').innerHTML = '';
+  const wasOpen = !!document.querySelector('#alist details.aut[open]');
   $('alist').innerHTML = sec('מחכה להחלטה שלך', dec, 'dec') + sec('בטיפול של Claude', han, 'han')
-    + '<details class="atier aut"><summary>מתאושש לבד, רק לידיעה <span>'+aut.reduce((n,a)=>n+(a.count||1),0)+' אירועים · '+aut.length+' סוגים</span></summary>'
-    + aut.map(a=>'<div class="aline">'+esc(a.count>1?a.count+'× ':'')+esc(a.id)+' <span>'+esc(a.meaning)+'</span></div>').join('')+'</details>';
+    + '<details class="atier aut"'+(wasOpen?' open':'')+'><summary>מתאושש לבד, רק לידיעה <span>'+aut.reduce((n,a)=>n+(a.count||1),0)+' אירועים · '+aut.length+' סוגים</span></summary>'
+    + aut.map(a=>{ const k='auto|'+a.id, open=OPEN.has(k); return '<div class="aline"><button class="atog" data-k="'+esc(k)+'">'+(open?'−':'+')+'</button> '+esc(a.count>1?a.count+'× ':'')+esc(a.id)+(open?' <span>'+esc(a.meaning)+'</span>':'')+'</div>'; }).join('')+'</details>';
+  $('alist').querySelectorAll('.atog').forEach(b=>b.onclick=e=>{ e.preventDefault(); const k=b.dataset.k; OPEN.has(k)?OPEN.delete(k):OPEN.add(k); renderAlerts(); });
 }
 async function alertsTick(){ try{ const h = await (await fetch('/api/vidsum/admin/health?hours=24')).json(); if(h.alerts){ ALERTS = h.alerts; renderAlerts(); } else $('alist').textContent='אין הרשאה'; }catch(e){ $('alist').textContent='שגיאה בטעינת ההתראות'; } }
 alertsTick(); setInterval(alertsTick, 60000);
@@ -285,6 +290,11 @@ function drawStats() {
   const lmax = Math.max(1, ...ST.by_lang.map(l => l.counts[FR]));
   $('bylang').innerHTML = '<table class="st"><thead><tr><th>Language</th><th>Articles</th><th>of which podcasts</th></tr></thead><tbody>'
     + ST.by_lang.filter(l => l.counts[FR]).map(l => '<tr><td>' + esc(l.name) + '</td><td class="n">' + l.counts[FR] + pc(l.counts[FR], t.articles) + '<span class="bar1" style="width:' + Math.round(110 * l.counts[FR] / lmax) + 'px"></span></td><td class="n">' + l.podcasts[FR] + '</td></tr>').join('')
+    + '</tbody></table>';
+  const FLG = c => c.length === 2 && c !== '??' ? [...c].map(ch => String.fromCodePoint(0x1F1E6 + ch.charCodeAt(0) - 65)).join('') : '🌐';
+  const omax = Math.max(1, ...ST.by_origin.map(o => o.counts[FR]));
+  $('byorigin').innerHTML = '<table class="st"><thead><tr><th>Origin</th><th>Articles</th><th>of which podcasts</th></tr></thead><tbody>'
+    + ST.by_origin.filter(o => o.counts[FR]).map(o => '<tr><td>' + FLG(o.cc) + ' ' + esc(o.cc) + '</td><td class="n">' + o.counts[FR] + pc(o.counts[FR], t.articles) + '<span class="bar1" style="width:' + Math.round(110 * o.counts[FR] / omax) + 'px"></span></td><td class="n">' + o.podcasts[FR] + '</td></tr>').join('')
     + '</tbody></table>';
   $('trans').innerHTML = '<table class="st"><thead><tr><th>Language</th><th>Articles available</th></tr></thead><tbody>'
     + ST.translations[FR].map(x => '<tr><td>' + esc(x.name) + '</td><td class="n">' + x.count + pc(x.count, t.articles) + '<span class="bar1" style="width:' + Math.round(110 * x.count / Math.max(1, t.articles)) + 'px"></span></td></tr>').join('')
