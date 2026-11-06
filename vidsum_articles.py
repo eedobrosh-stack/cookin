@@ -1151,6 +1151,8 @@ def relay_queue(limit=15, for_mac=True):
             except ValueError:
                 pass
         row = {"vid": v, "url": f"https://www.youtube.com/watch?v={v}", "submitted": j.get("submitted"), "priority": bool(j.get("priority"))}
+        if j.get("no_caps"):
+            row["no_caps"] = True
         if j.get("kind") == "rss":                  # podcast episode: the Mac downloads the audio and transcribes it (Whisper)
             row.update(kind="rss", url=j.get("page") or j.get("audio"), audio=j.get("audio"), title=j.get("title"), channel=j.get("channel"),
                        duration=j.get("duration"), published_at=j.get("published_at"), description=j.get("description"),
@@ -1183,7 +1185,7 @@ def queue_view(limit=80):
         elif st == "queued":
             row["handler"] = "server: writing"
         elif st == "needs_transcript":
-            row["handler"] = "Mac: Whisper" if podcast else ("server: caption service" if srv_caps else "Mac: captions")
+            row["handler"] = "Mac: Whisper" if (podcast or j.get("no_caps")) else ("server: caption service" if srv_caps else "Mac: captions")
         else:
             try:
                 failed_at = calendar.timegm(time.strptime(j.get("updated", ""), "%Y-%m-%d %H:%M:%S"))
@@ -2211,8 +2213,9 @@ def server_captions_once(limit=6):
             if str(e) == "video not found or private":          # gone from YouTube (deleted / private): retrying can never work
                 _set_job(vid, status="unavailable", error=str(e)[:200], srv_claim=0)
                 log(f"vidsum {vid} unavailable on YouTube, no more retries")
-            else:
-                _set_job(vid, status="no_captions", error=str(e)[:200], srv_claim=0)
+            else:                                               # no captions on YouTube: the Mac downloads the audio and transcribes it (Whisper)
+                _set_job(vid, status="needs_transcript", no_caps=True, error="", srv_claim=0, srv_next=time.time() + 10 ** 9)
+                _event(vid, "queued", "no captions, audio goes to Whisper on the Mac", _load_jobs().get(vid, {}))
         except ytserver.RateLimited as e:                                   # the service allows only a few requests per second: try again shortly
             _set_job(vid, srv_claim=0, srv_next=time.time() + e.after)
         except RuntimeError as e:
