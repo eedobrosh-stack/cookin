@@ -13,6 +13,7 @@ NATIVE = {"he": "עברית", "en": "English", "de": "Deutsch", "fr": "Français
 LOCALE = {"he": "he-IL", "en": "en-US", "de": "de-DE", "fr": "fr-FR", "it": "it-IT", "es": "es-ES", "pt": "pt-BR", "nl": "nl-NL"}
 
 T = {
+    "Index": ("Index", "Index", "Indice", "Índice", "Índice", "Index"),
     "● Updating automatically": ("● Aktualisiert sich automatisch", "● Mise à jour automatique", "● Aggiornamento automatico", "● Se actualiza automáticamente", "● Atualiza automaticamente", "● Wordt automatisch bijgewerkt"),
     "Log": ("Protokoll", "Journal", "Registro", "Registro", "Registro", "Logboek"),
     "Terms": ("Nutzungsbedingungen", "Conditions d'utilisation", "Termini d'uso", "Términos de uso", "Termos de uso", "Gebruiksvoorwaarden"),

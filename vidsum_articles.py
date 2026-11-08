@@ -1496,6 +1496,32 @@ def _origin_cc(a, ch):
     return "" if cc == "US" else cc
 
 
+def visible_news_items(handler, qs, user, ul):
+    """The articles THIS viewer may see (same rules as the homepage feed): private sources stay private, Hebrew-audio hidden outside Israel, switched-off sections removed."""
+    items = news_items()
+    for i in items:
+        trs = i.pop("tr", None)
+        if trs and ul in trs:
+            i["title_en"], i["lead_en"] = trs[ul]
+    vis = _visible_source_ids(user)
+    if vis is not None:
+        uid = user["id"] if user else None
+        pr = get_vprefs(uid) if uid else {"hideBase": False, "hiddenBase": []}
+        base_ok = not pr["hideBase"]
+        custom = bool(pr["hideBase"] or pr["hiddenBase"])
+        items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and not i.get("submitted_by") and base_ok and not custom)
+                 or (uid and i.get("submitted_by") == uid)]
+    if vis is None and user and user.get("admin") and user.get("id") != "admin-token":
+        owners = {c["id"]: c.get("owner_id") for c in _load_ch()["channels"]}
+        items = [i for i in items if not owners.get(i["source_id"]) and not i.get("submitted_by")]
+    if not show_il(handler, qs, user):
+        items = [i for i in items if i.get("lang") != "he"]
+    gone = removed_topics(user)
+    if gone:
+        items = [i for i in items if i["topic"] not in gone]
+    return items
+
+
 def news_items():
     nd = vidsum_render.nodash
     chs = _load_ch()["channels"]
@@ -2278,6 +2304,8 @@ def start_background():
     threading.Thread(target=podstt.loop, daemon=True).start()
     import vidsum_translate
     vidsum_translate.start()
+    import pawed_index
+    pawed_index.start()
 
 
 def podcast_hours():
@@ -2534,6 +2562,7 @@ SOURCES_PAGE = os.path.join(_ASSETS, "vidsum_sources.html")
 BOOKMARKS_PAGE = os.path.join(_ASSETS, "vidsum_bookmarks.html")
 STATS_PAGE = os.path.join(_ASSETS, "vidsum_stats.html")
 ERR_PAGE = os.path.join(_ASSETS, "vidsum_err.html")
+INDEX_PAGE = os.path.join(_ASSETS, "vidsum_index.html")
 LOGS_PAGE = os.path.join(_ASSETS, "vidsum_logs.html")
 
 
@@ -2921,6 +2950,9 @@ def handle_get(handler, path, qs):
             import pawed_legal
             handler._json({"ok": True, "requests": pawed_legal.list_requests()})
         return True
+    if path in ("/vidsum/index", "/vidsum/index/"):
+        _serve(handler, INDEX_PAGE, default_lang(handler))
+        return True
     if path in ("/vidsum/err", "/vidsum/err/"):
         user = current_user(handler)
         if not (user and user.get("admin")):
@@ -3131,6 +3163,30 @@ def handle_get(handler, path, qs):
         user = current_user(handler)
         ok = bool(user and user.get("id") != "admin-token")
         handler._json({"signed": ok, "rating": get_rating(user["id"], (qs.get("slug") or [""])[0]) if ok else 0})
+        return True
+    if path in ("/api/vidsum/index", "/api/vidsum/index/entry"):
+        import pawed_index
+        user = current_user(handler)
+        ul = request_lang(handler, qs)
+        items = visible_news_items(handler, qs, user, ul)
+        by = {i["slug"]: i for i in items}
+        ents = pawed_index.entries_for(set(by), ul)
+        if path == "/api/vidsum/index":
+            handler._json({"ok": True, "lang": ul, "entries": ents, "articles": len(by)}, )
+            return True
+        eid = (qs.get("id") or [""])[0]
+        info = next((e for e in ents if e["id"] == eid), None)
+        _, slugs = pawed_index.articles_of(eid, set(by))
+        if not info:
+            handler._json({"ok": False, "error": "not found"}, 404)
+            return True
+        rows = []
+        for s in slugs:
+            i = by[s]
+            rows.append({"slug": s, "title": i["title"] if ul == "he" else (i.get("title_en") or i["title"]), "host": pawed_index.host_of(i["channel"]) or i["channel"],
+                         "channel": i["channel"], "lang": i.get("lang") or "", "afc": i.get("afc") or "", "released": i["released"]})
+        rows.sort(key=lambda r: r["released"], reverse=True)
+        handler._json({"ok": True, "lang": ul, "entry": info, "articles": rows})
         return True
     if path == "/api/vidsum/news":
         user = current_user(handler)

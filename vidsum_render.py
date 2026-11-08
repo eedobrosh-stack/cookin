@@ -293,7 +293,7 @@ EN_TOPICS = {"פוליטיקה": "Politics", "טכנולוגיה": "Technology",
              "לייפסטייל": "Lifestyle", "בריאות": "Health"}
 EN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 STR = {
-    "he": {"main": "ראשי", "live": "● מתעדכן אוטומטית", "all": "כל הסיכומים", "sources": "מקורות", "log": "יומן", "by": "מאת", "desk": "מערכת Pawed",
+    "he": {"index": "אינדקס", "main": "ראשי", "live": "● מתעדכן אוטומטית", "all": "כל הסיכומים", "sources": "מקורות", "log": "יומן", "by": "מאת", "desk": "מערכת Pawed",
            "from": "מתוך", "read": "דק׳ קריאה", "ls_pod": "האזנה לפרק", "ls_yt": "צפייה בסרטון ביוטיוב", "shot": " · צילום מסך מתוך הסרטון",
            "also": "האזנה גם ב:", "on": "האזנה ב-", "key": "עיקרי הדברים", "full_pod": "האזנה לפרק המלא ↗", "full_yt": "צפייה בשיחה המלאה ביוטיוב ↗",
            "more": "כתבות נוספות", "new": "הכי חדש", "bytopic": "לפי נושא", "stories": "כתבות",
@@ -301,7 +301,7 @@ STR = {
            "lt": "תנאי שימוש", "lp": "פרטיות", "ld": "הסרה ופניות", "cp": "העתקת קישור", "cp_ok": "הקישור הועתק", "wt": "צפייה ב-YouTube", "wr": "האזנה בנגן הפודקאסט", "rq": "האם הסיכום עזר לך?", "r_login": "דירוג והסרת תוכן דורשים התחברות", "r_signin": "התחברות עם Google", "r_cancel": "ביטול",
            "r_rm": "להסיר את «{n}» מהמקורות שלך?", "r_rm_sub": "הפרקים שלו לא יופיעו יותר אצלך. אפשר להחזיר אותו בעמוד המקורות.", "r_yes": "כן, להסיר",
            "r_up": "נוסף +1 ל-{n}", "r_off": "הדירוג בוטל", "r_done": "«{n}» הוסר מהמקורות שלך", "r_err": "משהו השתבש, נסו שוב"},
-    "en": {"main": "Home", "live": "● Updating automatically", "all": "All summaries", "sources": "Resources", "log": "Log", "by": "By", "desk": "Pawed Desk",
+    "en": {"index": "Index", "main": "Home", "live": "● Updating automatically", "all": "All summaries", "sources": "Resources", "log": "Log", "by": "By", "desk": "Pawed Desk",
            "from": "From", "read": "min read", "ls_pod": "Listen to the episode", "ls_yt": "Watch the video on YouTube", "shot": " · Screenshot from the video",
            "also": "Also listen on:", "on": "Listen on ", "key": "Key points", "full_pod": "Listen to the full episode ↗", "full_yt": "Watch the full conversation on YouTube ↗",
            "more": "More stories", "new": "Latest", "bytopic": "By topic", "stories": "stories",
@@ -433,7 +433,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
     hero_title = pf_titles.get(hero_k, S["ls_pod"] if rss else S["ls_yt"])
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(fdate(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">{S["live"]}</span>'
-           f'<a class="admin-only" href="{base}/vidsum/articles">{S["all"]}</a><a class="admin-only" href="{base}/vidsum/logs">{S["log"]}</a><a class="admin-only" href="{base}/vidsum/stats">Stats</a><a class="admin-only" href="{base}/vidsum/err">ERR</a></div>'
+           f'<a href="{base}/vidsum/index">{S["index"]}</a><a class="admin-only" href="{base}/vidsum/articles">{S["all"]}</a><a class="admin-only" href="{base}/vidsum/logs">{S["log"]}</a><a class="admin-only" href="{base}/vidsum/stats">Stats</a><a class="admin-only" href="{base}/vidsum/err">ERR</a></div>'
            f'</div></div>'
            f'<header class="masthead"><a class="brand" href="{base}/"><img class="brand-wordmark" src="{base}/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a></header>'
            f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">{S["main"]}</a>{nav}</nav></div>',
