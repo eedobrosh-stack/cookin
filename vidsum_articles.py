@@ -3193,7 +3193,19 @@ def handle_get(handler, path, qs):
             rows.append({"slug": s, "title": i["title"] if ul == "he" else (i.get("title_en") or i["title"]), "hosts": pawed_index.hosts_of(i["channel"]),
                          "channel": i["channel"], "lang": i.get("lang") or "", "afc": i.get("afc") or "", "released": i["released"]})
         rows.sort(key=lambda r: r["released"], reverse=True)
-        handler._json({"ok": True, "lang": ul, "entry": info, "articles": rows})
+        total = len(rows)
+        try:
+            off = max(0, int((qs.get("offset") or ["0"])[0]))
+            lim = min(50, max(1, int((qs.get("limit") or ["25"])[0])))
+        except ValueError:
+            off, lim = 0, 25
+        rows = rows[off:off + lim]
+        terms = pawed_index.terms_for(None, corrected or qtext) if qtext else pawed_index.terms_for(eid)
+        for r in rows:                                      # the line where the searched word is mentioned (a few files read per page, never the whole list)
+            sn = pawed_index.snippet(r["slug"], terms, prefer_he=(ul == "he"))
+            if sn:
+                r["snip"], r["hl"] = sn["t"], sn["hl"]
+        handler._json({"ok": True, "lang": ul, "entry": info, "articles": rows, "total": total, "offset": off})
         return True
     if path == "/api/vidsum/news":
         user = current_user(handler)

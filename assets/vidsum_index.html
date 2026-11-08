@@ -215,6 +215,7 @@
     .ixm .ixhosts, .ixm .ixflag, .ixm .ixdate { unicode-bidi:isolate; }
     .ixm .ixdate { color:#188038; }
     .ixfix { margin:-4px 0 10px; color:#555; font-size:14px; }
+    .ixs { margin-top:5px; color:#4d5156; font-size:14px; line-height:1.5; font-weight:400; } .ixs mark { background:#fff3a3; color:inherit; font-weight:600; padding:0 1px; border-radius:2px; }
     .ixmore { margin:14px 0; padding:8px 18px; border:1px solid #171717; background:#fff; border-radius:6px; cursor:pointer; }
     .ixh { font-size:24px; margin:10px 0 12px; } .ixback { font-size:14px; color:#777; text-decoration:none; }
     .ixres { padding-inline-start:38px; margin:0; } .ixres li { padding:11px 0; border-bottom:1px solid var(--line); font-size:17px; }
@@ -286,16 +287,25 @@ function listView(){
   $('view').querySelectorAll('.ixl button').forEach(b=>b.onclick=()=>{ LETTER=b.dataset.l; SHOW=300; listView(); });
   const m = $('more'); if(m) m.onclick = () => { SHOW += 600; listView(); };
 }
+const HLRE = ws => ws && ws.length ? new RegExp('('+ws.map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')','gi') : null;
+const snipHtml = a => { if(!a.snip) return ''; const re = HLRE(a.hl); const t = esc(a.snip); return '<div class="ixs">'+(re ? t.replace(re,'<mark>$1</mark>') : t)+'</div>'; };
+const artRow = (a, dt) => '<li><a class="ixa" href="/vidsum/article/'+encodeURIComponent(a.slug)+'">'+esc(a.title)+'</a>'+snipHtml(a)+'<div class="ixm">'
+  +'<span class="ixhosts">'+(a.hosts||[]).map(h=>'<a href="#e='+encodeURIComponent(h.id)+'">'+esc(h.name)+'</a>').join(', ')+'</span>'
+  +'<span class="ixflag">'+FLAG(a.afc||ACC[a.lang])+'</span><span class="ixdate">'+esc(dt(a.released))+'</span></div></li>';
 async function entryView(param){
   $('view').innerHTML = '<p>'+S.loading+'</p>';
-  const j = await (await fetch('/api/vidsum/index/entry?'+param)).json();
-  if(!j.ok){ $('view').innerHTML = '<p>'+S.none+'</p>'; return; }
   const dt = r => r ? new Date(r.replace(' ','T')+'Z').toLocaleDateString(S.locale,{day:'numeric',month:'short',year:'numeric'}) : '';
-  $('view').innerHTML = '<a class="ixback" href="#">'+S.back+'</a><h2 class="ixh">'+esc(j.entry.q ? j.entry.q : j.entry.l)+'<span class="ixt">'+(j.entry.t.length?', '+esc(j.entry.t.join(' · ')):'')+' ('+j.articles.length+' '+S.arts+')</span></h2>'
+  const get = off => fetch('/api/vidsum/index/entry?'+param+'&offset='+off).then(r=>r.json());
+  const j = await get(0);
+  if(!j.ok){ $('view').innerHTML = '<p>'+S.none+'</p>'; return; }
+  let shown = j.articles.length;
+  $('view').innerHTML = '<a class="ixback" href="#">'+S.back+'</a><h2 class="ixh">'+esc(j.entry.q ? j.entry.q : j.entry.l)+'<span class="ixt">'+(j.entry.t.length?', '+esc(j.entry.t.join(' · ')):'')+' ('+j.total+' '+S.arts+')</span></h2>'
     + (j.entry.corrected ? '<p class="ixfix">'+S.showing+' <b>'+esc(j.entry.l)+'</b></p>' : '')
-    + '<ol class="ixres">'+j.articles.map(a=>'<li><a class="ixa" href="/vidsum/article/'+encodeURIComponent(a.slug)+'">'+esc(a.title)+'</a><div class="ixm">'
-      +'<span class="ixhosts">'+(a.hosts||[]).map(h=>'<a href="#e='+encodeURIComponent(h.id)+'">'+esc(h.name)+'</a>').join(', ')+'</span>'
-      +'<span class="ixflag">'+FLAG(a.afc||ACC[a.lang])+'</span><span class="ixdate">'+esc(dt(a.released))+'</span></div></li>').join('')+'</ol>';
+    + '<ol class="ixres" id="ixres">'+j.articles.map(a=>artRow(a,dt)).join('')+'</ol><button class="ixmore" id="ixmore" hidden></button>';
+  const more = $('ixmore');
+  const sync = () => { more.hidden = shown >= j.total; more.textContent = S.more+' ('+(j.total-shown)+')'; };
+  more.onclick = async () => { more.disabled = true; const k = await get(shown); $('ixres').insertAdjacentHTML('beforeend', k.articles.map(a=>artRow(a,dt)).join('')); shown += k.articles.length; more.disabled = false; sync(); };
+  sync();
   window.scrollTo(0,0);
 }
 function route(){ const m = location.hash.match(/^#e=(.+)$/), s = location.hash.match(/^#q=(.+)$/); if(m) entryView('id='+encodeURIComponent(decodeURIComponent(m[1]))); else if(s){ $('q').value = decodeURIComponent(s[1]); entryView('q='+s[1]); } else listView(); }

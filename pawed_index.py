@@ -414,8 +414,11 @@ def norm(s):
     return t.translate(_HEB_SIMILAR)
 
 
+_WORD = re.compile(r"[^\W_]+(?:['\u2019\u05f3\u05f4][^\W_]+)*", re.U)      # keeps ג׳מיני / don't in one piece
+
+
 def _words(s):
-    return [w for w in re.findall(r"[^\W_]+", s or "", re.U)]
+    return _WORD.findall(s or "")
 
 
 def _search_index():
@@ -478,3 +481,73 @@ def search(q, visible):
     for k in ids:
         slugs |= E[k]["slugs"] & visible
     return ids, slugs, corrected
+
+
+# ------------------------------------------------------------------ snippets ---
+def terms_for(eid=None, query=""):
+    """Normalised search terms to look for in an article's text: the words of every name of the entry (en + Hebrew), or of the typed query."""
+    names = []
+    if eid:
+        e = build().get(eid)
+        if e:
+            names = [e["en"]] + list(e["he"])
+    else:
+        names = [query]
+    out = []
+    for nm in names:
+        for w in _words(nm):
+            nw = norm(w)
+            if len(nw) >= 3 and nw not in out and w.lower() not in STOP and w.lower() not in GENERIC:
+                out.append(nw)
+    return out
+
+
+def _sentences(text):
+    return [x.strip() for x in re.split(r"(?<=[.!?\u2026\u05f4])\s+|\n+", text or "") if x and x.strip()]
+
+
+def _best(texts, terms):
+    """(sentence, matched words) of the sentence mentioning most of the terms, scanning texts in order; ties go to the earlier one."""
+    best, bw, bs = None, [], 0
+    for text in texts:
+        sents = _sentences(text)
+        for i, sent in enumerate(sents):
+            hit = []
+            for m in _WORD.finditer(sent):
+                nw = norm(m.group())
+                if any(t in nw for t in terms) and m.group() not in hit:
+                    hit.append(m.group())
+            sc = len({norm(h) for h in hit})
+            if sc > bs:
+                nxt = sents[i + 1] if i + 1 < len(sents) else ""
+                best, bw, bs = (sent + (" " + nxt if len(sent) < 110 and nxt else "")), hit, sc
+        if bs and bs >= len(terms):
+            break
+    return best, bw
+
+
+def snippet(slug, terms, prefer_he=True, width=260):
+    """A line or two from the article where the searched words are mentioned: {t: text, hl: [words]} or None."""
+    import os
+    if not terms:
+        return None
+    try:
+        with open(os.path.join(va.ART_DIR, slug + ".json"), encoding="utf-8") as f:
+            a = json.load(f)
+    except Exception:
+        return None
+    def texts(x):
+        out = list(x.get("key_points") or []) + [x.get("standfirst") or ""]
+        out += [(b.get("text") or "") for b in x.get("blocks") or []]
+        return out
+    eds = [a, a.get("en") or {}]
+    if not prefer_he:
+        eds.reverse()
+    for ed in eds:
+        sent, hit = _best(texts(ed), terms)
+        if sent:
+            if len(sent) > width:                       # window around the first hit
+                i = max(0, sent.find(hit[0]) - width // 3) if hit and hit[0] in sent else 0
+                sent = ("\u2026 " if i else "") + sent[i:i + width].rsplit(" ", 1)[0] + " \u2026"
+            return {"t": sent, "hl": hit[:6]}
+    return None
