@@ -3183,7 +3183,7 @@ def handle_get(handler, path, qs):
         rows = []
         for s in slugs:
             i = by[s]
-            rows.append({"slug": s, "title": i["title"] if ul == "he" else (i.get("title_en") or i["title"]), "host": pawed_index.host_of(i["channel"]) or i["channel"],
+            rows.append({"slug": s, "title": i["title"] if ul == "he" else (i.get("title_en") or i["title"]), "hosts": pawed_index.hosts_of(i["channel"]),
                          "channel": i["channel"], "lang": i.get("lang") or "", "afc": i.get("afc") or "", "released": i["released"]})
         rows.sort(key=lambda r: r["released"], reverse=True)
         handler._json({"ok": True, "lang": ul, "entry": info, "articles": rows})

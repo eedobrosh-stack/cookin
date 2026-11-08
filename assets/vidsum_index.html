@@ -209,9 +209,14 @@
     .ixt { color:#777; font-size:14px; font-weight:400; } .sug .ixt { display:block; font-size:12.5px; }
     .ixl { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; } .ixl button { border:1px solid var(--line); background:#fff; border-radius:6px; padding:3px 10px; cursor:pointer; font-size:14px; } .ixl button.on { background:#171717; color:#fff; border-color:#171717; }
     .ixlist { margin:0; padding-inline-start:38px; columns:2; column-gap:40px; } .ixlist li { padding:3px 0; break-inside:avoid; } .ixlist a, .ixres a { color:inherit; text-decoration:none; font-weight:600; } .ixlist a:hover, .ixres a:hover { color:var(--red); }
+    .ixres a.ixa { color:#1a0dab; font-weight:700; text-decoration:none; } .ixres a.ixa:hover { text-decoration:underline; color:#1a0dab; }
+    .ixm { display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; font-size:14px; margin-top:4px; }
+    .ixm .ixhosts a { color:#1a0dab; font-weight:400; text-decoration:none; } .ixm .ixhosts a:hover { text-decoration:underline; }
+    .ixm .ixhosts, .ixm .ixflag, .ixm .ixdate { unicode-bidi:isolate; }
+    .ixm .ixdate { color:#188038; }
     .ixmore { margin:14px 0; padding:8px 18px; border:1px solid #171717; background:#fff; border-radius:6px; cursor:pointer; }
     .ixh { font-size:24px; margin:10px 0 12px; } .ixback { font-size:14px; color:#777; text-decoration:none; }
-    .ixres { padding-inline-start:38px; margin:0; } .ixres li { padding:11px 0; border-bottom:1px solid var(--line); font-size:17px; } .ixm { color:#777; font-size:13.5px; margin-top:3px; }
+    .ixres { padding-inline-start:38px; margin:0; } .ixres li { padding:11px 0; border-bottom:1px solid var(--line); font-size:17px; }
     @media (max-width:700px) { .ixlist { columns:1; } }
     .alerts .aclear { color:#2e7d32; font-weight:700; padding:6px 0; }
     .qbox { background:#fff; border:1px solid var(--line); border-radius:8px; margin:0 0 16px; padding:10px 14px 12px; }
@@ -283,7 +288,9 @@ async function entryView(id){
   if(!j.ok){ $('view').innerHTML = '<p>'+S.none+'</p>'; return; }
   const dt = r => r ? new Date(r.replace(' ','T')+'Z').toLocaleDateString(S.locale,{day:'numeric',month:'short',year:'numeric'}) : '';
   $('view').innerHTML = '<a class="ixback" href="#">'+S.back+'</a><h2 class="ixh">'+esc(j.entry.l)+'<span class="ixt">, '+esc(j.entry.t.join(' · '))+' ('+j.articles.length+' '+S.arts+')</span></h2>'
-    + '<ol class="ixres">'+j.articles.map(a=>'<li><a href="/vidsum/article/'+encodeURIComponent(a.slug)+'">'+esc(a.title)+'</a><div class="ixm">'+esc(a.host)+' · '+FLAG(a.afc||ACC[a.lang])+' · '+esc(dt(a.released))+'</div></li>').join('')+'</ol>';
+    + '<ol class="ixres">'+j.articles.map(a=>'<li><a class="ixa" href="/vidsum/article/'+encodeURIComponent(a.slug)+'">'+esc(a.title)+'</a><div class="ixm">'
+      +'<span class="ixhosts">'+(a.hosts||[]).map(h=>'<a href="#e='+encodeURIComponent(h.id)+'">'+esc(h.name)+'</a>').join(', ')+'</span>'
+      +'<span class="ixflag">'+FLAG(a.afc||ACC[a.lang])+'</span><span class="ixdate">'+esc(dt(a.released))+'</span></div></li>').join('')+'</ol>';
   window.scrollTo(0,0);
 }
 function route(){ const m = location.hash.match(/^#e=(.+)$/); if(m) entryView(decodeURIComponent(m[1])); else listView(); }

@@ -99,6 +99,17 @@ def _norm_list(res):
     return people, orgs
 
 
+def process_kw(slug):
+    """Keywords only (no model): cheap, runs for the whole archive first so the index fills in minutes."""
+    import os
+    with open(os.path.join(va.ART_DIR, slug + ".json"), encoding="utf-8") as f:
+        a = json.load(f)
+    prev = a.get("ent") or {}
+    a["ent"] = dict(prev, v=prev.get("v") or ENT_V, kw=keywords_of(a), people=prev.get("people") or [], orgs=prev.get("orgs") or [], llm=bool(prev.get("llm")),
+                    at=time.strftime("%Y-%m-%d %H:%M:%S"))
+    va._write_article(a)
+
+
 def process(slug):
     """Compute and store 'ent' for one article. Keywords always; people/orgs through LunaRoute (kept as [] + 'llm': False if the call fails, retried later)."""
     import os
@@ -108,16 +119,18 @@ def process(slug):
     prev = a.get("ent") or {}
     ent = {"v": ENT_V, "kw": keywords_of(a), "people": prev.get("people") or [], "orgs": prev.get("orgs") or [], "llm": bool(prev.get("llm")),
            "at": time.strftime("%Y-%m-%d %H:%M:%S")}               # a failed model call never wipes what an earlier run found
+    err = ""
     if a.get("blocks") or a.get("key_points"):
         try:
             res, _tok, _stop = va._luna(_prompt(a), max_tokens=3000)
             ent["people"], ent["orgs"] = _norm_list(res)
             ent["llm"] = True
         except Exception as e:
-            va.log(f"index entities {slug}: {str(e)[:160]}")
+            err = str(e)
+            va.log(f"index entities {slug}: {err[:160]}")
     a["ent"] = ent
     va._write_article(a)
-    return ent
+    return ent, err
 
 
 _FAILED = {}
@@ -126,12 +139,19 @@ _LOCK = threading.Lock()
 RETRY_S = 3600
 
 
-def pending():
-    """Slugs without a finished 'ent' (newest release first), skipping those that failed in the last hour."""
+_BACKOFF = {"until": 0.0}
+
+
+def pending(kw_only=False):
+    """Slugs still to do (newest release first). kw_only: those without keywords yet. Otherwise: those without model-extracted people/companies, skipping failures of the last hour."""
     now = time.time()
     out = []
     for a in va._article_index():
         e = a.get("ent")
+        if kw_only:
+            if not e or "kw" not in e:
+                out.append(a["slug"])
+            continue
         if e and e.get("v") == ENT_V and e.get("llm"):
             continue
         if now - _FAILED.get(a["slug"], 0) < RETRY_S:
@@ -140,29 +160,37 @@ def pending():
     return out
 
 
-def _one(slug):
-    try:
-        ent = process(slug)
-        if not ent["llm"]:
-            _FAILED[slug] = time.time()
-    except Exception as e:
-        _FAILED[slug] = time.time()
-        va.log(f"index process {slug}: {str(e)[:160]}")
-    finally:
-        with _LOCK:
-            _BUSY.discard(slug)
-
-
 def loop():
-    time.sleep(120)
+    time.sleep(90)
     while True:
         try:
-            todo = [s for s in pending() if s not in _BUSY][:2]
-            for s in todo:
-                with _LOCK:
-                    _BUSY.add(s)
-                threading.Thread(target=_one, args=(s,), daemon=True).start()
-            time.sleep(25 if todo else 300)
+            kw = pending(kw_only=True)
+            if kw:                                           # phase 1: keywords for everything, no model, a few per second
+                for s in kw[:40]:
+                    try:
+                        process_kw(s)
+                    except Exception as e:
+                        va.log(f"index keywords {s}: {str(e)[:120]}")
+                    time.sleep(0.2)
+                continue
+            if time.time() < _BACKOFF["until"]:
+                time.sleep(30)
+                continue
+            todo = pending()[:1]                              # phase 2: people + companies, one at a time (LunaRoute has a concurrent-request limit shared with the article writer)
+            if not todo:
+                time.sleep(300)
+                continue
+            slug = todo[0]
+            try:
+                ent, err = process(slug)
+                if not ent["llm"]:
+                    _FAILED[slug] = time.time()
+                if "429" in err or "CONCURRENT" in err:
+                    _BACKOFF["until"] = time.time() + 180   # LunaRoute is busy: leave it alone for 3 minutes
+            except Exception as e:
+                _FAILED[slug] = time.time()
+                va.log(f"index process {slug}: {str(e)[:160]}")
+            time.sleep(6)
         except Exception as e:
             va.log(f"index loop error: {str(e)[:160]}")
             time.sleep(120)
@@ -300,3 +328,12 @@ def articles_of(eid, visible):
 def host_of(channel):
     hosts, nname = _hosts_by_podcast()
     return ", ".join(hosts.get(nname(channel), [])[:3])
+
+
+def hosts_of(channel):
+    """[{name, id}] for the article's podcast: the catalog's hosts (each links to its own index entry), else the podcast itself."""
+    hosts, nname = _hosts_by_podcast()
+    hs = hosts.get(nname(channel), [])[:3]
+    if hs:
+        return [{"name": h, "id": "p:" + _key(h)} for h in hs]
+    return [{"name": channel, "id": "s:" + _key(channel)}] if channel else []
