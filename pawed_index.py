@@ -37,6 +37,10 @@ about above across actually almost along already always another anything around 
 """.split())
 
 
+# product/tech topics people discuss that are lowercase in text; never filtered as generic
+KEEP_KW = set("codex claude gemini chatgpt copilot cursor sora grok llama mistral deepseek perplexity midjourney openai anthropic nvidia bitcoin ethereum blockchain crypto stablecoin starlink tesla waymo".split())
+
+
 def _clean(s):
     s = _NIQQUD.sub("", s or "")
     return s.replace("״", "").replace("׳", "").replace("'", "").replace("’", "").replace('"', " ")
@@ -351,6 +355,8 @@ def build():
         latin = bool(re.match(r"[a-z]", w))
         if w in GENERIC:
             keep = False
+        elif w in KEEP_KW:
+            keep = True
         elif latin:
             keep = capdf.get(w, 0) >= 0.6 * df and df <= 40  # lowercase English words are never material; only names/brands
         else:
