@@ -256,7 +256,7 @@
   <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><a href="/vidsum/index" id="nv-ix">אינדקס</a><a class="admin-only" href="/vidsum/articles" id="nv-all">כל הסיכומים</a><a class="admin-only" href="/vidsum/logs" id="nv-log">יומן</a><a class="admin-only" href="/vidsum/stats">Stats</a><a class="admin-only" href="/vidsum/err">ERR</a></div></div></div>
   <header class="masthead">
     <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
-    <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
+    <div class="masthead-actions"><a href="/vidsum" id="nv-home" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
   </header>
   <main>
     <h1 class="page" id="ttl">אינדקס</h1>
@@ -342,7 +342,7 @@ async function init(){
   const j = await (await fetch('/api/vidsum/index')).json();
   LANG = j.lang === 'he' ? 'he' : 'en'; S = STR[LANG]; ENT = j.entries || [];
   document.documentElement.lang = LANG; document.documentElement.dir = LANG==='he' ? 'rtl' : 'ltr';
-  if (LANG==='en') { $('nv-ix').textContent='Index'; $('nv-all').textContent='All summaries'; $('nv-log').textContent='Log'; }
+  if (LANG==='en') { $('nv-ix').textContent='Index'; $('nv-all').textContent='All summaries'; $('nv-log').textContent='Log'; $('nv-home').textContent='← Back to the home page'; }
   document.title = S.title + ' | Pawed'; $('ttl').textContent = S.title; $('sub').textContent = S.sub; $('q').placeholder = S.ph;
   route();
 }
