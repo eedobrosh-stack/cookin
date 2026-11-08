@@ -2,6 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8" />
+  <script>(function(){var m=document.cookie.match(/(?:^|; )pawed_lang=(he|en)/);if(m){window.LANG=m[1];document.documentElement.lang=m[1];document.documentElement.dir=m[1]==="he"?"rtl":"ltr";}})();</script>
   <script src="/vidsum/i18n.js"></script>
   <meta name="theme-color" content="#e3222b">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -252,7 +253,7 @@
 </head>
 <body>
   <div class="topline"></div>
-  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><a href="/vidsum/index" data-i="index">אינדקס</a><a class="admin-only" href="/vidsum/articles">כל הסיכומים</a><a class="admin-only" href="/vidsum/logs">יומן</a><a class="admin-only" href="/vidsum/stats">Stats</a><a class="admin-only" href="/vidsum/err">ERR</a></div></div></div>
+  <div class="utility"><div class="utility-inner"><span id="today"></span><div class="utility-links"><a href="/vidsum/index" id="nv-ix">אינדקס</a><a class="admin-only" href="/vidsum/articles" id="nv-all">כל הסיכומים</a><a class="admin-only" href="/vidsum/logs" id="nv-log">יומן</a><a class="admin-only" href="/vidsum/stats">Stats</a><a class="admin-only" href="/vidsum/err">ERR</a></div></div></div>
   <header class="masthead">
     <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
     <div class="masthead-actions"><a href="/vidsum" style="font-size:13px;color:#777">← חזרה לעמוד הראשי</a></div>
@@ -337,10 +338,11 @@ $('q').onkeydown = ev => {
 };
 window.addEventListener('hashchange', route);
 async function init(){
-  $('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  $('today').textContent = new Date().toLocaleDateString(document.documentElement.lang==='he'?'he-IL':'en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const j = await (await fetch('/api/vidsum/index')).json();
   LANG = j.lang === 'he' ? 'he' : 'en'; S = STR[LANG]; ENT = j.entries || [];
   document.documentElement.lang = LANG; document.documentElement.dir = LANG==='he' ? 'rtl' : 'ltr';
+  if (LANG==='en') { $('nv-ix').textContent='Index'; $('nv-all').textContent='All summaries'; $('nv-log').textContent='Log'; }
   document.title = S.title + ' | Pawed'; $('ttl').textContent = S.title; $('sub').textContent = S.sub; $('q').placeholder = S.ph;
   route();
 }
