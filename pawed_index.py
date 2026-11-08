@@ -139,7 +139,7 @@ def process(slug):
     err = ""
     if a.get("blocks") or a.get("key_points"):
         try:
-            res, _tok, _stop = va._luna(_prompt(a), max_tokens=3000)
+            res, _tok, _stop = va._luna(_prompt(a), max_tokens=12000)       # the reasoning model spends part of the budget thinking: 3000 left an empty reply on real articles
             ent["people"], ent["orgs"] = _norm_list(res)
             ent["llm"] = True
         except Exception as e:
