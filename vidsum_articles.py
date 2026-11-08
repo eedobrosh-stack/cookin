@@ -2308,6 +2308,26 @@ def podcast_hours():
             "gemini_min_today": used, "gemini_budget_min": budget}
 
 
+def extraction_rate():
+    """Episodes turned into articles in the last 24 h (actual) vs what is normal (expected = median of the 14 rolling 24 h windows before that,
+    so weekends and quiet days are part of the baseline). Both counted by article creation time."""
+    now = time.time()
+    ts = []
+    for a in _article_index():
+        c = (a.get("created") or "")[:19]
+        try:
+            ts.append(calendar.timegm(time.strptime(c, "%Y-%m-%d %H:%M:%S")))
+        except ValueError:
+            pass
+    def win(end):
+        return sum(1 for t in ts if end - 86400 < t <= end)
+    hist = [win(now - 86400 * k) for k in range(1, 15)]
+    s = sorted(hist)
+    mid = len(s) // 2
+    expected = (s[mid] if len(s) % 2 else (s[mid - 1] + s[mid]) / 2) if s else 0
+    return {"actual": win(now), "expected": round(expected, 1), "history": hist[::-1]}
+
+
 _ERR_RX = re.compile(r"fail|error|exception|traceback|quota|unavailable|memory|\b(?:4\d\d|5\d\d)\b|reset by peer|timed? ?out|stopped early|malformed|repeats", re.I)
 _BOOT = time.time()
 
@@ -2838,7 +2858,7 @@ def handle_get(handler, path, qs):
         for j in jobs.values():
             cnt[j.get("status", "?")] = cnt.get(j.get("status", "?"), 0) + 1
         qrows, qtotal = queue_view()
-        handler._json({"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "summary": cnt, "total": len(jobs), "podcast_hours": podcast_hours(),
+        handler._json({"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "summary": cnt, "total": len(jobs), "podcast_hours": podcast_hours(), "rate": extraction_rate(),
                        "events": _recent_events(int((qs.get("limit") or ["300"])[0])), "relay": relay_status_get(),
                        "queue": qrows, "queue_total": qtotal})
         return True

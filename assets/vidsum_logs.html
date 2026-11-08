@@ -17,6 +17,13 @@
     .utility-inner, .masthead, .nav, main, .footer-inner { max-width:1180px; margin:auto; padding-inline:22px; }
     .utility-inner { min-height:34px; display:flex; align-items:center; justify-content:space-between; gap:18px; }
     .utility-links { display:flex; gap:18px; }
+    .gauge { display:flex; align-items:center; gap:28px; flex-wrap:wrap; border:1px solid var(--line); background:#fff; padding:14px 22px; margin:0 0 18px; }
+    .gauge svg { width:300px; max-width:100%; height:auto; flex:none; }
+    .gauge h2 { margin:0 0 6px; font-size:18px; }
+    .gauge .gl { display:flex; flex-direction:column; gap:7px; font-size:14px; color:#444; }
+    .gauge .gl i { display:inline-block; width:22px; height:4px; border-radius:2px; vertical-align:middle; margin-inline-end:8px; }
+    .gauge .gl b { font-size:22px; color:#111; margin-inline-end:6px; }
+    .gauge .gv { font-weight:800; }
     .live { color:var(--red); font-weight:700; }
     .masthead { height:102px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
     .brand { display:flex; align-items:baseline; gap:10px; }
@@ -196,6 +203,7 @@
     <h1 class="page">יומן פעילות</h1>
     <p class="sub2">משיכת כתוביות, כתיבת כתבות, הצלחות וכשלונות, בזמן אמת. מתרענן כל כמה שניות.</p>
     <div class="now idle" id="now"><span class="dot"></span><span id="nowtext">טוען…</span></div>
+    <section class="gauge" id="gauge"></section>
     <div class="tiles" id="tiles"></div>
     <div class="bar"><div class="chips" id="chips"></div><span id="stamp"></span></div>
     <div id="scan" class="scan"></div>
@@ -230,8 +238,29 @@ function renderQueue(){
   $('qbox').innerHTML = '<h2>התור: מה ממתין ('+total+')</h2><div class="qsub">לפי הסדר שבו יטופלו: כתיבה, אחר כך כתוביות (מקורות חדשים קודם), ובסוף ניסיונות חוזרים.</div>'
     + tbl(head) + (rest.length ? '<details><summary>עוד '+(total-head.length)+' בתור</summary>'+tbl(rest)+'</details>' : '');
 }
+function renderGauge(){
+  const R = DATA.rate; if(!R){ $('gauge').style.display='none'; return; }
+  const exp = R.expected, act = R.actual, max = Math.max(5, Math.ceil(Math.max(exp, act) * 1.4));
+  const cx=150, cy=140, r=110, ang = v => Math.PI * (1 - Math.min(v,max)/max);          // 0 = far left, max = far right
+  const pt = (v,rad) => [cx + rad*Math.cos(ang(v)), cy - rad*Math.sin(ang(v))];
+  const arc = (a,b,col) => { const p=pt(a,r), q=pt(b,r), pi=pt(a,r-22), qi=pt(b,r-22);
+    return '<path d="M'+p[0]+' '+p[1]+' A'+r+' '+r+' 0 0 1 '+q[0]+' '+q[1]+' L'+qi[0]+' '+qi[1]+' A'+(r-22)+' '+(r-22)+' 0 0 0 '+pi[0]+' '+pi[1]+' Z" fill="'+col+'"/>'; };
+  const ratio = exp>0 ? act/exp : (act>0?1:0);
+  const col = exp<=0 ? '#999' : ratio<0.5 ? '#d33' : ratio<0.8 ? '#e8a100' : '#2fbf71';
+  const needle = (v,len,color,w) => { const p=pt(v,len); return '<line x1="'+cx+'" y1="'+cy+'" x2="'+p[0]+'" y2="'+p[1]+'" stroke="'+color+'" stroke-width="'+w+'" stroke-linecap="round" style="transition:all .6s"/>'; };
+  let svg = '<svg viewBox="0 0 300 165" role="img" aria-label="gauge">'
+    + arc(0,exp*0.5,'#f3c4c4') + arc(exp*0.5,exp*0.8,'#f7e2b0') + arc(exp*0.8,max,'#c5ebd5');
+  for(let i=0;i<=4;i++){ const v=max*i/4, a=pt(v,r+4), b=pt(v,r+12), t=pt(v,r+24); svg += '<text x="'+t[0]+'" y="'+(t[1]+4)+'" font-size="11" text-anchor="middle" fill="#888">'+Math.round(v)+'</text>'; }
+  svg += needle(exp,r-4,'#555',3) + needle(act,r-14,col,5) + '<circle cx="'+cx+'" cy="'+cy+'" r="9" fill="#222"/></svg>';
+  const msg = exp<=0 ? 'אין עדיין היסטוריה להשוואה' : ratio<0.5 ? '⚠ חריגה: פחות ממחצית הקצב הרגיל, בדקו את מקורות הסריקה והשגיאות' : ratio<0.8 ? 'מעט מתחת לקצב הרגיל' : 'בקצב תקין';
+  $('gauge').innerHTML = svg + '<div class="gl"><h2>קצב חילוץ פרקים ב-24 שעות</h2>'
+    + '<span><i style="background:#555"></i><b>'+exp+'</b>צפוי (חציון 14 הימים הקודמים)</span>'
+    + '<span><i style="background:'+col+'"></i><b class="gv" style="color:'+col+'">'+act+'</b>בפועל ב-24 השעות האחרונות</span>'
+    + '<span style="color:'+col+';font-weight:700">'+msg+'</span></div>';
+}
 function render(){
   if(!DATA) return;
+  renderGauge();
   const sm = DATA.summary;
   const PH = DATA.podcast_hours;
   $('tiles').innerHTML = TILES.map(([k,l,c])=>'<div class="tile" style="--c:'+c+'"><b>'+(sm[k]||0)+'</b><span>'+l+'</span></div>').join('')
