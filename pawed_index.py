@@ -420,6 +420,22 @@ def norm(s):
     return t.translate(_HEB_SIMILAR)
 
 
+_HE_SK = {"ב": "b", "ג": "g", "ד": "d", "ז": "z", "ח": "h", "ט": "t", "ת": "t", "כ": "k", "ך": "k", "ק": "k", "ל": "l", "מ": "m", "ם": "m", "נ": "n", "ן": "n", "ס": "s", "ש": "s", "פ": "p", "ף": "p", "צ": "z", "ץ": "z", "ר": "r"}
+
+
+def skel(w):
+    """Consonant skeleton comparable across Hebrew and Latin spellings: אלטמן / Altman -> ltmn, סם / Sam -> sm."""
+    w = _NIQQUD.sub("", (w or "").lower())
+    w = w.replace("ph", "p").replace("sh", "s").replace("th", "t").replace("ch", "h").replace("ck", "k").replace("x", "ks")
+    out = []
+    for c in w:
+        c = _HE_SK.get(c, c if c in "bcdfghjklmnpqrstvxz" else "")
+        c = {"c": "k", "q": "k", "f": "p", "v": "b", "j": "g"}.get(c, c)
+        if c and (not out or out[-1] != c):
+            out.append(c)
+    return "".join(out)
+
+
 _WORD = re.compile(r"[^\W_]+(?:['\u2019\u05f3\u05f4][^\W_]+)*", re.U)      # keeps ג׳מיני / don't in one piece
 
 
@@ -466,13 +482,26 @@ def search(q, visible):
         return [], set(), ""
     ids = _match(toks, texts, visible)
     corrected = ""
+    if not ids:                                        # same name written in the other alphabet (אלטמן -> Altman)
+        sk = [skel(w) for w in _words(q)]
+        sk = [x for x in sk if x]
+        if sk and all(len(x) >= 3 for x in sk):
+            E0 = build()
+            for k, e in E0.items():
+                if not (E0[k]["slugs"] & visible):
+                    continue
+                have = {skel(w) for n in [e["en"]] + list(e["he"]) for w in _words(n)}
+                if all(x in have for x in sk):
+                    ids.append(k)
+            if ids:
+                corrected = q if False else ""
     if not ids:
         fixed, changed = [], False
         for tk in toks:
             if any(tk in t for t in texts.values()):
                 fixed.append(tk)
                 continue
-            near = difflib.get_close_matches(tk, list(vocab), n=1, cutoff=0.78) if len(tk) >= 4 else []
+            near = difflib.get_close_matches(tk, list(vocab), n=1, cutoff=0.86) if len(tk) >= 4 else []
             if near:
                 fixed.append(near[0])
                 changed = True
@@ -505,6 +534,9 @@ def terms_for(eid=None, query=""):
             nw = norm(w)
             if len(nw) >= 3 and nw not in out and w.lower() not in STOP and w.lower() not in GENERIC:
                 out.append(nw)
+                sk = skel(w)
+                if len(sk) >= 3 and "~" + sk not in out:
+                    out.append("~" + sk)                # same word in the other alphabet
     return out
 
 
@@ -521,13 +553,13 @@ def _best(texts, terms):
             hit = []
             for m in _WORD.finditer(sent):
                 nw = norm(m.group())
-                if any(t in nw for t in terms) and m.group() not in hit:
+                if any((skel(m.group()) == t[1:]) if t[0] == "~" else (t in nw) for t in terms) and m.group() not in hit:
                     hit.append(m.group())
             sc = len({norm(h) for h in hit})
             if sc > bs:
                 nxt = sents[i + 1] if i + 1 < len(sents) else ""
                 best, bw, bs = (sent + (" " + nxt if len(sent) < 110 and nxt else "")), hit, sc
-        if bs and bs >= len(terms):
+        if bs and bs >= len([t for t in terms if t[0] != "~"]):
             break
     return best, bw
 
