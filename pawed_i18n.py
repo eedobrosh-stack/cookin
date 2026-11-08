@@ -233,6 +233,14 @@ SWITCH_JS = (
     "if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();})();\n")
 
 
+ERR_JS = r"""(function(){function go(){var a=document.querySelectorAll('a[href$="/vidsum/err"]');if(!a.length)return;
+var C={green:'#2e7d32',orange:'#ef8a00',red:'#d3202a'},timer;
+function paint(l){a.forEach(function(x){x.style.cssText='background:'+(C[l]||'#999')+';color:#fff;padding:2px 9px;border-radius:4px;font-weight:700';x.title=l==='red'?'Needs your attention':l==='orange'?'Errors in the last 24h':'No errors in the last 24h';});}
+function t(){fetch('/api/vidsum/admin/errstatus').then(function(r){if(!r.ok){clearInterval(timer);return null;}return r.json();}).then(function(j){if(j&&j.level)paint(j.level);}).catch(function(){});}
+t();timer=setInterval(t,60000);}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();})();
+"""
+
 USER_JS = r"""(function(){
 var L={he:['אורח','התחברות עם Google','מקורות','החלפת משתמש','יציאה','גולש כאורח','הסימניות שלי'],en:['Guest','Sign in with Google','Resources','Switch user','Sign out','Browsing as a guest','My Bookmarks'],
 de:['Gast','Mit Google anmelden','Ressourcen','Benutzer wechseln','Abmelden','Als Gast unterwegs','Meine Lesezeichen'],fr:['Invité','Se connecter avec Google','Ressources','Changer d’utilisateur','Se déconnecter','Navigation en invité','Mes favoris'],
@@ -271,4 +279,4 @@ def js():
             "var m=en.match(/^(\\s*)([\\s\\S]*?)(\\s*)$/);if(m[2]&&m[2]!==en){v=PI.T[m[2]];if(v)return m[1]+v[i]+m[3];}"
             "var s=m[2];for(var k=0;k<PI.P.length;k++){var re=new RegExp(PI.P[k][0]);if(re.test(s)){return m[1]+s.replace(re,function(){var a=arguments,t=PI.P[k][1][i];"
             "return t.replace(/\\$(\\d)/g,function(_,n){return a[+n]===undefined?'':a[+n];});})+m[3];}}return en;};\n"
-            + SWITCH_JS % (json.dumps(NATIVE, ensure_ascii=False), json.dumps(FLAG, ensure_ascii=False)) + USER_JS + pawed_bm.BM_JS)
+            + SWITCH_JS % (json.dumps(NATIVE, ensure_ascii=False), json.dumps(FLAG, ensure_ascii=False)) + USER_JS + pawed_bm.BM_JS + ERR_JS)

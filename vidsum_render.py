@@ -433,7 +433,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
     hero_title = pf_titles.get(hero_k, S["ls_pod"] if rss else S["ls_yt"])
     out = [f'<div class="topline"></div><div class="utility"><div class="utility-inner">'
            f'<span>{e(fdate(a.get("published_at") or a.get("published") or ""))}</span><div class="utility-links"><span class="live">{S["live"]}</span>'
-           f'<a class="admin-only" href="{base}/vidsum/articles">{S["all"]}</a><a class="admin-only" href="{base}/vidsum/logs">{S["log"]}</a><a class="admin-only" href="{base}/vidsum/stats">Stats</a></div>'
+           f'<a class="admin-only" href="{base}/vidsum/articles">{S["all"]}</a><a class="admin-only" href="{base}/vidsum/logs">{S["log"]}</a><a class="admin-only" href="{base}/vidsum/stats">Stats</a><a class="admin-only" href="{base}/vidsum/err">ERR</a></div>'
            f'</div></div>'
            f'<header class="masthead"><a class="brand" href="{base}/"><img class="brand-wordmark" src="{base}/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a></header>'
            f'<div class="nav-wrap"><nav class="nav"><a href="{base}/vidsum">{S["main"]}</a>{nav}</nav></div>',

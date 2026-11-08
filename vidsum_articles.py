@@ -2308,6 +2308,23 @@ def podcast_hours():
             "gemini_min_today": used, "gemini_budget_min": budget}
 
 
+_ERRST = {"t": 0.0, "v": None}
+_NOT_ERRORS = {"rss-new-episode", "article-done"}          # log lines that only look like errors
+
+
+def err_status():
+    """Colour of the ERR link: red = something needs Eedo (a decision, or a critical alert), orange = errors came in during the last 24 h,
+    green = none. Cached for a minute (health_report scans the log)."""
+    if _ERRST["v"] and time.time() - _ERRST["t"] < 60:
+        return _ERRST["v"]
+    rep = health_report({"hours": ["24"]})
+    al = [a for a in rep["alerts"] if a["id"] not in _NOT_ERRORS]
+    red = [a for a in al if a["tier"] == "decision" or a["severity"] == "crit"]
+    level = "red" if red else ("orange" if al else "green")
+    _ERRST["t"], _ERRST["v"] = time.time(), {"ok": True, "level": level, "red": len(red), "errors": len(al)}
+    return _ERRST["v"]
+
+
 def extraction_rate():
     """Episodes turned into articles in the last 24 h (actual) vs what is normal (expected = median of the 14 rolling 24 h windows before that,
     so weekends and quiet days are part of the baseline). Both counted by article creation time."""
@@ -2452,6 +2469,7 @@ V1_PAGE = os.path.join(_ASSETS, "vidsum_discover.html")
 SOURCES_PAGE = os.path.join(_ASSETS, "vidsum_sources.html")
 BOOKMARKS_PAGE = os.path.join(_ASSETS, "vidsum_bookmarks.html")
 STATS_PAGE = os.path.join(_ASSETS, "vidsum_stats.html")
+ERR_PAGE = os.path.join(_ASSETS, "vidsum_err.html")
 LOGS_PAGE = os.path.join(_ASSETS, "vidsum_logs.html")
 
 
@@ -2838,6 +2856,20 @@ def handle_get(handler, path, qs):
         else:
             import pawed_legal
             handler._json({"ok": True, "requests": pawed_legal.list_requests()})
+        return True
+    if path in ("/vidsum/err", "/vidsum/err/"):
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "not found"}, 404)
+        else:
+            _serve(handler, ERR_PAGE)
+        return True
+    if path == "/api/vidsum/admin/errstatus":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "not found"}, 404)
+        else:
+            handler._json(err_status())
         return True
     if path in ("/vidsum/stats", "/vidsum/stats/"):
         _serve(handler, STATS_PAGE)
