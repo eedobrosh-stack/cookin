@@ -482,6 +482,7 @@ def search(q, visible):
         return [], set(), ""
     ids = _match(toks, texts, visible)
     corrected = ""
+    _C["skel_q"] = ""
     if not ids:                                        # same name written in the other alphabet (אלטמן -> Altman)
         sk = [skel(w) for w in _words(q)]
         sk = [x for x in sk if x]
@@ -493,8 +494,7 @@ def search(q, visible):
                 have = {skel(w) for n in [e["en"]] + list(e["he"]) for w in _words(n)}
                 if all(x in have for x in sk):
                     ids.append(k)
-            if ids:
-                corrected = q if False else ""
+            _C["skel_q"] = q if ids else ""
     if not ids:
         fixed, changed = [], False
         for tk in toks:
@@ -535,7 +535,7 @@ def terms_for(eid=None, query=""):
             if len(nw) >= 3 and nw not in out and w.lower() not in STOP and w.lower() not in GENERIC:
                 out.append(nw)
                 sk = skel(w)
-                if len(sk) >= 3 and "~" + sk not in out:
+                if query and query == _C.get("skel_q") and len(sk) >= 3 and "~" + sk not in out and not re.match(r"[a-z]", w.lower()):
                     out.append("~" + sk)                # same word in the other alphabet
     return out
 
@@ -553,7 +553,7 @@ def _best(texts, terms):
             hit = []
             for m in _WORD.finditer(sent):
                 nw = norm(m.group())
-                if any((skel(m.group()) == t[1:]) if t[0] == "~" else (t in nw) for t in terms) and m.group() not in hit:
+                if any((re.match(r"[a-z]", m.group().lower()) is not None and skel(m.group()) == t[1:]) if t[0] == "~" else (t in nw) for t in terms) and m.group() not in hit:
                     hit.append(m.group())
             sc = len({norm(h) for h in hit})
             if sc > bs:
