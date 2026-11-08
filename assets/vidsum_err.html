@@ -199,6 +199,9 @@
     .alerts .aline { font-size:12.5px; color:#555; padding:3px 0; border-top:1px solid var(--line); direction:ltr; text-align:left; } .alerts .aline span { color:#999; }
     .atog { width:22px; height:22px; border:1px solid var(--line); background:#fff; border-radius:5px; cursor:pointer; font-size:14px; line-height:1; padding:0; }
     .atog.big { width:auto; padding:3px 14px; font-size:15px; } .amaster { margin:10px 0 6px; font-size:13px; color:#555; }
+    .alerts .aimp { color:#7a3b00; background:#fff6e8; border-radius:6px; padding:5px 9px; margin-top:6px; font-size:13px; } .alerts .aimp i { font-weight:700; font-style:normal; }
+    .alerts .aprm { margin-top:7px; } .alerts .acopy { border:1px solid #171717; background:#171717; color:#fff; border-radius:6px; padding:4px 11px; font-size:12.5px; cursor:pointer; }
+    .alerts .aprm details { margin-top:5px; } .alerts .aprm summary { font-size:12px; color:#777; font-weight:400; } .alerts .aprm pre { white-space:pre-wrap; background:#f6f6f6; border-radius:6px; padding:8px; font-size:12px; margin:4px 0 0; direction:ltr; text-align:left; }
     .alerts .aclear { color:#2e7d32; font-weight:700; padding:6px 0; }
     .qbox { background:#fff; border:1px solid var(--line); border-radius:8px; margin:0 0 16px; padding:10px 14px 12px; }
     .qbox h2 { margin:0 0 2px; font-size:17px; } .qbox .qsub { color:#777; font-size:12.5px; margin-bottom:8px; }
@@ -248,15 +251,17 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;
 $('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 fetch('/api/vidsum/me').then(r=>r.json()).then(j=>{ if(j.admin) document.body.classList.add('admin'); }).catch(()=>{});
 // ---- alerts panel: /api/vidsum/admin/health (admin only) -> three tiers: decisions for Eedo, handled by Claude, auto-healed ----
-let ALERTS = [], OPEN = new Set();
+let ALERTS = [], OPEN = new Set(), PROMPTS = {};
 const ICON = {crit:'🔴', warn:'🟠', info:'⚪'}, SEV = {crit:'critical', warn:'to watch', info:'expected'};
 function renderAlerts(){
   const T = t => ALERTS.filter(a=>a.tier===t);
   const dec = T('decision'), han = T('handled'), aut = T('auto');
+  const imp = a => '<div class="aimp"><i>What it could imply:</i> '+esc(a.impact||'')+'</div>';
+  const prm = (a,k) => { PROMPTS[k] = a.prompt||''; return '<div class="aprm"><button class="acopy" data-p="'+esc(k)+'">Copy prompt for Claude</button><details><summary>Show prompt</summary><pre>'+esc(a.prompt||'')+'</pre></details></div>'; };
   const row = a => { const dec = a.tier==='decision', k = a.id+'|'+a.title, open = dec || OPEN.has(k);
-    return '<div class="arow '+a.severity+'"><div>'+(dec ? ICON[a.severity] : '<button class="atog" data-k="'+esc(k)+'" title="'+(open?'Minimize':'Maximize')+'">'+(open?'−':'+')+'</button>')+'</div><div><b>'+esc(a.title)+'</b>'+(open ? '<div>'+esc(a.meaning)+'</div>' : '')
-      +(!open ? '' : a.tier==='decision' ? '<div class="aopts">'+(a.options||[]).map(o=>'<div class="aopt"><b>'+esc(o[0])+'</b><span>'+esc(o[1])+'</span></div>').join('')+'</div>'
-                            : '<div class="anext"><i>Next:</i> '+esc(a.next)+' <span class="awho">('+esc(a.who)+')</span></div>')
+    return '<div class="arow '+a.severity+'"><div>'+(dec ? ICON[a.severity] : '<button class="atog" data-k="'+esc(k)+'" title="'+(open?'Minimize':'Maximize')+'">'+(open?'−':'+')+'</button>')+'</div><div><b>'+esc(a.title)+'</b>'+(open ? '<div>'+esc(a.meaning)+'</div>'+imp(a) : '')
+      +(!open ? '' : (a.tier==='decision' ? '<div class="aopts">'+(a.options||[]).map(o=>'<div class="aopt"><b>'+esc(o[0])+'</b><span>'+esc(o[1])+'</span></div>').join('')+'</div>'
+                            : '<div class="anext"><i>Next:</i> '+esc(a.next)+' <span class="awho">('+esc(a.who)+')</span></div>')+prm(a,k))
       +'</div><div class="ameta">'+(a.count>1?a.count+'× ':'')+esc((a.last||'').slice(5,16))+'<br>'+SEV[a.severity]+'</div></div>'; };
   const sec = (title, list, cls) => '<div class="atier '+cls+'"><h3>'+title+' <span>'+list.length+'</span></h3>'+(list.length ? list.map(row).join('') : '<div class="aclear">✓ אין</div>')+'</div>';
   $('achips').innerHTML = '';
@@ -265,8 +270,9 @@ function renderAlerts(){
   const master = keys.length ? '<div class="amaster"><button class="atog big" id="amaster">'+(allOpen?'−':'+')+'</button> '+(allOpen?'Minimize':'Maximize')+' all non-attention alerts ('+keys.length+')</div>' : '';
   $('alist').innerHTML = sec('מחכה להחלטה שלך', dec, 'dec') + master + sec('בטיפול של Claude', han, 'han')
     + '<details class="atier aut"'+(wasOpen?' open':'')+'><summary>מתאושש לבד, רק לידיעה <span>'+aut.reduce((n,a)=>n+(a.count||1),0)+' אירועים · '+aut.length+' סוגים</span></summary>'
-    + aut.map(a=>{ const k='auto|'+a.id, open=OPEN.has(k); return '<div class="aline"><button class="atog" data-k="'+esc(k)+'">'+(open?'−':'+')+'</button> '+esc(a.count>1?a.count+'× ':'')+esc(a.id)+(open?' <span>'+esc(a.meaning)+'</span>':'')+'</div>'; }).join('')+'</details>';
+    + aut.map(a=>{ const k='auto|'+a.id, open=OPEN.has(k); return '<div class="aline"><button class="atog" data-k="'+esc(k)+'">'+(open?'−':'+')+'</button> '+esc(a.count>1?a.count+'× ':'')+esc(a.id)+(open?' <span>'+esc(a.meaning)+'</span>'+imp(a)+prm(a,k):'')+'</div>'; }).join('')+'</details>';
   const am = $('amaster'); if (am) am.onclick = () => { if (allOpen) keys.forEach(k=>OPEN.delete(k)); else keys.forEach(k=>OPEN.add(k)); renderAlerts(); };
+  $('alist').querySelectorAll('.acopy').forEach(b=>b.onclick=()=>{ navigator.clipboard.writeText(PROMPTS[b.dataset.p]||'').then(()=>{ b.textContent='Copied ✓'; setTimeout(()=>b.textContent='Copy prompt for Claude',1800); }); });
   $('alist').querySelectorAll('.atog[data-k]').forEach(b=>b.onclick=e=>{ e.preventDefault(); const k=b.dataset.k; OPEN.has(k)?OPEN.delete(k):OPEN.add(k); renderAlerts(); });
 }
 async function alertsTick(){ try{ const h = await (await fetch('/api/vidsum/admin/health?hours=24')).json(); if(h.alerts){ ALERTS = h.alerts; renderAlerts(); } else $('alist').textContent='אין הרשאה'; }catch(e){ $('alist').textContent='שגיאה בטעינת ההתראות'; } }

@@ -2313,13 +2313,13 @@ _NOT_ERRORS = {"rss-new-episode", "article-done"}          # log lines that only
 
 
 def err_status():
-    """Colour of the ERR link: red = something needs Eedo (a decision, or a critical alert), orange = errors came in during the last 24 h,
+    """Colour of the ERR link: red = at least one alert is in the "waiting for your decision" tier (same list as the ERR page), orange = errors came in during the last 24 h,
     green = none. Cached for a minute (health_report scans the log)."""
     if _ERRST["v"] and time.time() - _ERRST["t"] < 60:
         return _ERRST["v"]
     rep = health_report({"hours": ["24"]})
     al = [a for a in rep["alerts"] if a["id"] not in _NOT_ERRORS]
-    red = [a for a in al if a["tier"] == "decision" or a["severity"] == "crit"]
+    red = [a for a in al if a["tier"] == "decision"]            # exactly what the ERR page lists under "waiting for your decision"
     level = "red" if red else ("orange" if al else "green")
     _ERRST["t"], _ERRST["v"] = time.time(), {"ok": True, "level": level, "red": len(red), "errors": len(al)}
     return _ERRST["v"]
@@ -2494,6 +2494,24 @@ def health_report(qs=None):
     rep["alerts"] = pawed_alerts.system_alerts({**rep, "relay": relay_status_get()}) + [
         {"severity": g["class"]["severity"], "id": g["class"]["id"], "title": g["kind"], "count": g["count"], "last": g["last"], "first": g["first"],
          "meaning": g["class"]["meaning"], "next": g["class"]["next"], "who": g["class"]["who"], "example": g["example"], "source": "log"} for g in rep["errors"]]
+    merged, order_ids = {}, []
+    for a in rep["alerts"]:                                   # one row per catalog id (variants of the same message are noise); not-errors (new-episode lines) are dropped
+        if a["id"] in _NOT_ERRORS:
+            continue
+        if a["id"] == "unknown" or a.get("source") != "log":
+            merged[(a["id"], a["title"])] = a
+            order_ids.append((a["id"], a["title"]))
+            continue
+        m = merged.get((a["id"], ""))
+        if not m:
+            merged[(a["id"], "")] = a
+            order_ids.append((a["id"], ""))
+        else:
+            m["count"] += a["count"]
+            m["first"] = min(m.get("first") or a["first"], a["first"])
+            if a["last"] > m["last"]:
+                m["last"], m["example"] = a["last"], a["example"]
+    rep["alerts"] = [merged[k] for k in order_ids]
     for a in rep["alerts"]:                                   # a quota hit is logged every 10 min while it lasts: silence for 45 min means it has cleared
         if a["id"] == "supadata-quota" and a["severity"] != "info" and a.get("last"):
             try:
