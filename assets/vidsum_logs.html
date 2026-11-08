@@ -254,9 +254,10 @@ function renderGauge(){
   svg += needle(exp,r-4,'#555',3) + needle(act,r-14,col,5) + '<circle cx="'+cx+'" cy="'+cy+'" r="9" fill="#222"/></svg>';
   const msg = exp<=0 ? 'אין עדיין היסטוריה להשוואה' : ratio<0.5 ? '⚠ חריגה: פחות ממחצית הקצב הרגיל, בדקו את מקורות הסריקה והשגיאות' : ratio<0.8 ? 'מעט מתחת לקצב הרגיל' : 'בקצב תקין';
   $('gauge').innerHTML = svg + '<div class="gl"><h2>קצב חילוץ פרקים ב-24 שעות</h2>'
-    + '<span><i style="background:#555"></i><b>'+exp+'</b>צפוי (חציון 14 הימים הקודמים)</span>'
+    + '<span><i style="background:#555"></i><b>'+exp+'</b>צפוי לפי '+R.active+' מקורות פעילים (מתוך '+R.sources+'): '+R.mix.daily+' יומיים, '+R.mix.several+' כמה בשבוע, '+R.mix.weekly+' שבועיים או פחות</span>'
     + '<span><i style="background:'+col+'"></i><b class="gv" style="color:'+col+'">'+act+'</b>בפועל ב-24 השעות האחרונות</span>'
-    + '<span style="color:'+col+';font-weight:700">'+msg+'</span></div>';
+    + '<span style="color:'+col+';font-weight:700">'+msg+'</span>'
+    + '<span style="font-size:12px;color:#888">לשם השוואה: חציון 24 השעות ב-14 הימים האחרונים = '+R.median+'</span></div>';
 }
 function render(){
   if(!DATA) return;

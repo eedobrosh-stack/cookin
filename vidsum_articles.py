@@ -2325,9 +2325,51 @@ def err_status():
     return _ERRST["v"]
 
 
+RATE_WINDOW_D = 60
+
+
+def _source_rates():
+    """Expected episodes per day for every ACTIVE source, from what we know of its cadence: a declared daily cadence (pub_days = which weekdays), else
+    the observed release rate over the last 60 days (episodes / days, the span starting at its first release or when it was added). A source with no
+    release for 60 days (and older than that) is dormant and counts 0; a brand-new source with no history counts 1/7."""
+    now = time.time()
+    chs = [c for c in _load_ch()["channels"] if not c["id"].startswith("pending-")]
+    resolve = _source_resolver(chs)
+    rel = {c["id"]: [] for c in chs}
+    for a in _article_index():
+        sid = resolve(a)
+        r = _rel(a)
+        if sid in rel and r:
+            try:
+                rel[sid].append(calendar.timegm(time.strptime(r, "%Y-%m-%d %H:%M:%S")))
+            except ValueError:
+                pass
+    out = []
+    for c in chs:
+        ts = rel[c["id"]]
+        cut = now - RATE_WINDOW_D * 86400
+        n = sum(1 for t in ts if t >= cut)
+        try:
+            added = calendar.timegm(time.strptime((c.get("added") or "")[:19], "%Y-%m-%d %H:%M:%S"))
+        except ValueError:
+            added = 0
+        first = min(ts + ([added] if added else [])) if (ts or added) else now
+        age_d = (now - first) / 86400
+        if c.get("cadence") == "daily":
+            rate, how = (len(c.get("pub_days") or []) or 7) / 7, "declared"
+        elif n:
+            rate, how = n / max(7.0, min(float(RATE_WINDOW_D), age_d)), "observed"
+        elif age_d < 14:
+            rate, how = 1 / 7, "new"
+        else:
+            rate, how = 0.0, "dormant"
+        out.append({"id": c["id"], "name": c.get("name"), "rate": rate, "how": how})
+    return out
+
+
 def extraction_rate():
-    """Episodes turned into articles in the last 24 h (actual) vs what is normal (expected = median of the 14 rolling 24 h windows before that,
-    so weekends and quiet days are part of the baseline). Both counted by article creation time."""
+    """Episodes turned into articles in the last 24 h (actual) vs EXPECTED = the sum of the active sources' expected daily rates (see _source_rates).
+    The 14-day median of past 24 h counts is kept as a second reference (history)."""
     now = time.time()
     ts = []
     for a in _article_index():
@@ -2341,8 +2383,12 @@ def extraction_rate():
     hist = [win(now - 86400 * k) for k in range(1, 15)]
     s = sorted(hist)
     mid = len(s) // 2
-    expected = (s[mid] if len(s) % 2 else (s[mid - 1] + s[mid]) / 2) if s else 0
-    return {"actual": win(now), "expected": round(expected, 1), "history": hist[::-1]}
+    median = (s[mid] if len(s) % 2 else (s[mid - 1] + s[mid]) / 2) if s else 0
+    src = _source_rates()
+    act = [x for x in src if x["rate"] > 0]
+    mix = {"daily": sum(1 for x in act if x["rate"] >= 0.7), "several": sum(1 for x in act if 0.25 <= x["rate"] < 0.7), "weekly": sum(1 for x in act if x["rate"] < 0.25)}
+    return {"actual": win(now), "expected": round(sum(x["rate"] for x in src), 1), "sources": len(src), "active": len(act), "mix": mix,
+            "median": round(median, 1), "history": hist[::-1]}
 
 
 _ERR_RX = re.compile(r"fail|error|exception|traceback|quota|unavailable|memory|\b(?:4\d\d|5\d\d)\b|reset by peer|timed? ?out|stopped early|malformed|repeats", re.I)
