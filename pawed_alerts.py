@@ -52,6 +52,9 @@ KNOWN = [
      "Check the YouTube API quota in Google Cloud if it repeats.", "Eedo"),
     (r"Python version 3\.9 has been deprecated|no metadata", "mac-ytdlp", "warn",
      "The Mac's yt-dlp could not read the video; the real reason is now printed after 'no metadata:'.", "Read the reason; usually a live stream or a private video.", "-"),
+    (r"vidsum_channels\.json|refusing to treat it as empty", "registry-error", "crit",
+     "The source registry file (vidsum_channels.json) could not be written or read. If it was saved empty, nothing new is discovered and the site looks fine because old articles stay (this is how 2026-11-07 15:44 UTC silently stopped Pawed).",
+     "Check the source count in health (sources); if it is 0 or dropped, restore from the rebuild roster via POST /api/vidsum/channels/restore.", "Claude"),
     (r"watcher error|loop error|sweep error", "loop-error", "warn", "A background loop raised an exception and continued.", "Read the line; fix if it repeats.", "Claude"),
 ]
 
@@ -146,6 +149,19 @@ def system_alerts(h):
             add("crit", "watcher-stalled", "The YouTube watcher has not run for over 25 minutes", "New YouTube videos are not being discovered by the server.", "Check the Render logs for 'yt-api'; restart the service if needed.", "Claude")
     except Exception:
         pass
+    n_src, hwm = h.get("sources"), h.get("sources_hwm") or 0
+    if n_src is not None and h.get("uptime_min", 0) > 2:
+        if n_src == 0:
+            add("crit", "no-sources", "The source registry is EMPTY", "No shows are being watched, so no new episodes will ever arrive. Old articles still show, so the site looks alive.",
+                "Restore the roster (POST /api/vidsum/channels/restore with the rebuild roster) and fix whatever wiped vidsum_channels.json.", "Claude")
+        elif hwm >= 10 and n_src < hwm * 0.7:
+            add("crit", "sources-dropped", f"Sources dropped from {hwm} to {n_src}", "A large part of the roster disappeared (file race, bad edit or mass removal).",
+                "Check the Events log for 'restore' and recent source removals; restore the missing sources.", "Claude")
+    hrs = h.get("hours_since_article")
+    if hrs is not None and h.get("uptime_min", 0) > 60 and hrs >= 14:
+        add("crit" if hrs >= 24 else "warn", "no-new-articles", f"No new article for {int(hrs)} hours",
+            "Nothing was published for a long stretch. Shows publish daily, so this is silence from a stalled pipeline, not a quiet day (errors may be absent).",
+            "Check sources (count), the YouTube watcher, the RSS watcher, and Gemini/LunaRoute billing (402s).", "Claude")
     rl = h.get("relay") or {}
     if rl.get("tick_at") and rl.get("now") and (rl["now"] - rl["tick_at"]) / 60 > 15:
         add("crit", "mac-silent", f"The Mac relay has been silent for {int((rl['now'] - rl['tick_at']) / 60)} min", "Long podcasts and caption fallbacks are not being processed.",

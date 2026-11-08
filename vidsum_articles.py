@@ -1878,6 +1878,7 @@ def _can_edit_source(c, user):
 
 # ------------------------------------------------------- channel watcher ---
 CH_PATH = os.path.join(multiuser.DATA_DIR, "vidsum_channels.json")
+_CH_IO = threading.Lock()
 WATCH_DAILY_CAP = 120
 SERVER_PODCAST_MAX_MIN = int(os.environ.get("VIDSUM_PODCAST_MAX_MIN", "40"))   # podcast episodes longer than this are transcribed by the Mac (Whisper), not Gemini audio
 
@@ -1900,11 +1901,20 @@ _SEED = {  # url / language / vertical for sources subscribed before the sources
 
 
 def _load_ch():
-    try:
-        with open(CH_PATH, encoding="utf-8") as f:
-            d = json.load(f)
-    except Exception:
-        d = {"channels": [], "log": []}
+    d = None
+    for attempt in range(4):                       # a concurrent save may be mid-rename: retry before believing the file is gone
+        try:
+            with open(CH_PATH, encoding="utf-8") as f:
+                d = json.load(f)
+            break
+        except FileNotFoundError:
+            if attempt == 3 and not os.path.exists(CH_PATH):
+                d = {"channels": [], "log": []}    # genuinely never written yet
+        except ValueError:
+            pass
+        time.sleep(0.05)
+    if d is None:
+        raise RuntimeError("vidsum_channels.json unreadable; refusing to treat it as empty")   # never let a failed read become an empty save
     d.setdefault("channels", [])
     d.setdefault("log", [])
     for c in d["channels"]:
@@ -1921,10 +1931,11 @@ def _load_ch():
 
 def _save_ch(d):
     d["log"] = d["log"][-60:]
-    tmp = CH_PATH + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(d, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, CH_PATH)
+    with _CH_IO:                                   # one writer at a time, each with its own temp file (a shared .tmp lost the registry on 2026-11-07)
+        tmp = f"{CH_PATH}.{os.getpid()}.{threading.get_ident()}.tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(d, f, ensure_ascii=False, indent=1)
+        os.replace(tmp, CH_PATH)
 
 
 def _http(url, timeout=20):
@@ -2370,7 +2381,25 @@ def health_report(qs=None):
     raw_q = (qs.get("q") or [""])[0]
     raw = [l for l in lines if re.search(raw_q, l, re.I)][-int((qs.get("limit") or ["40"])[0]):] if raw_q else []
     import vidsum_translate, pawed_alerts
-    rep = {"ok": True, "now": time.strftime("%Y-%m-%d %H:%M:%S"), "uptime_min": int((time.time() - _BOOT) / 60), "rss_mb": rss, "peak_mb": peak,
+    n_src = hwm = hrs = None
+    try:
+        n_src = sum(1 for c in _load_ch()["channels"] if not c["id"].startswith("pending-"))
+        hp = os.path.join(multiuser.DATA_DIR, "vidsum_sources_hwm.json")
+        try:
+            with open(hp) as f:
+                hwm = int(json.load(f).get("max") or 0)
+        except Exception:
+            hwm = 0
+        if n_src > hwm:
+            hwm = n_src
+            with open(hp, "w") as f:
+                json.dump({"max": hwm, "t": time.strftime("%Y-%m-%d %H:%M:%S")}, f)
+        newest = max((a.get("created") or "" for a in _article_index()), default="")
+        if newest:
+            hrs = (time.time() - calendar.timegm(time.strptime(newest[:19], "%Y-%m-%d %H:%M:%S")) ) / 3600
+    except Exception as e:
+        log(f"health: source/article check failed: {str(e)[:120]}")
+    rep = {"ok": True, "sources": n_src, "sources_hwm": hwm, "hours_since_article": None if hrs is None else round(hrs, 1), "now": time.strftime("%Y-%m-%d %H:%M:%S"), "uptime_min": int((time.time() - _BOOT) / 60), "rss_mb": rss, "peak_mb": peak,
             "disk_free_mb": du.free // 1048576, "disk_used_mb": du.used // 1048576, "log_mb": round(os.path.getsize(multiuser.LOG_PATH) / 1048576, 1) if os.path.exists(multiuser.LOG_PATH) else 0,
             "threads": sorted({t.name for t in threading.enumerate()})[:30], "thread_count": threading.active_count(),
             "last": {"yt_pass": last("vidsum yt-api pass"), "rss_found": last("vidsum rss:"), "translate": last("vidsum translate"), "done": last(" DONE "),
@@ -3466,6 +3495,16 @@ def handle_post(handler, path, req):
                                               "backfill": bool(req.get("backfill"))})
                     _save_ch(d)
                 handler._json({"ok": True, "id": cid, "name": name})
+            elif path == "/api/vidsum/channels/restore":          # recovery: merge a rebuilt roster in (existing ids are kept untouched)
+                rows = [c for c in (req.get("channels") or []) if isinstance(c, dict) and c.get("id")]
+                with LOCK:
+                    d = _load_ch()
+                    have = {c["id"] for c in d["channels"]}
+                    add = [c for c in rows if c["id"] not in have]
+                    d["channels"].extend(add)
+                    d["log"].append({"kind": "restore", "added": len(add), "t": time.strftime("%Y-%m-%d %H:%M:%S")})
+                    _save_ch(d)
+                handler._json({"ok": True, "added": len(add), "total": len(d["channels"])})
             elif path == "/api/vidsum/channels/remove":
                 with LOCK:
                     d = _load_ch()
