@@ -31,13 +31,19 @@ het een van dat dit niet zijn voor met als maar ook door naar
 """.split())
 
 
+GENERIC = set("""
+about above across actually almost along already always another anything around away back become before being believe best better between beyond big billion bit both bring call came cant case change come could course day days different does doing done down during each either end enough even ever every everyone everything example fact far feel few find first five four get getting give given going gone good got great group guy guys hand happen happened hard having help here high however hundred idea important including instead into itself job just keep kind know known last late least left less let level life like likely little live long look lot lots made make makes making man many matter maybe mean means might million moment money more most much must near need needs never new next nobody nothing number often old once ones only open others over own part people per percent perhaps person place play point possible probably problem put question quite rather real really reason right run same saying second see seem seems set several share short show since small some someone something sometimes soon start started still story such sure take taking talk talking tell than thing things think thinks though thought thousand three through time times today together told took top toward trillion try trying turn two under until upon use used using very view wait want wanted wants way ways week weeks well went what whether while whole whose why will within without work working world would year years yes yet young bet bets betting
+שנה שנים פרק מדובר למעשה כלל חלק דבר דברים אנשים אדם עניין מצב צורה סוג אופן תחום נושא שאלה תשובה בעיה סיפור זמן יום ימים שבוע חודש חודשים מאז עדיין בקרוב כיום היום אתמול מחר הרבה מעט גדול גדולה קטן קטנה חדש חדשה ראשון ראשונה אחרון אחרונה טוב טובה רע אפשר צריך צריכה יכול יכולה רוצה רוצים חושב חושבת מאמין מאמינה אומרים נראה נראית קורה קרה התברר מסתבר עשוי עשויה הנראה אכן בהחלט ממש פשוט בדיוק לגמרי כמעט אולי בטח תמיד פעם פעמים שוב כלומר למשל הנה זהו כזה כזאת כאלה איזה איזו מישהו משהו כלום שניים שלושה מיליון מיליארד אלף אחוז אחוזים דולר דולרים שקל שקלים כסף עולם מדינה חברה חברות ארגון
+""".split())
+
+
 def _clean(s):
     s = _NIQQUD.sub("", s or "")
     return s.replace("״", "").replace("׳", "").replace("'", "").replace("’", "").replace('"', " ")
 
 
 def tokens(text):
-    return [w for w in _TOK.findall(_clean(text).lower()) if w not in STOP and not w.startswith("http")]
+    return [w for w in _TOK.findall(_clean(text).lower()) if w not in STOP and w not in GENERIC and not w.startswith("http")]
 
 
 def _body_text(a):
@@ -49,9 +55,11 @@ def _body_text(a):
 
 
 def keywords_of(a, top=14):
-    """Top words of one article, titles and key points weighted up; both the Hebrew text and the English edition when it exists."""
-    cnt = {}
+    """Top words of one article, titles and key points weighted up; both the Hebrew text and the English edition when it exists.
+    Returns (keywords, proper) where proper = those keywords that are capitalised in most of their Latin occurrences (names, brands, places)."""
+    cnt, parts = {}, []
     def add(text, w):
+        parts.append(text or "")
         for t in tokens(text):
             cnt[t] = cnt.get(t, 0) + w
     add(a.get("title"), 4)
@@ -67,7 +75,14 @@ def keywords_of(a, top=14):
             add(k, 2)
         add(_body_text(en), 1)
     ranked = sorted(cnt.items(), key=lambda kv: (-kv[1], kv[0]))
-    return [w for w, c in ranked[:top] if c >= 3]
+    kw = [w for w, c in ranked[:top] if c >= 3]
+    tot, cap = {}, {}
+    for m in re.finditer(r"[A-Za-z][A-Za-z]{2,}", _clean(" ".join(parts))):
+        w = m.group().lower()
+        tot[w] = tot.get(w, 0) + 1
+        if m.group()[0].isupper():
+            cap[w] = cap.get(w, 0) + 1
+    return kw, [w for w in kw if tot.get(w) and cap.get(w, 0) / tot[w] >= 0.6]
 
 
 def _prompt(a):
@@ -105,7 +120,8 @@ def process_kw(slug):
     with open(os.path.join(va.ART_DIR, slug + ".json"), encoding="utf-8") as f:
         a = json.load(f)
     prev = a.get("ent") or {}
-    a["ent"] = dict(prev, v=prev.get("v") or ENT_V, kw=keywords_of(a), people=prev.get("people") or [], orgs=prev.get("orgs") or [], llm=bool(prev.get("llm")),
+    kw, kwp = keywords_of(a)
+    a["ent"] = dict(prev, v=prev.get("v") or ENT_V, kw=kw, kwp=kwp, kwv=2, people=prev.get("people") or [], orgs=prev.get("orgs") or [], llm=bool(prev.get("llm")),
                     at=time.strftime("%Y-%m-%d %H:%M:%S"))
     va._write_article(a)
 
@@ -117,7 +133,8 @@ def process(slug):
     with open(path, encoding="utf-8") as f:
         a = json.load(f)
     prev = a.get("ent") or {}
-    ent = {"v": ENT_V, "kw": keywords_of(a), "people": prev.get("people") or [], "orgs": prev.get("orgs") or [], "llm": bool(prev.get("llm")),
+    kw, kwp = keywords_of(a)
+    ent = {"v": ENT_V, "kw": kw, "kwp": kwp, "kwv": 2, "people": prev.get("people") or [], "orgs": prev.get("orgs") or [], "llm": bool(prev.get("llm")),
            "at": time.strftime("%Y-%m-%d %H:%M:%S")}               # a failed model call never wipes what an earlier run found
     err = ""
     if a.get("blocks") or a.get("key_points"):
@@ -136,10 +153,11 @@ def process(slug):
 _FAILED = {}
 _BUSY = set()
 _LOCK = threading.Lock()
-RETRY_S = 3600
+RETRY_S = 1200
 
 
 _BACKOFF = {"until": 0.0}
+_KW_LOCK = threading.Lock()
 
 
 def pending(kw_only=False):
@@ -149,7 +167,7 @@ def pending(kw_only=False):
     for a in va._article_index():
         e = a.get("ent")
         if kw_only:
-            if not e or "kw" not in e:
+            if not e or "kw" not in e or (e.get("kwv") or 1) < 2:
                 out.append(a["slug"])
             continue
         if e and e.get("v") == ENT_V and e.get("llm"):
@@ -165,18 +183,27 @@ def loop():
     while True:
         try:
             kw = pending(kw_only=True)
-            if kw:                                           # phase 1: keywords for everything, no model, a few per second
-                for s in kw[:40]:
+            if kw:                                           # phase 1: keywords for everything, no model, a few per second (one worker at a time)
+                if _KW_LOCK.acquire(blocking=False):
                     try:
-                        process_kw(s)
-                    except Exception as e:
-                        va.log(f"index keywords {s}: {str(e)[:120]}")
-                    time.sleep(0.2)
+                        for s in kw[:40]:
+                            try:
+                                process_kw(s)
+                            except Exception as e:
+                                va.log(f"index keywords {s}: {str(e)[:120]}")
+                            time.sleep(0.2)
+                    finally:
+                        _KW_LOCK.release()
+                else:
+                    time.sleep(10)
                 continue
             if time.time() < _BACKOFF["until"]:
                 time.sleep(30)
                 continue
-            todo = pending()[:1]                              # phase 2: people + companies, one at a time (LunaRoute has a concurrent-request limit shared with the article writer)
+            with _LOCK:
+                todo = [x for x in pending() if x not in _BUSY][:1]
+                if todo:
+                    _BUSY.add(todo[0])
             if not todo:
                 time.sleep(300)
                 continue
@@ -190,6 +217,9 @@ def loop():
             except Exception as e:
                 _FAILED[slug] = time.time()
                 va.log(f"index process {slug}: {str(e)[:160]}")
+            finally:
+                with _LOCK:
+                    _BUSY.discard(slug)
             time.sleep(6)
         except Exception as e:
             va.log(f"index loop error: {str(e)[:160]}")
@@ -198,6 +228,7 @@ def loop():
 
 def start():
     threading.Thread(target=loop, daemon=True).start()
+    threading.Thread(target=loop, daemon=True).start()           # a second worker: each model call takes 30-90 s
 
 
 # ------------------------------------------------------------------ the index ---
@@ -287,13 +318,45 @@ def build():
             for h, c in E[k]["he"].items():
                 t["he"][h] = t["he"].get(h, 0) + c
             del E[k]
-    names = set()
+    # One name = one entry: a keyword that is a person's surname (or the whole name of a one-word company) joins that person / company, so
+    # "נתניהו" the keyword (24 articles) and Benjamin Netanyahu the persona (2) become one entry holding all 26.
+    tokidx = {}
     for k, e in E.items():
-        if k[0] in "pc":
-            names.add(e["en"].lower())
-            names |= {h.lower() for h in e["he"]}
-    for k in [k for k in E if k[0] == "k" and E[k]["en"].lower() in names]:
-        del E[k]                                      # a keyword that is just a person's or company's name is listed once, as that person or company
+        if k[0] not in "pc":
+            continue
+        for nm in [e["en"]] + list(e["he"]):
+            ws = [norm(w) for w in _words(nm)]
+            ws = [w for w in ws if w]
+            if not ws:
+                continue
+            keys = {ws[-1]} if k[0] == "p" else ({ws[0]} if len(ws) == 1 else set())
+            for t in keys:
+                if len(t) >= 3:
+                    tokidx.setdefault(t, set()).add(k)
+    capdf = {}
+    for a in items:
+        for w in (a.get("ent") or {}).get("kwp") or []:
+            capdf[w] = capdf.get(w, 0) + 1
+    for k in [k for k in E if k[0] == "k"]:
+        cands = tokidx.get(norm(E[k]["en"]))
+        if not cands:
+            continue
+        t = E[max(cands, key=lambda c: len(E[c]["slugs"]))]
+        t["kinds"].add("keyword")
+        t["slugs"] |= E[k]["slugs"]
+        del E[k]
+    # what is left of the keywords must be material: names / brands (capitalised in the text) always; ordinary English words only when long, rare and not generic; Hebrew words not generic and not everywhere
+    for k in [k for k in E if k[0] == "k"]:
+        w, df = E[k]["en"], len(E[k]["slugs"])
+        latin = bool(re.match(r"[a-z]", w))
+        if w in GENERIC:
+            keep = False
+        elif latin:
+            keep = capdf.get(w, 0) >= 0.5 * df or (len(w) >= 7 and df <= 30)
+        else:
+            keep = len(w) >= 3 and df <= max(8, n * 0.15)
+        if not keep:
+            del E[k]
     _C["sig"], _C["data"] = sig, E
     return E
 
