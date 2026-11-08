@@ -337,3 +337,81 @@ def hosts_of(channel):
     if hs:
         return [{"name": h, "id": "p:" + _key(h)} for h in hs]
     return [{"name": channel, "id": "s:" + _key(channel)}] if channel else []
+
+
+# ------------------------------------------------------------------ search ---
+_HEB_SIMILAR = str.maketrans({"ט": "ת", "ק": "כ", "ע": "א", "ו": "", "י": ""})      # spellings that sound alike (אנטרופיק / אנתרופיק); matres lectionis dropped
+
+
+def norm(s):
+    """Match form of a word: lower case, no niqqud / quotes / hyphens, Latin 'ph' -> 'f', 'th' -> 't', Hebrew look-alike letters merged."""
+    t = _NIQQUD.sub("", unicodedata.normalize("NFKC", s or "").lower())
+    t = re.sub(r"[\u05f3\u05f4'\u2019\"\-_]", "", t)
+    t = t.replace("ph", "f").replace("th", "t").replace("ck", "k")
+    return t.translate(_HEB_SIMILAR)
+
+
+def _words(s):
+    return [w for w in re.findall(r"[^\W_]+", s or "", re.U)]
+
+
+def _search_index():
+    """normalised searchable text per entry + a vocabulary of normalised words (people, companies, keywords, podcasts) for spelling correction."""
+    E = build()
+    if _C.get("sx_sig") is _C["data"] and _C.get("sx"):
+        return _C["sx"]
+    texts, vocab = {}, {}
+    for k, e in E.items():
+        names = [e["en"]] + list(e["he"])
+        t = " ".join(norm(n) for n in names)
+        texts[k] = t
+        if k[0] != "e":
+            for n in names:
+                for w in _words(n):
+                    nw = norm(w)
+                    if len(nw) >= 3:
+                        vocab.setdefault(nw, w)
+    _C["sx"], _C["sx_sig"] = (texts, vocab), _C["data"]
+    return _C["sx"]
+
+
+def _match(q_tokens, texts, visible):
+    E = build()
+    out = []
+    for k, t in texts.items():
+        if all(tok in t for tok in q_tokens) and (E[k]["slugs"] & visible):
+            out.append(k)
+    return out
+
+
+def search(q, visible):
+    """-> (entry ids, slugs, corrected) for a typed query: every entry whose names contain all the words (the union of their articles); when nothing
+    matches, each word is replaced by its closest known word (Antropic -> Anthropic) and the search repeats. corrected = the query actually used, '' if unchanged."""
+    import difflib
+    texts, vocab = _search_index()
+    toks = [norm(w) for w in _words(q) if len(norm(w)) >= 2]
+    if not toks:
+        return [], set(), ""
+    ids = _match(toks, texts, visible)
+    corrected = ""
+    if not ids:
+        fixed, changed = [], False
+        for tk in toks:
+            if any(tk in t for t in texts.values()):
+                fixed.append(tk)
+                continue
+            near = difflib.get_close_matches(tk, list(vocab), n=1, cutoff=0.78) if len(tk) >= 4 else []
+            if near:
+                fixed.append(near[0])
+                changed = True
+            else:
+                fixed.append(tk)
+        if changed:
+            ids = _match(fixed, texts, visible)
+            if ids:
+                corrected = " ".join(vocab.get(w, w) for w in fixed)
+    E = build()
+    slugs = set()
+    for k in ids:
+        slugs |= E[k]["slugs"] & visible
+    return ids, slugs, corrected

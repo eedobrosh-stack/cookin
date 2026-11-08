@@ -3174,12 +3174,19 @@ def handle_get(handler, path, qs):
         if path == "/api/vidsum/index":
             handler._json({"ok": True, "lang": ul, "entries": ents, "articles": len(by)}, )
             return True
-        eid = (qs.get("id") or [""])[0]
-        info = next((e for e in ents if e["id"] == eid), None)
-        _, slugs = pawed_index.articles_of(eid, set(by))
-        if not info:
-            handler._json({"ok": False, "error": "not found"}, 404)
-            return True
+        qtext = (qs.get("q") or [""])[0].strip()
+        corrected = ""
+        if qtext:                                           # a typed search: all entries that match, their articles together
+            mids, slugs, corrected = pawed_index.search(qtext, set(by))
+            slugs = list(slugs)
+            info = {"id": "q:" + qtext, "l": corrected or qtext, "a": "", "t": [], "n": len(slugs), "q": qtext, "corrected": bool(corrected)}
+        else:
+            eid = (qs.get("id") or [""])[0]
+            info = next((e for e in ents if e["id"] == eid), None)
+            _, slugs = pawed_index.articles_of(eid, set(by))
+            if not info:
+                handler._json({"ok": False, "error": "not found"}, 404)
+                return True
         rows = []
         for s in slugs:
             i = by[s]
