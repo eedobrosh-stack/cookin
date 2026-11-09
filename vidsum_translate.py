@@ -190,9 +190,10 @@ import geo_suites
 import pawed_i18n
 import vidsum_render
 
-TR_SINCE = "2026-11-01"                      # only articles created from here on get language editions; older ones fall back to English
+TR_SINCE = time.strftime("%Y-%m-%d", time.localtime(time.time() - 3 * 86400))   # full language editions are written ahead of time for articles of the last 3 days; older ones get headlines (trh) and a full edition when opened
+TR_SINCE_MIN = "2026-11-01"
 LANG_NAME = {"de": "German", "fr": "French", "it": "Italian", "es": "Spanish", "pt": "Brazilian Portuguese", "nl": "Dutch"}
-LANG_DAILY_CAP = 240                         # editions written per day (LunaRoute is free, this only bounds a runaway queue)
+LANG_DAILY_CAP = 900                         # editions written per day (LunaRoute is free, this only bounds a runaway queue)
 _WANT_L = []                                 # (slug, lang) asked for by a page view
 _FAILED_L = {}                               # (slug, lang) -> time of the last failure (retried after an hour)
 _DONE_TODAY = {"day": "", "n": 0}
@@ -214,7 +215,7 @@ def wanted_langs(ch, chs):
     """UI languages a source's new articles are written in ahead of time: the language of the suite it belongs to (a German show gets a German
     edition) and the preferred language of the user who owns it. A US-suite show gets none: it already exists in English and Hebrew, and
     any other language is written the first time a reader opens an article in it (want_lang)."""
-    out = set()
+    out = set(pawed_i18n.ORDER)                           # every language: all articles are written in all languages
     for g in ch.get("geos") or []:
         if g in geo_suites.GEOS and g not in ("us", "il"):
             out.add(geo_suites.GEOS[g][4])
@@ -228,8 +229,12 @@ def wanted_langs(ch, chs):
     return out & set(pawed_i18n.ORDER)
 
 
+def _since():
+    return max(TR_SINCE_MIN, time.strftime("%Y-%m-%d", time.localtime(time.time() - 3 * 86400)))
+
+
 def _eligible(a):
-    return bool(a.get("slug")) and (a.get("created") or "") >= TR_SINCE
+    return bool(a.get("slug")) and (a.get("created") or "") >= _since()
 
 
 def want_lang(slug, lang):
@@ -351,10 +356,75 @@ def pending_langs():
     return n
 
 
+_FAILED_H = {}
+H_BATCH = 10
+
+
+def _head_src(a):
+    en = a.get("en") or {}
+    return (en.get("title") or a.get("title") or "", en.get("lead") or en.get("standfirst") or a.get("lead") or a.get("standfirst") or "")
+
+
+def headline_pending():
+    out = []
+    for a in va._article_index():                          # newest first
+        if not a.get("slug") or not (a.get("title") or "").strip():
+            continue
+        have = set(a.get("trh") or {}) | set((a.get("tr") or {}))
+        if set(pawed_i18n.ORDER) - have and time.time() - _FAILED_H.get(a["slug"], 0) > 3600:
+            out.append(a)
+    return out
+
+
+def headline_batch():
+    """Titles and leads in every language for H_BATCH articles in ONE model call (cheap): lists, search and the Index are then fully localized,
+    the body of an article is written only when it is opened (or by the eager window above). -> number of articles done."""
+    todo = headline_pending()[:H_BATCH]
+    if not todo:
+        return 0
+    items = {str(i): dict(zip(("title", "lead"), _head_src(a))) for i, a in enumerate(todo)}
+    langs = ", ".join(f"{k} ({LANG_NAME[k]})" for k in pawed_i18n.ORDER)
+    prompt = ("Translate the title and lead of each news item below into these languages: " + langs + ". Natural, fluent news-site wording; "
+              "keep names and numbers exact; never use the ASCII double-quote character inside a string value.\n"
+              "Return ONLY one JSON object: {\"<item id>\": {\"de\": {\"title\": \"...\", \"lead\": \"...\"}, \"fr\": {...}, ...}, ...} covering every item id and every language.\n\n"
+              + json.dumps(items, ensure_ascii=False))
+    try:
+        res, _tok, _stop = va._luna(prompt, max_tokens=24000)
+    except Exception as e:
+        for a in todo:
+            _FAILED_H[a["slug"]] = time.time()
+        va.log(f"vidsum headlines batch failed: {va._scrub(str(e))[:200]}")
+        return 0
+    done = 0
+    nd = va.vidsum_render.nodash
+    for i, a in enumerate(todo):
+        got = (res or {}).get(str(i)) if isinstance(res, dict) else None
+        add = {}
+        if isinstance(got, dict):
+            for l in pawed_i18n.ORDER:
+                e = got.get(l)
+                if isinstance(e, dict) and str(e.get("title") or "").strip():
+                    add[l] = {"title": nd(str(e["title"])).strip(), "lead": nd(str(e.get("lead") or "")).strip()}
+        if not add:
+            _FAILED_H[a["slug"]] = time.time()
+            continue
+        with va.LOCK:
+            cur = _load(a["slug"])
+            if cur:
+                cur.setdefault("trh", {}).update({l: v for l, v in add.items() if l not in cur["trh"]})
+                va._write_article(cur)
+                done += 1
+    va.log(f"vidsum headlines: {done}/{len(todo)} articles")
+    return done
+
+
 def loop():
     time.sleep(240)
     while True:
         try:
+            if headline_batch():                              # cheap: titles + leads in every language, 10 articles per call
+                time.sleep(3)
+                continue
             sl = _next_lang()                                 # language editions first: they are the demand-driven, newest-first work
             if sl:
                 translate_lang(*sl)

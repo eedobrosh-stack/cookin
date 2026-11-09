@@ -58,6 +58,9 @@ KNOWN = [
     (r"index (?:entities|keywords|process)", "index-extract-failed", "warn",
      "The Index could not extract people / companies from an article (LunaRoute busy with 429, or an empty / invalid reply). The article is retried in 20 minutes.",
      "None for a few; if it stays at hundreds for hours, check LunaRoute and the extraction prompt in pawed_index.py.", "Claude"),
+    (r"vidsum headlines batch failed", "headlines-failed", "warn",
+     "A batch of headline translations (titles + leads in all languages) failed (LunaRoute busy or an invalid reply). Its articles are retried in an hour.",
+     "None for a few; a long streak means non-Hebrew users keep seeing English headlines on older articles.", "Claude"),
     (r"vidsum_channels\.json|refusing to treat it as empty", "registry-error", "crit",
      "The source registry file (vidsum_channels.json) could not be written or read. If it was saved empty, nothing new is discovered and the site looks fine because old articles stay (this is how 2026-11-07 15:44 UTC silently stopped Pawed).",
      "Check the source count in health (sources); if it is 0 or dropped, restore from the rebuild roster via POST /api/vidsum/channels/restore.", "Claude"),
@@ -99,6 +102,7 @@ DECISIONS = {
 
 
 IMPACT = {
+    "headlines-failed": "Older articles keep English (or Hebrew) titles in the other six languages until a batch succeeds; the full text is still written when someone opens the article.",
     "index-extract-failed": "Those articles stay out of the Index's people and companies lists (their keywords, podcast and episode entries still work). A long streak means the Index stays thin and LunaRoute capacity is wasted on retries.",
     "provider-402": "Every Gemini call fails: podcast transcription (up to 600 audio minutes a day normally), YouTube video fallback (10/day), candidate scoring and the Gemini article fallback stop. Episodes pile up in 'needs transcript' and the gauge's actual needle falls toward 0; nothing is billed while it is down, but backlog and delay grow every hour.",
     "supadata-quota": "YouTube videos cannot get captions from the server, so they wait in 'needs transcript' (the Mac relay covers only while it is awake). Expect a growing YouTube backlog and fewer articles per day.",

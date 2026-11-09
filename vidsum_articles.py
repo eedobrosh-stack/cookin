@@ -1540,7 +1540,8 @@ def news_items():
                     "released_time": len((a.get("published_at") or "")) >= 19, "minutes": a["_min"] if "_min" in a else _length_min(a),
                     "lang": (al := audio_lang(a, chmap.get(sid))),
                     **({"afc": _origin_cc(a, chmap.get(sid))} if al == "en" else {}),
-                    **({"tr": {l: [nd(e["title"]), nd(e.get("lead") or e.get("standfirst") or "")] for l, e in a["tr"].items()}} if a.get("tr") else {}),
+                    **({"tr": {**{l: [nd(e["title"]), nd(e.get("lead") or "")] for l, e in (a.get("trh") or {}).items() if e.get("title")},
+                                **{l: [nd(e["title"]), nd(e.get("lead") or e.get("standfirst") or "")] for l, e in (a.get("tr") or {}).items()}}} if (a.get("tr") or a.get("trh")) else {}),
                     "pf": (pl := vidsum_render.platform_links(a, a.get("kind") == "rss")),
                     "pfa": {k: ap for k, ap in ((k, vidsum_render._pf_app(k, u)) for k, u in pl.items()) if ap}})
     return out
