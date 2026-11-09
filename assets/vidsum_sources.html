@@ -194,6 +194,7 @@
     .plat label { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border:1.5px solid #ddd; border-radius:999px; cursor:pointer; font-weight:700; font-size:14px; }
     .plat label.on { border-color:#e3222b; background:#fff0f0; }
     .plat input { display:none; }
+    .plat input[type=checkbox] { display:inline-block; width:17px; height:17px; margin:0; accent-color:#e3222b; cursor:pointer; }
     .plat svg { width:24px; height:24px; }
     .gbtn { display:inline-flex; align-items:center; gap:10px; background:#fff; border:1px solid #cfcfcf; border-radius:4px; padding:10px 18px; font-weight:700; font-size:15px; color:#222; }
     .gbtn:hover { box-shadow:0 1px 4px rgba(0,0,0,.18); }
@@ -391,15 +392,22 @@ async function renderGeo(){
   const flag = c => String.fromCodePoint(...[...c].map(ch=>0x1F1E6+ch.charCodeAt(0)-65));
   const LANGS = [['en','US'],['fr','FR'],['es','ES'],['he','IL'],['de','DE'],['it','IT'],['pt','BR'],['nl','NL']];   // Hebrew sits mid-row, not first
   const mid = a => { const r = a.filter(x=>x.slug!=='il'), i = a.find(x=>x.slug==='il'); if(i) r.splice(Math.floor(r.length/2), 0, i); return r; };   // Israel mid-row, not first
+  const HE = window.LANG === 'he';
+  const X = HE ? {lang:'שפה', langHelp:'שפת הממשק ושפת סיכומי הכתבות בכל המסכים. ברירת המחדל נקבעת לפי המדינה שזוהתה.', src:'מקור התוכן (בחירה מרובה)',
+      srcHelp:'אפשר לבחור כמה מדינות. ברירת המחדל: המדינה שזוהתה ו-ארצות הברית. ', saveU:'השינויים נשמרים בפרופיל.', saveB:'השינויים נשמרים בדפדפן.',
+      warn:'לחלק מהמדינות עוד אין סט פעיל, מוצג במקומן הסט הכללי.', upd:'מעדכן את התוכן…', saved:'נשמר'}
+    : {lang:'Language', langHelp:'The language of the interface and of the article summaries on every screen. The default follows your detected country.', src:'Content Source (Multi Selection)',
+      srcHelp:'You can pick several countries. Default: your detected country and the United States. ', saveU:'Changes are saved to your profile.', saveB:'Changes are saved in this browser.',
+      warn:'Some countries have no live set yet; the general set is shown instead.', upd:'Updating the content…', saved:'Saved'};
   const signed = !!(D && D.me && D.prefs);
   const curLang = (signed && D.prefs.lang) || g.lang || window.LANG, sel = g.sel || [];
   const big = f => '<span style="font-size:22px;line-height:1">'+f+'</span>';
   el.hidden = false;
-  el.innerHTML = '<b>שפה</b><div class="opts">' + LANGS.map(([l,c])=>'<label class="'+(l===curLang?'on':'')+'"><input type="radio" name="lang" value="'+l+'"'+(l===curLang?' checked':'')+'>'+big(flag(c))+esc(ln(l))+'</label>').join('') + '</div>'
-    + '<small>שפת הממשק ושפת סיכומי הכתבות בכל המסכים. ברירת המחדל נקבעת לפי הדפדפן.</small>'
-    + '<b style="margin-top:14px">מקור התוכן</b><div class="opts">' + mid(g.geos).map(x=>'<label class="'+(sel.includes(x.slug)?'on':'')+'" title="'+esc(rn(x.cc))+'"><input type="checkbox" name="geo" value="'+x.slug+'"'+(sel.includes(x.slug)?' checked':'')+'>'+big(flag(x.cc))+esc(rn(x.cc))+'</label>').join('') + '</div>'
-    + '<small>אפשר לבחור כמה מדינות. ברירת המחדל: המדינה שזוהתה ו-ארצות הברית. '+(signed?'השינויים נשמרים בפרופיל.':'השינויים נשמרים בדפדפן.')+'</small>'
-    + (g.sel.some(x=>x!=='il' && !g.geos.find(y=>y.slug===x).live) ? '<small class="warn">לחלק מהמדינות עוד אין סט פעיל, מוצג במקומן הסט הכללי.</small>' : '');
+  el.innerHTML = '<b>'+X.lang+'</b><div class="opts">' + LANGS.map(([l,c])=>'<label class="'+(l===curLang?'on':'')+'"><input type="radio" name="lang" value="'+l+'"'+(l===curLang?' checked':'')+'>'+big(flag(c))+esc(ln(l))+'</label>').join('') + '</div>'
+    + '<small>'+X.langHelp+'</small>'
+    + '<b style="margin-top:14px">'+X.src+'</b><div class="opts">' + mid(g.geos).map(x=>'<label class="'+(sel.includes(x.slug)?'on':'')+'" title="'+esc(rn(x.cc))+'"><input type="checkbox" name="geo" value="'+x.slug+'"'+(sel.includes(x.slug)?' checked':'')+'>'+big(flag(x.cc))+esc(rn(x.cc))+'</label>').join('') + '</div>'
+    + '<small>'+X.srcHelp+(signed?X.saveU:X.saveB)+'</small>'
+    + (g.sel.some(x=>x!=='il' && !g.geos.find(y=>y.slug===x).live) ? '<small class="warn">'+X.warn+'</small>' : '');
   const ck = (k,v) => { document.cookie = k+'='+v+';path=/;max-age=31536000;samesite=lax'; };
   el.querySelectorAll('input[name=lang]').forEach(i=>i.onchange = async () => {
     ck('pawed_lang', i.value);
@@ -413,11 +421,11 @@ async function renderGeo(){
     el.querySelectorAll('input[name=geo]').forEach(x=>x.parentElement.classList.toggle('on', x.checked));   // instant visual feedback
     clearTimeout(tmr);                                                          // several clicks in a row become one save
     tmr = setTimeout(async () => {
-      msg('מעדכן את התוכן…','ok');
+      msg(X.upd,'ok');
       document.cookie = 'pawed_geo=;path=/;max-age=0'; ck('pawed_geos', vals.join(','));
       try{
         if(signed){ const j = await api('/api/vidsum/prefs',{contentGeos:vals}); D.prefs = j.prefs; }
-        await load(); msg('נשמר','ok');                            // reload the lists in place, no page reload
+        await load(); msg(X.saved,'ok');                            // reload the lists in place, no page reload
       }catch(e){ msg('❌ '+e.message,'err'); }
     }, 700);
   });
