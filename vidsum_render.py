@@ -291,6 +291,13 @@ def clean_dashes(o, key=None):
 
 EN_TOPICS = {"פוליטיקה": "Politics", "טכנולוגיה": "Technology", "כלכלה": "Economy", "ספורט": "Sports", "תרבות": "Culture",
              "לייפסטייל": "Lifestyle", "בריאות": "Health"}
+TOPIC_SLUG = {"פוליטיקה": "politics", "טכנולוגיה": "tech", "כלכלה": "economy", "ספורט": "sports", "תרבות": "culture", "לייפסטייל": "lifestyle", "בריאות": "health"}
+
+
+def tslug(t):
+    return TOPIC_SLUG.get(t, t)
+
+
 EN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 STR = {
     "he": {"index": "אינדקס", "main": "ראשי", "live": "● מתעדכן אוטומטית", "all": "כל הסיכומים", "sources": "מקורות", "log": "יומן", "by": "מאת", "desk": "מערכת Pawed",
@@ -420,8 +427,8 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
     tps = [t for t in (a.get("topics") or []) if t in TOPICS] or [a["topic"]]
     if a["topic"] in tps:
         tps = [a["topic"]] + [t for t in tps if t != a["topic"]]
-    crumb_topics = '<a href="%s/vidsum#%s">%s</a>' % (base, urllib.parse.quote(tps[0]), e(tname(tps[0])))   # one highlighted section; the others only list the story
-    nav = "".join(f'<a href="{base}/vidsum#{urllib.parse.quote(t)}" class="{"active" if t == tps[0] else ""}">{e(tname(t))}</a>'
+    crumb_topics = '<a href="%s/vidsum#%s">%s</a>' % (base, urllib.parse.quote(tslug(tps[0])), e(tname(tps[0])))   # one highlighted section; the others only list the story
+    nav = "".join(f'<a href="{base}/vidsum#{urllib.parse.quote(tslug(t))}" class="{"active" if t == tps[0] else ""}">{e(tname(t))}</a>'
                   for t in TOPICS)
     share_url = urllib.parse.quote(f'{SITE}/vidsum/article/{a["slug"]}', safe="")
     share_txt = urllib.parse.quote(a["title"], safe="")
@@ -491,7 +498,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
     for x in latest:
         cnt[x["topic"]] = cnt.get(x["topic"], 0) + 1
     out.append(f'<div class="box"><h3>{S["bytopic"]}</h3><ol>' + "".join(
-        f'<li><a href="{base}/vidsum#{urllib.parse.quote(t)}"><span>{e(tname(t))}</span><small>{cnt.get(t, 0)} {"story" if en and cnt.get(t, 0) == 1 else S["stories"]}</small></a></li>'
+        f'<li><a href="{base}/vidsum#{urllib.parse.quote(tslug(t))}"><span>{e(tname(t))}</span><small>{cnt.get(t, 0)} {"story" if en and cnt.get(t, 0) == 1 else S["stories"]}</small></a></li>'
         for t in TOPICS) + "</ol></div></aside></div>")
     out.append(f'<footer><div class="footer-inner"><span>{S["foot"]}</span>'
                f'<span class="legal"><a href="/vidsum/terms">{S["lt"]}</a> \u00b7 <a href="/vidsum/privacy">{S["lp"]}</a> \u00b7 <a href="/vidsum/takedown">{S["ld"]}</a></span>'

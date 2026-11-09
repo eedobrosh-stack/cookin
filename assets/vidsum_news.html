@@ -451,6 +451,9 @@ function when(s, hasTime){
 const rel = a => when(a.released||a.created, a.released_time);
 const meta = a => [a.channel, a.minutes? t('summary')+a.minutes+t('min'):'', rel(a)].filter(Boolean).map(esc).join(' · ');
 let DATA = null, FILTER = 'all';
+const SLUGS = {'all':'home','פוליטיקה':'politics','טכנולוגיה':'tech','כלכלה':'economy','ספורט':'sports','תרבות':'culture','לייפסטייל':'lifestyle','בריאות':'health','הופעות חיות':'live-shows','מבשלים':'cooking'};
+const UNSLUG = Object.fromEntries(Object.entries(SLUGS).map(([k,v])=>[v,k]));
+const hashOf = f => '#'+encodeURIComponent(SLUGS[f]||f);
 
 const COL = {'פוליטיקה':'#b3171f','כלכלה':'#1b3f94','טכנולוגיה':'#0f2a5c','תרבות':'#6a2fa3','ספורט':'#1a7a3a','בריאות':'#0e7a6e','לייפסטייל':'#b0276a','הופעות חיות':'#c2410c','מבשלים':'#2f7d32'};
 const col = t => COL[t]||'#333';
@@ -562,7 +565,7 @@ function takeD(list, n, used, blockPods, pagePods){
   return out;
 }
 const take = (list, n, used) => { const out=[]; for(const a of list){ if(out.length>=n) break; if(!used.has(a.slug)){ used.add(a.slug); out.push(a); } } return out; };
-function bar(topic, more){ return '<div class="sec-h" style="--c:'+col(topic)+'"><b>'+esc(TN(topic))+'</b>'+(more?'<a href="#'+encodeURIComponent(topic)+'" data-go="'+esc(topic)+'">'+t('moreIn')+esc(TN(topic))+' ›</a>':'')+'</div>'; }
+function bar(topic, more){ return '<div class="sec-h" style="--c:'+col(topic)+'"><b>'+esc(TN(topic))+'</b>'+(more?'<a href="'+hashOf(topic)+'" data-go="'+esc(topic)+'">'+t('moreIn')+esc(TN(topic))+' ›</a>':'')+'</div>'; }
 
 // each section uses a different arrangement so the page never reads as identical blocks stacked on each other
 function pattern(kind, L){
@@ -663,7 +666,7 @@ function render(){
   if(FILTER==='all') h += '<div id="feed2"></div><div id="sentinel" style="height:1px"></div>';
   main.innerHTML=h; hydrateThumbs();
   if(FILTER==='all') startFeed(all); else if(FEED && FEED.io){ FEED.io.disconnect(); FEED=null; }
-  main.querySelectorAll('[data-go]').forEach(a=>a.onclick=e=>{ e.preventDefault(); FILTER=a.dataset.go; nav(); render(); window.scrollTo({top:0}); history.replaceState(null,'','#'+encodeURIComponent(FILTER)); });
+  main.querySelectorAll('[data-go]').forEach(a=>a.onclick=e=>{ e.preventDefault(); FILTER=a.dataset.go; nav(); render(); window.scrollTo({top:0}); history.replaceState(null,'',hashOf(FILTER)); });
 }
 
 // ---- Live Shows (upcoming Israeli events from Supercaly) ----
@@ -729,7 +732,7 @@ function nav(){
   const live=DATA.topics.filter(t=>DATA.items.some(a=>(a.topics||[a.topic]).includes(t)));   // a section with nothing in it (e.g. all its sources switched off) disappears
   if(FILTER!=='all' && FILTER!==LIVE && FILTER!==COOK && !live.includes(FILTER)) FILTER='all';
   n.innerHTML=['all',...live,LIVE,COOK].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?t_('main'):esc(TN(t)))+'</button>').join('');
-  n.querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f; nav(); render(); if(innerWidth<=640){ const w=document.querySelector('.nav-wrap'); if(w) w.scrollIntoView({behavior:'smooth',block:'start'}); } history.replaceState(null,'', FILTER==='all'?location.pathname:'#'+encodeURIComponent(FILTER));});
+  n.querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f; nav(); render(); if(innerWidth<=640){ const w=document.querySelector('.nav-wrap'); if(w) w.scrollIntoView({behavior:'smooth',block:'start'}); } history.replaceState(null,'', hashOf(FILTER));});
 }
 document.getElementById('today').textContent = new Date().toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
@@ -757,7 +760,7 @@ function showSourcesHint(){
 fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
   if(EN) j.items.forEach(a=>{ if(a.title_en){ a.title=a.title_en; a.lead=a.lead_en||a.lead; } });
   applyStatic();
-  DATA=j; PLAT=j.platform||''; const h=decodeURIComponent(location.hash.slice(1)); if(j.topics.includes(h) || h===LIVE || h===COOK || h==='Live Shows') FILTER = h==='Live Shows' ? LIVE : h;
+  DATA=j; PLAT=j.platform||''; let h=decodeURIComponent(location.hash.slice(1)); h=UNSLUG[h.toLowerCase()]||h; if(j.topics.includes(h) || h===LIVE || h===COOK || h==='Live Shows') FILTER = h==='Live Shows' ? LIVE : h;
   const ul=document.querySelector('.utility-links');
   if(j.me) showSourcesHint();
   nav(); render();
