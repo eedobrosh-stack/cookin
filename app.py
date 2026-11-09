@@ -1169,7 +1169,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path.split("?")[0]
-        if p in ("/api/vidsum/summarize", "/api/vidsum/article/delete", "/api/vidsum/article/import", "/api/vidsum/article/release", "/api/vidsum/article/topic", "/api/vidsum/article/source", "/api/vidsum/links/set", "/api/vidsum/topics/backfill", "/api/vidsum/submit") or p.startswith(("/api/vidsum/channels/", "/api/vidsum/relay/", "/api/vidsum/sources/", "/api/vidsum/admin/")) or p in ("/api/vidsum/bulk", "/api/vidsum/prefs", "/api/vidsum/bookmarks", "/api/vidsum/lang", "/api/vidsum/rate", "/api/vidsum/takedown"):
+        if p in ("/api/vidsum/summarize", "/api/vidsum/article/delete", "/api/vidsum/article/import", "/api/vidsum/article/fixtext", "/api/vidsum/article/release", "/api/vidsum/article/topic", "/api/vidsum/article/source", "/api/vidsum/links/set", "/api/vidsum/topics/backfill", "/api/vidsum/submit") or p.startswith(("/api/vidsum/channels/", "/api/vidsum/relay/", "/api/vidsum/sources/", "/api/vidsum/admin/")) or p in ("/api/vidsum/bulk", "/api/vidsum/prefs", "/api/vidsum/bookmarks", "/api/vidsum/lang", "/api/vidsum/rate", "/api/vidsum/takedown"):
             if vidsum_articles.handle_post(self, p, self._read_json()):
                 return
         if p.startswith("/bernard/api/") and self._is_main_host():

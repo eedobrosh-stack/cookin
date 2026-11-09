@@ -362,7 +362,7 @@ Write like an Israeli news site feature, not like a meeting summary:
 - topic: the single best-fitting section from the allowed list. topics: the primary section first (same as topic) plus at most ONE secondary section, and only when the episode substantially covers it (e.g. tech business = טכנולוגיה + כלכלה). The primary section is what the episode is mostly ABOUT (a TV-history conversation is תרבות even if it mentions money).
 - key_points: 4-5 short Hebrew sentences ("עיקרי הדברים").
 - blocks: the article body, in order. Every block MUST carry its content in "text" (for "list" blocks put the bullets in "items" and leave "text" empty). Use type "h2" for subheadings (a new one every 2-4 paragraphs), "p" for flowing prose paragraphs, "list" (with "items") at most once for a real enumeration, and "quote" for pull quotes.
-- About {words} Hebrew words in total across the "p" blocks. Third person, past/present tense news style, attribute claims ("לדבריו", "לטענתו"), keep concrete names, numbers, examples and the logic of the argument. Do not invent facts; do not editorialize.
+- About {words} Hebrew words in total across the "p" blocks. Third person, past/present tense news style, attribute claims ("לדבריו", "לטענתו"), keep concrete names, numbers, examples and the logic of the argument. Do not invent facts; do not editorialize. Use a person's name only as it appears in the title, description or transcript: never guess a first name from a surname alone (write just the surname if that is all the source gives).
 - Every "p" block has "ts": the timestamp (m:ss or h:mm:ss) where its content is said. Cover the whole video to the end, chronologically.
 - Include {quotes} "quote" blocks: the MOST PROVOCATIVE, punchy, quotable statements actually spoken, copied as close to verbatim as you can hear them, each under 25 words, with "speaker" (name + a few words of context, e.g. "אלון אולמן, על מנהיגות") and "ts". Place each quote right after the paragraph it relates to.
 Return only JSON matching the schema."""
@@ -3411,6 +3411,37 @@ def import_article(req):
     return art["slug"]
 
 
+def fix_article_text(slug, old, new):
+    """Admin: replace a wrong string in every text field of a stored article (all languages), in place; slug, dates and media untouched."""
+    fp = os.path.join(ART_DIR, os.path.basename(slug) + ".json")
+    with open(fp, encoding="utf-8") as f:
+        art = json.load(f)
+    n = [0]
+
+    def walk(x):
+        if isinstance(x, str):
+            if old in x:
+                n[0] += x.count(old)
+                return x.replace(old, new)
+            return x
+        if isinstance(x, list):
+            return [walk(i) for i in x]
+        if isinstance(x, dict):
+            return {k: (v if k in ("slug", "url", "vid") else walk(v)) for k, v in x.items()}
+        return x
+    art = walk(art)
+    if n[0]:
+        tmp = fp + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(art, f, ensure_ascii=False, indent=1)
+        os.replace(tmp, fp)
+        try:
+            pawed_index.refresh_slug(slug)
+        except Exception:
+            pass
+    return n[0]
+
+
 def _geo_post(handler, path, req):
     user = current_user(handler)
     if not (user and user.get("admin")):
@@ -3570,6 +3601,19 @@ def handle_post(handler, path, req):
         else:
             try:
                 handler._json({"ok": True, "slug": import_article(req)})
+            except Exception as e:
+                handler._json({"ok": False, "error": str(e)[:200]}, 400)
+        return True
+    if path == "/api/vidsum/article/fixtext":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            try:
+                old, new = str(req.get("old") or ""), str(req.get("new") or "")
+                if len(old) < 3 or old == new:
+                    raise ValueError("bad old/new")
+                handler._json({"ok": True, "replaced": fix_article_text(str(req.get("slug") or ""), old, new)})
             except Exception as e:
                 handler._json({"ok": False, "error": str(e)[:200]}, 400)
         return True

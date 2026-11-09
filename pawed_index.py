@@ -130,6 +130,10 @@ def process_kw(slug):
     va._write_article(a)
 
 
+def refresh_slug(slug):
+    process_kw(slug)
+
+
 def process(slug):
     """Compute and store 'ent' for one article. Keywords always; people/orgs through LunaRoute (kept as [] + 'llm': False if the call fails, retried later)."""
     import os
