@@ -23,12 +23,27 @@ def short_id(slug):
     return out
 
 
+def pretty_slug(slug, title):
+    """English-looking article URL part: <ascii title>~<8-char id>; the real slug when the title is not mostly Latin (Hebrew viewers keep the Hebrew URL)."""
+    import re as _re
+    t = title or ""
+    letters = _re.findall(r"[^\W\d_]", t)
+    latin = _re.findall(r"[A-Za-z]", t)
+    if len(latin) < 8 or len(latin) < 0.7 * len(letters):
+        return slug
+    import unicodedata
+    a = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode().lower()
+    a = _re.sub(r"[^a-z0-9]+", "-", a).strip("-")
+    a = a[:70].rsplit("-", 1)[0] if len(a) > 70 else a
+    return (a + "~" + short_id(slug)) if a else slug
+
+
 BM_JS = r"""(function(){
 var RE=/^[0-9a-z]{8}$/,ids=[],signed=false,tmr=null,L={
 he:['הוספה לסימניות','הסרה מהסימניות','נוסף לסימניות','הוסר מהסימניות','נשמר במכשיר הזה. התחברו כדי לשמור את הסימניות בחשבון.','הסימניות שלי'],
 en:['Bookmark','Remove bookmark','Bookmarked','Bookmark removed','Saved on this device. Sign in to keep your bookmarks in your account.','My Bookmarks']},
 lang=window.LANG||document.documentElement.lang||'en',T=L[lang]||L.en;
-function sid(s){var h1=0xdeadbeef,h2=0x41c6ce57,i,c;for(i=0;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);}
+function sid(s){var q=/~([0-9a-z]{8})$/.exec(s);if(q)return q[1];var h1=0xdeadbeef,h2=0x41c6ce57,i,c;for(i=0;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);}
 h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909);
 var n=(4294967296*(2097151&h2)+(h1>>>0))%2821109907456;return n.toString(36).padStart(8,'0');}
 function ck(){var m=document.cookie.match(/(?:^|;\s*)pawed_bm=([^;]*)/);return m?m[1].split(',').filter(function(x){return RE.test(x)}):[]}
@@ -50,7 +65,8 @@ function decorate(){
 }
 function paint(){decorate();[].forEach.call(document.querySelectorAll('.bmf b'),function(b){b.textContent=ids.length});[].forEach.call(document.querySelectorAll('.bmb'),function(b){var on=ids.indexOf(b.getAttribute('data-bm'))>=0;b.classList.toggle('on',on);b.title=on?T[1]:T[0];b.setAttribute('aria-label',b.title);b.setAttribute('aria-pressed',String(on))})}
 var pend=null;function later(){clearTimeout(pend);pend=setTimeout(paint,80)}
-window.pawedBM={sid:sid,ids:function(){return ids.slice()},has:function(id){return ids.indexOf(id)>=0},toggle:toggle,ready:null};
+function pretty(a){var t=a.title||'',L=(t.match(/\p{L}/gu)||[]).length,A=(t.match(/[A-Za-z]/g)||[]).length;if(A<8||A<0.7*L)return '/vidsum/article/'+encodeURIComponent(a.slug);var x=t.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');if(x.length>70)x=x.slice(0,70).replace(/-[^-]*$/,'');return x?'/vidsum/article/'+x+'~'+sid(a.slug):'/vidsum/article/'+encodeURIComponent(a.slug)}
+window.pawedBM={url:pretty,sid:sid,ids:function(){return ids.slice()},has:function(id){return ids.indexOf(id)>=0},toggle:toggle,ready:null};
 ids=ck();
 window.pawedBM.ready=fetch('/api/vidsum/bookmarks',{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){
  if(j&&j.signed){signed=true;var c=ck(),m=union(j.ids||[],c);if(c.length||m.length!==(j.ids||[]).length){ids=m;persist();}else ids=m;if(c.length)document.cookie='pawed_bm=;path=/;max-age=0;SameSite=Lax'}

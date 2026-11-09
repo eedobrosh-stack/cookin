@@ -419,7 +419,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
         if k_ == "youtube":
             return f'<a class="ts" href="{e(pl_["youtube"])}&amp;t={sec}s" target="_blank" rel="noopener">▶ {e(ts)}</a>'
         return f'<span class="ts">{e(ts)}</span>'        # Apple Podcasts and plain RSS pages have no time-offset link
-    art_url = lambda s: f'{base}/vidsum/article/{urllib.parse.quote(s["slug"])}'
+    art_url = lambda s: f'{base}/vidsum/article/{urllib.parse.quote(pawed_bm.pretty_slug(s["slug"], s.get("title")))}'
     thumb = lambda v: f"https://i.ytimg.com/vi/{v}/hq720.jpg"   # true 16:9 (hqdefault has baked-in black bars)
     mins = max(1, round(sum(len(b.get("text", "").split()) for b in a["blocks"]) / 200))
     others = [x for x in latest if x.get("slug") != a.get("slug")]
@@ -507,7 +507,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
     refresh = '<meta http-equiv="refresh" content="60">' if en and not translated else ""
     return (f'<!doctype html><html lang="{lang}" dir="{"ltr" if en else "rtl"}"><head><meta charset="utf-8">'
             f'<meta name="theme-color" content="#e3222b"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(a["title"])} | Pawed</title>'
-            f'<meta name="description" content="{desc}"><link rel="canonical" href="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}">'
-            f'<meta property="og:url" content="{SITE}/vidsum/article/{urllib.parse.quote(a["slug"])}"><meta property="og:title" content="{e(a["title"])}">'
+            f'<meta name="description" content="{desc}"><link rel="canonical" href="{SITE}/vidsum/article/{urllib.parse.quote(pawed_bm.pretty_slug(a["slug"], a.get("title")))}">'
+            f'<meta property="og:url" content="{SITE}/vidsum/article/{urllib.parse.quote(pawed_bm.pretty_slug(a["slug"], a.get("title")))}"><meta property="og:title" content="{e(a["title"])}">'
             f'<meta property="og:description" content="{desc}"><meta property="og:image" content="{e(a.get("image")) if rss and a.get("image") else "https://i.ytimg.com/vi/" + e(a["vid"]) + "/maxresdefault.jpg"}">'
             f'<style>{CSS}{LANG_CSS}{RATE_CSS}{COPY_CSS}{LTR_CSS if en else ""}</style>{refresh}</head><body style="{_theme(a["topic"])}">{"".join(out)}{PAW_JS}{LANG_JS}{RATE_JS}{APP_JS}{COPY_JS}</body></html>')

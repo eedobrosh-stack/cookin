@@ -400,7 +400,7 @@ function hydrateThumbs(){
     el.style.setProperty('--img','url("'+u+'")'); el.classList.add('fit');
   });
 }
-const href = a => '/vidsum/article/' + encodeURIComponent(a.slug);
+const href = a => (window.pawedBM&&pawedBM.url) ? pawedBM.url(a) : '/vidsum/article/' + encodeURIComponent(a.slug);
 // true 16:9 frames only (hqdefault/sddefault carry baked-in black bars); a failed image is skipped and the next layer shows
 const bg = v => ['maxresdefault','hq720','mqdefault'].map(f=>'url(https://i.ytimg.com/vi/'+v+'/'+f+'.jpg)').join(',');
 const tone = a => TONES[[...a.vid].reduce((x,c)=>x+c.charCodeAt(0),0) % TONES.length];

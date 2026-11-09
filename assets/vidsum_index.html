@@ -290,7 +290,7 @@ function listView(){
 }
 const HLRE = ws => ws && ws.length ? new RegExp('('+ws.map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')','gi') : null;
 const snipHtml = a => { if(!a.snip) return ''; const re = HLRE(a.hl); const t = esc(a.snip); return '<div class="ixs">'+(re ? t.replace(re,'<mark>$1</mark>') : t)+'</div>'; };
-const artRow = (a, dt) => '<li><a class="ixa" href="/vidsum/article/'+encodeURIComponent(a.slug)+'">'+esc(a.title)+'</a>'+snipHtml(a)+'<div class="ixm">'
+const artRow = (a, dt) => '<li><a class="ixa" href="'+((window.pawedBM&&pawedBM.url)?pawedBM.url(a):'/vidsum/article/'+encodeURIComponent(a.slug))+'">'+esc(a.title)+'</a>'+snipHtml(a)+'<div class="ixm">'
   +'<span class="ixhosts">'+(a.hosts||[]).map(h=>'<a href="#e='+encodeURIComponent(h.id)+'">'+esc(h.name)+'</a>').join(', ')+'</span>'
   +'<span class="ixflag">'+FLAG(a.afc||ACC[a.lang])+'</span><span class="ixdate">'+esc(dt(a.released))+'</span></div></li>';
 async function entryView(param){

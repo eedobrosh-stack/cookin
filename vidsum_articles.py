@@ -2807,6 +2807,9 @@ def handle_get(handler, path, qs):
         return True
     if path.startswith(ART_PREFIX):
         slug = urllib.parse.unquote(path[len(ART_PREFIX):]).strip("/")
+        mp_ = re.search(r"~([0-9a-z]{8})$", slug)
+        if mp_:                                           # English-looking URL: <title words>~<id>
+            slug = slug_for_sid(mp_.group(1)) or slug
         a = None
         if slug and "/" not in slug and ".." not in slug:
             try:
