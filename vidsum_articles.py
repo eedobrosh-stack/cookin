@@ -1842,14 +1842,11 @@ def explicit_lang(handler, qs=None):
 
 
 def default_lang(handler):
-    """No choice made yet: Hebrew for Israel (and when the country is unknown), English for the rest of the world."""
-    for part in (handler.headers.get("Accept-Language") or "").split(","):        # the browser's own language list decides first
-        l = part.split(";")[0].strip().lower()[:2]
-        l = "he" if l in ("he", "iw") else l
-        if l in pawed_i18n.UI_LANGS:
-            return l
-    cc = (handler.headers.get("CF-IPCountry") or "").strip().upper()
-    if not cc or cc == "IL":
+    """No choice made yet: the language of the visitor's detected country (Hebrew for Israel); unknown or unresolved country: English."""
+    cc = viewer_country(handler)
+    if not cc:
+        return "en"
+    if cc == "IL":
         return "he"
     return geo_suites.GEOS[geo_suites.CC2SLUG[cc]][4] if cc in geo_suites.CC2SLUG else "en"
 
@@ -1859,13 +1856,13 @@ def request_lang(handler, qs=None):
 
 
 def show_il(handler, qs=None, user=None):
-    """Israeli (Hebrew-audio) content: shown to visitors in Israel or of unknown country, to admins, and to anyone who picked the Israeli flag."""
+    """Israeli (Hebrew-audio) content: shown to visitors in Israel, to admins, and to anyone who picked the Israeli flag."""
     if user and user.get("admin"):
         return True
     cc = viewer_country(handler)
-    if not cc or cc == "IL":
+    if cc == "IL":
         return True
-    return explicit_lang(handler, qs) == "he"
+    return explicit_lang(handler, qs) == "he"          # unknown / unresolved country: the US set, no Hebrew unless chosen
 
 
 def _hidden_names():

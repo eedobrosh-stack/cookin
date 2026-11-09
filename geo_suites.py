@@ -44,7 +44,7 @@ def norm(v):
 # ------------------------------------------------------------------ visitor geo
 def resolve(handler, qs=None):
     """-> (slugs, explicit). The content regions the visitor reads: ?geo= (one, for testing), the pawed_geos cookie (several),
-    the legacy pawed_geo cookie, else the detected country plus the United States. Unknown country: Israel plus the US."""
+    the legacy pawed_geo cookie, else the detected country plus the United States. Unknown country: the US."""
     q = ((qs or {}).get("geo") or [""])[0]
     if not q:
         m = re.search(r"[?&]geo=([A-Za-z_-]{2,20})", getattr(handler, "path", "") or "")
@@ -62,7 +62,7 @@ def resolve(handler, qs=None):
     if s:
         return [s], True
     cc = (handler.headers.get("CF-IPCountry") or "").strip().upper()
-    home = CC2SLUG.get(cc, "us") if len(cc) == 2 and cc.isalpha() and cc not in ("XX", "T1") else "il"
+    home = CC2SLUG.get(cc, "us") if len(cc) == 2 and cc.isalpha() and cc not in ("XX", "T1") else "us"
     return list(dict.fromkeys([home, "us"])), False
 
 
