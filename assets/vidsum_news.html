@@ -730,8 +730,8 @@ function ckShow(){
 function nav(){
   const n=document.getElementById('nav');
   const live=DATA.topics.filter(t=>DATA.items.some(a=>(a.topics||[a.topic]).includes(t)));   // a section with nothing in it (e.g. all its sources switched off) disappears
-  if(FILTER!=='all' && FILTER!==LIVE && FILTER!==COOK && !live.includes(FILTER)) FILTER='all';
-  n.innerHTML=['all',...live,LIVE,COOK].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?t_('main'):esc(TN(t)))+'</button>').join('');
+  if(FILTER!=='all' && !live.includes(FILTER)) FILTER='all';
+  n.innerHTML=['all',...live].map(t=>'<button data-f="'+esc(t)+'" class="'+(t===FILTER?'active':'')+'">'+(t==='all'?t_('main'):esc(TN(t)))+'</button>').join('');
   n.querySelectorAll('button').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f; nav(); render(); if(innerWidth<=640){ const w=document.querySelector('.nav-wrap'); if(w) w.scrollIntoView({behavior:'smooth',block:'start'}); } history.replaceState(null,'', hashOf(FILTER));});
 }
 document.getElementById('today').textContent = new Date().toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -760,7 +760,7 @@ function showSourcesHint(){
 fetch('/api/vidsum/news').then(r=>r.json()).then(j=>{
   if(EN) j.items.forEach(a=>{ if(a.title_en){ a.title=a.title_en; a.lead=a.lead_en||a.lead; } });
   applyStatic();
-  DATA=j; PLAT=j.platform||''; let h=decodeURIComponent(location.hash.slice(1)); h=UNSLUG[h.toLowerCase()]||h; if(j.topics.includes(h) || h===LIVE || h===COOK || h==='Live Shows') FILTER = h==='Live Shows' ? LIVE : h;
+  DATA=j; PLAT=j.platform||''; let h=decodeURIComponent(location.hash.slice(1)); h=UNSLUG[h.toLowerCase()]||h; if(j.topics.includes(h)) FILTER = h;
   const ul=document.querySelector('.utility-links');
   if(j.me) showSourcesHint();
   nav(); render();
