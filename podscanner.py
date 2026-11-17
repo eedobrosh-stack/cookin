@@ -75,6 +75,11 @@ def _load():
         if t not in st.get("topics", []) and not st.get("_t2"):
             st.setdefault("topics", []).append(t)
     st["_t2"] = True
+    if not st.get("_t3"):                                  # pods classified before the new sections existed: crime / history / comedy shows sit in "אחר" or "תרבות"; classify them again
+        for p in d["pods"].values():
+            if {"True Crime", "History", "Comedy"} & set((p.get("genres") or [])[:3]) and p.get("topic") in ("אחר", "תרבות"):
+                p.pop("classified", None)
+        st["_t3"] = True
     return d
 
 
@@ -380,7 +385,7 @@ def _classify_batch(batch):
               "language": p.get("language"), "description": (p.get("desc") or "")[:260]} for p in batch]
     prompt = ("Classify podcasts for a Hebrew news portal. For each item return: topic = exactly one of "
               + json.dumps(va.TOPICS + ["אחר"], ensure_ascii=False)
-              + " (judge the show's main subject; use \"אחר\" when none fits, e.g. kids, religion, music); hosts = the real person "
+              + " (judge the show's main subject: crime and cold-case shows = \"פשע אמיתי\", history shows = \"היסטוריה\", comedy and banter shows = \"קומדיה\"; use \"אחר\" when none fits, e.g. kids, religion, music); hosts = the real person "
               "names who host the show if you are confident (from the name/author text), else []. Never invent hosts. "
               'Reply with only JSON: {"<id>": {"topic": "...", "hosts": ["..."]}, ...}\n\n' + json.dumps(items, ensure_ascii=False))
     d, _, _ = va._luna(prompt, max_tokens=4000)
