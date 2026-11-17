@@ -138,6 +138,9 @@ T = {
     "Culture": ("Kultur", "Culture", "Cultura", "Cultura", "Cultura", "Cultuur"),
     "Lifestyle": ("Lifestyle", "Style de vie", "Lifestyle", "Estilo de vida", "Estilo de vida", "Lifestyle"),
     "Health": ("Gesundheit", "Santé", "Salute", "Salud", "Saúde", "Gezondheid"),
+    "True Crime": ("True Crime", "Faits divers", "True crime", "Crímenes reales", "Crimes reais", "True crime"),
+    "History": ("Geschichte", "Histoire", "Storia", "Historia", "História", "Geschiedenis"),
+    "Comedy": ("Comedy", "Humour", "Commedia", "Comedia", "Comédia", "Comedy"),
     "The full text is available in English and Hebrew.": ("Der vollständige Text ist auf Englisch und Hebräisch verfügbar.", "Le texte complet est disponible en anglais et en hébreu.", "Il testo completo è disponibile in inglese e in ebraico.", "El texto completo está disponible en inglés y hebreo.", "O texto completo está disponível em inglês e hebraico.", "De volledige tekst is beschikbaar in het Engels en Hebreeuws."),
     # article page chrome (server-rendered)
     "By": ("Von", "Par", "Di", "Por", "Por", "Door"),

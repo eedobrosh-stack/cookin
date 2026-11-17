@@ -277,9 +277,12 @@ def _unique_slug(title, vid):
 
 
 # ----------------------------------------------------------------- gemini ---
-TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות"]
+TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות", "פשע אמיתי", "היסטוריה", "קומדיה"]
 LIFESTYLE_HINT = ("לייפסטייל = ONLY advice and everyday-living subjects: relationships, psychology and wellbeing tips, parenting, food, beauty and fashion, personal growth. "
                   "A news event, incident, security, political or economic story is NEVER לייפסטייל, even when it is told as a personal testimony or a lessons-learned story")
+TOPIC_HINT = ("פשע אמיתי = real criminal cases, investigations, trials, cold cases and serial-crime storytelling (not today's crime news items, which stay in פוליטיקה or תרבות as before); "
+              "היסטוריה = history episodes about past events, eras, wars and figures told as history (a current-affairs story stays in פוליטיקה); "
+              "קומדיה = comedy shows, stand-up, sketch and banter chat shows whose main point is humour")
 SCHEMA = {
     "type": "OBJECT",
     "properties": {
@@ -450,7 +453,7 @@ LUNA_URL = "https://gw.lunaroute.com"
 LUNA_MODEL = os.environ.get("VIDSUM_LUNA_MODEL", "deepseek-4.1-flash")
 SCHEMA_HINT = """{"title": str, "standfirst": str, "topic": one of %s, "topics": [primary, optional secondary: from the same list], "lead": str, "key_points": [str],
  "blocks": [{"type": "h2"|"p"|"quote"|"list", "text": str, "ts": "m:ss or h:mm:ss", "speaker": str (quotes only), "items": [str] (list only)}]}""" % (json.dumps(TOPICS, ensure_ascii=False))
-SCHEMA_HINT += "\n" + LIFESTYLE_HINT
+SCHEMA_HINT += "\n" + LIFESTYLE_HINT + "; " + TOPIC_HINT
 
 
 def _clean_topics(topics, primary):
@@ -486,7 +489,7 @@ def backfill_topics(limit=12, redo=False, only=None):
             continue
         txt = a["title"] + "\n" + (a.get("standfirst") or "") + "\n" + "\n".join(a.get("key_points") or []) + "\n" + \
             " ".join(b.get("text", "") for b in a["blocks"] if b.get("type") == "p")[:1200]
-        prompt = ("Choose the news sections for this Hebrew podcast article. Allowed sections: " + json.dumps(TOPICS, ensure_ascii=False) + " (" + LIFESTYLE_HINT + ")"
+        prompt = ("Choose the news sections for this Hebrew podcast article. Allowed sections: " + json.dumps(TOPICS, ensure_ascii=False) + " (" + LIFESTYLE_HINT + "; " + TOPIC_HINT + ")"
                   + ". primary = the section the episode is mostly ABOUT (judge the subject, not the vocabulary: a conversation about a TV "
                   "show's history is תרבות even if it mentions money; stock-market analysis is כלכלה). secondary = ONE other section only if the "
                   'episode substantially covers it, otherwise null. Reply with only JSON: {"primary": "..", "secondary": ".." or null}\n\n' + txt[:3500])
@@ -1317,7 +1320,8 @@ def render_article(a, lang="he", platform=""):
 
 # ------------------------------------------------ generated cover art (no usable YouTube thumbnail) ---
 _COVER_ACC = {"כלכלה": "#e0a43a", "פוליטיקה": "#6fbf5a", "טכנולוגיה": "#ff6b4a", "ספורט": "#ff9a3c",
-              "תרבות": "#b07be0", "לייפסטייל": "#f07ab0", "בריאות": "#3fcfb4"}
+              "תרבות": "#b07be0", "לייפסטייל": "#f07ab0", "בריאות": "#3fcfb4",
+              "פשע אמיתי": "#8d99ae", "היסטוריה": "#c9a26b", "קומדיה": "#ffd23f"}
 _KEYS = [("chip", r"\bAI\b|בינה מלאכותית|GPT|סוכן|סוכנים|אלגוריתם|סייבר|הייטק|רובוט|OpenAI|אנטרופיק|צ'אט"),
          ("chart", r"מניות|בורסה|S&P|נאסד|שוק ההון|השקעות|מסחר|וול סטריט|כלכל|ריבית|אינפלציה|מטבע|קריפטו|דולר"),
          ("ball", r"כדורגל|ליגה|שחקן|קבוצ|מונדיאל|יורו|מאמן|כדורסל|ספורט|משחק"),
@@ -1325,7 +1329,7 @@ _KEYS = [("chip", r"\bAI\b|בינה מלאכותית|GPT|סוכן|סוכנים|�
          ("heart", r"בריאות|רפוא|מחל|סוכר|תזונה|מוח|דיאטה|שינה|רופא|טיפול"),
          ("mic", r"פודקאסט|ראיון|תרבות|מוזיק|סרט|טלוויזיה|סלבס|לייפסטייל|אופנה|קומדי|סאטיר")]
 _TOPIC_MOTIF = {"טכנולוגיה": "chip", "כלכלה": "chart", "ספורט": "ball", "פוליטיקה": "columns", "בריאות": "heart",
-                "תרבות": "mic", "לייפסטייל": "mic"}
+                "תרבות": "mic", "לייפסטייל": "mic", "פשע אמיתי": "mic", "היסטוריה": "mic", "קומדיה": "mic"}
 
 
 def _motif_name(a):

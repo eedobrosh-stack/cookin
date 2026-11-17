@@ -20,11 +20,14 @@ THEMES = {  # very mild page tint per portal category: bg, hairline, quote box, 
     "תרבות": ("#f7f1fb", "#e0d2ee", "#e8dbf4", "#5d2f87"),      # purple
     "לייפסטייל": ("#fdf0f6", "#f1cfdf", "#f9d9e7", "#9b2a5c"),     # pink
     "בריאות": ("#edf8f6", "#c9e6e0", "#d3efe9", "#17665a"),     # teal
+    "פשע אמיתי": ("#f1f3f6", "#d3d8e0", "#dfe3ea", "#2b3a4a"),  # slate
+    "היסטוריה": ("#f8f3ea", "#e6d9bf", "#efe3cb", "#6e4f1f"),   # sepia
+    "קומדיה": ("#fffbe6", "#f3e7a3", "#faf0b8", "#7a5d00"),     # gold
 }
 
 SITE = os.environ.get("PAWED_SITE", "https://pawed.io")      # public address (share links, canonical, og:url)
 
-TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות"]
+TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות", "פשע אמיתי", "היסטוריה", "קומדיה"]
 HE_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"]
 
 CSS = """
@@ -290,8 +293,8 @@ def clean_dashes(o, key=None):
 
 
 EN_TOPICS = {"פוליטיקה": "Politics", "טכנולוגיה": "Technology", "כלכלה": "Economy", "ספורט": "Sports", "תרבות": "Culture",
-             "לייפסטייל": "Lifestyle", "בריאות": "Health"}
-TOPIC_SLUG = {"פוליטיקה": "politics", "טכנולוגיה": "tech", "כלכלה": "economy", "ספורט": "sports", "תרבות": "culture", "לייפסטייל": "lifestyle", "בריאות": "health"}
+             "לייפסטייל": "Lifestyle", "בריאות": "Health", "פשע אמיתי": "True Crime", "היסטוריה": "History", "קומדיה": "Comedy"}
+TOPIC_SLUG = {"פוליטיקה": "politics", "טכנולוגיה": "tech", "כלכלה": "economy", "ספורט": "sports", "תרבות": "culture", "לייפסטייל": "lifestyle", "בריאות": "health", "פשע אמיתי": "true-crime", "היסטוריה": "history", "קומדיה": "comedy"}
 
 
 def tslug(t):

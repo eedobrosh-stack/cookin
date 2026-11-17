@@ -39,7 +39,7 @@ GENRES = {1301: "Arts", 1303: "Comedy", 1304: "Education", 1305: "Kids & Family"
 # Apple genre -> Pawed section, used until/unless the model classifies the pod
 GENRE_TOPIC = {"News": "פוליטיקה", "Government": "פוליטיקה", "Business": "כלכלה", "Technology": "טכנולוגיה", "Science": "טכנולוגיה",
                "Sports": "ספורט", "Health & Fitness": "בריאות", "TV & Film": "תרבות", "Music": "תרבות", "Arts": "תרבות",
-               "Comedy": "תרבות", "History": "תרבות", "Society & Culture": "תרבות", "True Crime": "תרבות", "Leisure": "תרבות",
+               "Comedy": "קומדיה", "History": "היסטוריה", "Society & Culture": "תרבות", "True Crime": "פשע אמיתי", "Leisure": "תרבות",
                "Education": "תרבות", "Religion & Spirituality": "תרבות", "Kids & Family": "תרבות"}
 
 DEFAULT_SETTINGS = {
@@ -47,7 +47,7 @@ DEFAULT_SETTINGS = {
     "min_episodes": 20,
     "max_gap_days": 21,          # typical gap between episodes
     "languages": ["he", "en"],
-    "topics": ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות"],
+    "topics": ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות", "פשע אמיתי", "היסטוריה", "קומדיה"],
     "block_genres": ["Kids & Family", "Religion & Spirituality", "Music"],
 }
 
@@ -71,6 +71,10 @@ def _load():
     st = d["settings"]
     if "רכילות" in st.get("topics", []):                 # category renamed 2026-10-20
         st["topics"] = ["לייפסטייל" if t == "רכילות" else t for t in st["topics"]]
+    for t in ("פשע אמיתי", "היסטוריה", "קומדיה"):          # sections added 2026-11-17: saved settings predate them
+        if t not in st.get("topics", []) and not st.get("_t2"):
+            st.setdefault("topics", []).append(t)
+    st["_t2"] = True
     return d
 
 

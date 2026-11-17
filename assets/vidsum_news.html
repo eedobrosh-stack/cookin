@@ -430,7 +430,7 @@ const I18N = {
 };
 const t = k => I18N[k] ? (EN ? trl(I18N[k][1]) : I18N[k][0]) : k, t_ = t;
 const LOC = LOCS[LANG]||'en-US';
-const TOPIC_EN = {'פוליטיקה':'Politics','טכנולוגיה':'Technology','כלכלה':'Economy','ספורט':'Sports','תרבות':'Culture','לייפסטייל':'Lifestyle','בריאות':'Health','הופעות חיות':'Live Shows','מבשלים':'Cooking'};
+const TOPIC_EN = {'פוליטיקה':'Politics','טכנולוגיה':'Technology','כלכלה':'Economy','ספורט':'Sports','תרבות':'Culture','לייפסטייל':'Lifestyle','בריאות':'Health','פשע אמיתי':'True Crime','היסטוריה':'History','קומדיה':'Comedy','הופעות חיות':'Live Shows','מבשלים':'Cooking'};
 const TN = x => EN ? trl(TOPIC_EN[x]||x) : x;     // display name of a section (the Hebrew name stays the internal key everywhere)
 const LV_CATS_EN = {Music:'Music', Comedy:'Stand-up & comedy', Dance:'Dance', Festival:'Festivals', Art:'Art'};
 function applyStatic(){ document.querySelectorAll('[data-i]').forEach(el=>{ const k=el.dataset.i; if(I18N[k]) el.textContent=t(k); });
@@ -451,11 +451,11 @@ function when(s, hasTime){
 const rel = a => when(a.released||a.created, a.released_time);
 const meta = a => [a.channel, a.minutes? t('summary')+a.minutes+t('min'):'', rel(a)].filter(Boolean).map(esc).join(' · ');
 let DATA = null, FILTER = 'all';
-const SLUGS = {'all':'home','פוליטיקה':'politics','טכנולוגיה':'tech','כלכלה':'economy','ספורט':'sports','תרבות':'culture','לייפסטייל':'lifestyle','בריאות':'health','הופעות חיות':'live-shows','מבשלים':'cooking'};
+const SLUGS = {'all':'home','פוליטיקה':'politics','טכנולוגיה':'tech','כלכלה':'economy','ספורט':'sports','תרבות':'culture','לייפסטייל':'lifestyle','בריאות':'health','פשע אמיתי':'true-crime','היסטוריה':'history','קומדיה':'comedy','הופעות חיות':'live-shows','מבשלים':'cooking'};
 const UNSLUG = Object.fromEntries(Object.entries(SLUGS).map(([k,v])=>[v,k]));
 const hashOf = f => '#'+encodeURIComponent(SLUGS[f]||f);
 
-const COL = {'פוליטיקה':'#b3171f','כלכלה':'#1b3f94','טכנולוגיה':'#0f2a5c','תרבות':'#6a2fa3','ספורט':'#1a7a3a','בריאות':'#0e7a6e','לייפסטייל':'#b0276a','הופעות חיות':'#c2410c','מבשלים':'#2f7d32'};
+const COL = {'פוליטיקה':'#b3171f','כלכלה':'#1b3f94','טכנולוגיה':'#0f2a5c','תרבות':'#6a2fa3','ספורט':'#1a7a3a','בריאות':'#0e7a6e','לייפסטייל':'#b0276a','פשע אמיתי':'#3b4a5e','היסטוריה':'#8a6a3b','קומדיה':'#b58900','הופעות חיות':'#c2410c','מבשלים':'#2f7d32'};
 const col = t => COL[t]||'#333';
 // the platform the reader listens on (Resources page choice; YouTube until they pick), shown as a small separate link next to an article
 let PLAT = '';
