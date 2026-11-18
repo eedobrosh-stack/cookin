@@ -3757,7 +3757,7 @@ def handle_post(handler, path, req):
                     d = _load_ch()
                     n = 0
                     for c in d["channels"]:
-                        if c["id"] in ids and c.get("kind") != "rss":
+                        if c["id"] in ids:
                             c["take_latest"] = 3
                             c["seen"] = []                      # the next scan sees the whole feed again; only the newest is taken
                             n += 1
