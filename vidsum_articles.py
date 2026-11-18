@@ -277,9 +277,10 @@ def _unique_slug(title, vid):
 
 
 # ----------------------------------------------------------------- gemini ---
-TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות", "פשע אמיתי", "היסטוריה", "קומדיה"]
-LIFESTYLE_HINT = ("לייפסטייל = ONLY advice and everyday-living subjects: relationships, psychology and wellbeing tips, parenting, food, beauty and fashion, personal growth. "
-                  "A news event, incident, security, political or economic story is NEVER לייפסטייל, even when it is told as a personal testimony or a lessons-learned story")
+TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "בריאות", "פשע אמיתי", "היסטוריה", "קומדיה"]
+TOPIC_ALIAS = {"לייפסטייל": "בריאות", "רכילות": "בריאות"}   # lifestyle was merged into Health on 2026-11-18
+LIFESTYLE_HINT = ("בריאות = health, fitness, nutrition AND everyday-living advice: psychology and wellbeing tips, relationships, parenting, food, beauty and fashion, personal growth. "
+                  "A news event, incident, security, political or economic story is NEVER בריאות, even when it is told as a personal testimony or a lessons-learned story")
 TOPIC_HINT = ("פשע אמיתי = real criminal cases, investigations, trials, cold cases and serial-crime storytelling (not today's crime news items, which stay in פוליטיקה or תרבות as before); "
               "היסטוריה = history episodes about past events, eras, wars and figures told as history (a current-affairs story stays in פוליטיקה); "
               "קומדיה = comedy shows, stand-up, sketch and banter chat shows whose main point is humour")
@@ -458,8 +459,9 @@ SCHEMA_HINT += "\n" + LIFESTYLE_HINT + "; " + TOPIC_HINT
 
 def _clean_topics(topics, primary):
     """1-3 valid sections, primary first."""
+    primary = TOPIC_ALIAS.get(primary, primary)
     out = [primary] if primary in TOPICS else []
-    for t in (topics if isinstance(topics, list) else []):
+    for t in (TOPIC_ALIAS.get(x, x) for x in (topics if isinstance(topics, list) else [])):
         if t in TOPICS and t not in out:
             out.append(t)
     return out[:2] or ["תרבות"]                       # one primary section and at most one secondary
@@ -1946,6 +1948,8 @@ def _load_ch():
     d.setdefault("channels", [])
     d.setdefault("log", [])
     for c in d["channels"]:
+        if c.get("vertical") in TOPIC_ALIAS:
+            c["vertical"] = TOPIC_ALIAS[c["vertical"]]
         url, lang, vert = _SEED.get(c["id"], (None, "he", "תרבות"))
         if c["id"].startswith("pending-"):
             c.setdefault("url", "")
@@ -2294,8 +2298,38 @@ def _server_captions_loop():
         time.sleep(10 if busy else 30)
 
 
+def _migrate_lifestyle():
+    """2026-11-18: the Lifestyle section was merged into Health; rewrite the stored articles once."""
+    n = 0
+    try:
+        names = [x for x in os.listdir(ART_DIR) if x.endswith(".json")]
+    except OSError:
+        return
+    for x in names:
+        pth = os.path.join(ART_DIR, x)
+        try:
+            with open(pth, encoding="utf-8") as f:
+                a = json.load(f)
+            if a.get("topic") not in TOPIC_ALIAS and not any(t in TOPIC_ALIAS for t in (a.get("topics") or [])):
+                continue
+            a["topics"] = _clean_topics(a.get("topics"), a.get("topic"))
+            a["topic"] = TOPIC_ALIAS.get(a.get("topic"), a.get("topic"))
+            tmp = pth + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(a, f, ensure_ascii=False)
+            os.replace(tmp, pth)
+            n += 1
+        except Exception as e:
+            log(f"vidsum lifestyle migration {x}: {str(e)[:100]}")
+    with LOCK:
+        d = _load_ch()
+        _save_ch(d)                                   # _load_ch already mapped the sources' verticals
+    log(f"vidsum lifestyle -> health: {n} articles migrated")
+
+
 def start_background():
     resume_stuck()
+    threading.Thread(target=_migrate_lifestyle, daemon=True).start()
     threading.Thread(target=backfill, daemon=True).start()
     threading.Thread(target=_watch_loop, daemon=True).start()
     threading.Thread(target=_rss_loop, daemon=True).start()

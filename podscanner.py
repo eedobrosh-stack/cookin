@@ -47,7 +47,7 @@ DEFAULT_SETTINGS = {
     "min_episodes": 20,
     "max_gap_days": 21,          # typical gap between episodes
     "languages": ["he", "en"],
-    "topics": ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות", "פשע אמיתי", "היסטוריה", "קומדיה"],
+    "topics": ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "בריאות", "פשע אמיתי", "היסטוריה", "קומדיה"],
     "block_genres": ["Kids & Family", "Religion & Spirituality", "Music"],
 }
 
@@ -75,6 +75,14 @@ def _load():
         if t not in st.get("topics", []) and not st.get("_t2"):
             st.setdefault("topics", []).append(t)
     st["_t2"] = True
+    st["topics"] = [t for t in st.get("topics", []) if t not in ("לייפסטייל", "רכילות")]      # merged into Health 2026-11-18
+    if "בריאות" not in st["topics"]:
+        st["topics"].append("בריאות")
+    for p in d["pods"].values():
+        if p.get("topic") in ("לייפסטייל", "רכילות"):
+            p["topic"] = "בריאות"
+        if p.get("manual") in ("לייפסטייל", "רכילות"):
+            p["manual"] = "בריאות"
     if not st.get("_t3"):                                  # pods classified before the new sections existed: crime / history / comedy shows sit in "אחר" or "תרבות"; classify them again
         for p in d["pods"].values():
             if {"True Crime", "History", "Comedy"} & set((p.get("genres") or [])[:3]) and p.get("topic") in ("אחר", "תרבות"):
@@ -576,7 +584,7 @@ def ingest(items, source="client"):
 # ------------------------------------------------------------------ public catalog (feeds the sources page for every signed-in user)
 QUALITY = {"min_episodes": 51, "max_days": 45, "min_score": 50}      # "high quality": >50 episodes, last episode <=45 days, chart score >=50
 _CAT = {"mtime": 0.0, "pods": []}
-_TOPIC_FIX = {"רכילות": "לייפסטייל"}
+_TOPIC_FIX = {"רכילות": "בריאות", "לייפסטייל": "בריאות"}
 
 
 def _catalog():

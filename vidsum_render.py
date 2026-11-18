@@ -27,7 +27,7 @@ THEMES = {  # very mild page tint per portal category: bg, hairline, quote box, 
 
 SITE = os.environ.get("PAWED_SITE", "https://pawed.io")      # public address (share links, canonical, og:url)
 
-TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "לייפסטייל", "בריאות", "פשע אמיתי", "היסטוריה", "קומדיה"]
+TOPICS = ["פוליטיקה", "טכנולוגיה", "כלכלה", "ספורט", "תרבות", "בריאות", "פשע אמיתי", "היסטוריה", "קומדיה"]
 HE_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"]
 
 CSS = """
@@ -431,8 +431,9 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
     if a["topic"] in tps:
         tps = [a["topic"]] + [t for t in tps if t != a["topic"]]
     crumb_topics = '<a href="%s/vidsum#%s">%s</a>' % (base, urllib.parse.quote(tslug(tps[0])), e(tname(tps[0])))   # one highlighted section; the others only list the story
+    present = {t for x in latest for t in (x.get("topics") or [x.get("topic")])} | set(tps)      # only sections that have articles
     nav = "".join(f'<a href="{base}/vidsum#{urllib.parse.quote(tslug(t))}" class="{"active" if t == tps[0] else ""}">{e(tname(t))}</a>'
-                  for t in TOPICS)
+                  for t in TOPICS if t in present)
     share_url = urllib.parse.quote(f'{SITE}/vidsum/article/{a["slug"]}', safe="")
     share_txt = urllib.parse.quote(a["title"], safe="")
     pl = platform_links(a, rss)

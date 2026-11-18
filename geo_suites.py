@@ -121,9 +121,19 @@ def channel_ok(c, channels, sel=None):
 def _load():
     try:
         with open(DATA_PATH, encoding="utf-8") as f:
-            return json.load(f)
+            d = json.load(f)
     except (OSError, ValueError):
         return {"suites": {}}
+    for su in (d.get("suites") or {}).values():          # Lifestyle was merged into Health (2026-11-18)
+        pods = su.get("pods") or {}
+        old = pods.pop("לייפסטייל", None)
+        if old:
+            have = pods.setdefault("בריאות", [])
+            ids = {x["id"] for x in have}
+            have.extend(x for x in old if x["id"] not in ids)
+            for x in have:
+                x["topic"] = "בריאות"
+    return d
 
 
 def _save(d):
