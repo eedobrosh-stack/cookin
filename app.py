@@ -43,6 +43,7 @@ SUMMER_PATH = os.path.join(ASSETS, "ilsummer.html")
 BARRACE_PATH = os.path.join(ASSETS, "barrace.html")
 INVADERS_PATH = os.path.join(ASSETS, "invaders.html")
 PADDLE_PATH = os.path.join(ASSETS, "paddle.html")
+RACER_PATH = os.path.join(ASSETS, "racer.html")
 SKI2027_PATH = os.path.join(ASSETS, "ski2027.html")
 BERNARD_PATH = os.path.join(ASSETS, "bernard.html")
 bernard.init(os.path.join(ASSETS, "bernard_db.json"), DATA_DIR)
@@ -537,6 +538,7 @@ SUMMER_PREFIX = (
 # Same wrapper for other artifact-style assets, different favicon.
 BARRACE_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127937;")
 PADDLE_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127955;")
+RACER_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127950;&#65039;")
 BERNARD_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#128722;")
 SKI2027_PREFIX = SUMMER_PREFIX.replace("&#9728;&#65039;", "&#127935;")
 
@@ -603,6 +605,78 @@ def paddle_add(name, score, level, platform=None):
         os.replace(tmp, PADDLE_SCORES_PATH)
     return top, rank
 
+
+# ---- Shadow Racer: best run per player and arena, with the recorded path (persistent disk) ----
+RACER_RUNS_PATH = os.path.join(DATA_DIR, "racer_runs.json")
+RACER_LOCK = threading.Lock()
+RACER_LAST_POST = {}
+
+def racer_load():
+    try:
+        with open(RACER_RUNS_PATH, encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def racer_name(name):
+    return re.sub(r"[\x00-\x1f<>&\"'`]", "", str(name or "")).strip()[:14] or "Anon"
+
+def racer_board(d, v, track):
+    return d.get("%d:%d" % (v, track), {})
+
+def racer_sorted(d, v, track):
+    return sorted(racer_board(d, v, track).values(), key=lambda e: e["t"])
+
+def racer_records(v):
+    d = racer_load()
+    out = {}
+    for t in range(0, 10):
+        top = racer_sorted(d, v, t)[:30]
+        if top:
+            out[str(t)] = [{"n": e["n"], "t": e["t"]} for e in top]
+    return out
+
+def racer_shadows(v, track):
+    """The 3 fastest players on this arena, each with the recorded path."""
+    d = racer_load()
+    return [{"n": e["n"], "t": e["t"], "s": e["s"]} for e in racer_sorted(d, v, track) if e.get("s")][:3]
+
+def racer_save(v, track, name, t, s):
+    v = int(v); track = int(track); t = float(t)
+    if not (0 < v < 100 and 0 <= track < 10):
+        raise ValueError("bad arena")
+    if not (5 <= t <= 900):
+        raise ValueError("bad time")
+    if not isinstance(s, list) or len(s) % 3 or not (6 <= len(s) <= 24000):
+        raise ValueError("bad path")
+    s = [int(x) for x in s]
+    if any(abs(x) > 200000 for x in s) or any(abs(s[i]) > 700 for i in range(2, len(s), 3)):
+        raise ValueError("bad path")
+    if abs(len(s) / 3 * 0.125 - t) > 4:
+        raise ValueError("path does not match time")
+    name = racer_name(name)
+    key = re.sub(r"\s+", " ", name).lower()
+    entry = {"n": name, "t": round(t, 3), "s": s, "ts": int(time.time() * 1000)}
+    with RACER_LOCK:
+        d = racer_load()
+        board = d.setdefault("%d:%d" % (v, track), {})
+        old = board.get(key)
+        saved = old is None or entry["t"] < old["t"]
+        if saved:
+            board[key] = entry
+            ranked = sorted(board.items(), key=lambda kv: kv[1]["t"])
+            for i, (k, e) in enumerate(ranked):
+                if i >= 10 and "s" in e:
+                    del e["s"]          # only the fastest 10 keep their path
+            os.makedirs(DATA_DIR, exist_ok=True)
+            tmp = RACER_RUNS_PATH + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(d, f)
+            os.replace(tmp, RACER_RUNS_PATH)
+        rank = 1 + sum(1 for e in board.values() if e["t"] < min(entry["t"], old["t"] if old else 1e9))
+    return saved, rank
+
 JARCUD_LANDING = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -650,6 +724,7 @@ JARCUD_ARTIFACTS = """<!doctype html>
 <a class="card" href="/barrace"><span class="e">&#127937;</span><span>Bar Race<small>7-color racing game</small></span></a>
 <a class="card" href="/invaders"><span class="e">&#128126;</span><span>Space Invaders<small>power-ups, UFOs, 8 space scenes</small></span></a>
 <a class="card" href="/paddle"><span class="e">&#127955;</span><span>Neon Paddle<small>brick-breaker with 10 power-up pills</small></span></a>
+<a class="card" href="/racer"><span class="e">&#127950;&#65039;</span><span>Shadow Racer<small>kart racing against the best runs of other players</small></span></a>
 <a class="card" href="/ski2027"><span class="e">&#127935;</span><span>Ski 2027<small>chalet candidates, 17–22 Feb 2027</small></span></a>
 <a class="card" href="/bernard"><span class="e">&#128722;</span><span>Bernard<small>רשימת קניות משפחתית</small></span></a>
 <a class="card" href="/vidsum"><span class="e">&#127916;</span><span>Pawed<small>News from podcast &amp; video summaries</small></span></a>
@@ -1070,6 +1145,13 @@ class Handler(SimpleHTTPRequestHandler):
             except OSError:
                 self._json({"error": "paddle not found"}, 404)
             return
+        if self._is_main_host() and p in ("/racer", "/racer/", "/shadowracer", "/shadowracer/"):
+            try:
+                with open(RACER_PATH, encoding="utf-8") as f:
+                    self._html(RACER_PREFIX + f.read(), "no-store")
+            except OSError:
+                self._json({"error": "racer not found"}, 404)
+            return
         # legacy path: the site used to be mounted at /cookin/ on jarcud.com
         if p == "/cookin" or p.startswith("/cookin/"):
             target = self.path[len("/cookin"):] or "/"
@@ -1123,6 +1205,20 @@ class Handler(SimpleHTTPRequestHandler):
         if p in ("/privacy", "/privacy/", "/terms", "/terms/"):
             self._html(PRIVACY_HTML)
             return
+        if p == "/api/racer/records":
+            rq = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            try:
+                self._json({"records": racer_records(int(rq.get("v", ["0"])[0]))})
+            except (ValueError, TypeError):
+                self._json({"error": "bad request"}, 400)
+            return
+        if p == "/api/racer/shadows":
+            rq = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            try:
+                self._json({"shadows": racer_shadows(int(rq.get("v", ["0"])[0]), int(rq.get("track", ["0"])[0]))})
+            except (ValueError, TypeError):
+                self._json({"error": "bad request"}, 400)
+            return
         if p == "/api/paddle/games":
             self._json({"games": paddle_games_load()})
             return
@@ -1175,6 +1271,23 @@ class Handler(SimpleHTTPRequestHandler):
         if p.startswith("/bernard/api/") and self._is_main_host():
             if bernard.handle_post(self, p, self._read_json()):
                 return
+        if p == "/api/racer/run":
+            ip = self.headers.get("CF-Connecting-IP") or self.client_address[0]
+            now = time.time()
+            if now - RACER_LAST_POST.get(ip, 0) < 2:
+                self._json({"error": "slow down"}, 429)
+                return
+            RACER_LAST_POST[ip] = now
+            if len(RACER_LAST_POST) > 5000:
+                RACER_LAST_POST.clear()
+            req = self._read_json() or {}
+            try:
+                saved, rank = racer_save(req.get("v"), req.get("track"), req.get("name"), req.get("time"), req.get("s"))
+            except (ValueError, TypeError):
+                self._json({"error": "bad run"}, 400)
+                return
+            self._json({"saved": saved, "reason": None if saved else "slower", "rank": rank})
+            return
         if p == "/api/paddle/game":
             req = self._read_json() or {}
             try:
