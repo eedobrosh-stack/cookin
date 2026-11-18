@@ -2595,6 +2595,7 @@ _ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 NEWS_PAGE = os.path.join(_ASSETS, "vidsum_news.html")
 V1_PAGE = os.path.join(_ASSETS, "vidsum_discover.html")
 SOURCES_PAGE = os.path.join(_ASSETS, "vidsum_sources.html")
+CHARTS_PAGE = os.path.join(_ASSETS, "vidsum_charts.html")
 BOOKMARKS_PAGE = os.path.join(_ASSETS, "vidsum_bookmarks.html")
 STATS_PAGE = os.path.join(_ASSETS, "vidsum_stats.html")
 ERR_PAGE = os.path.join(_ASSETS, "vidsum_err.html")
@@ -2974,6 +2975,23 @@ def handle_get(handler, path, qs):
         return True
     if path in ("/vidsum/sources", "/vidsum/sources/"):
         _serve(handler, SOURCES_PAGE, default_lang(handler))
+        return True
+    if path in ("/vidsum/charts", "/vidsum/charts/"):
+        _serve(handler, CHARTS_PAGE, default_lang(handler))
+        return True
+    if path in ("/api/vidsum/charts", "/api/vidsum/charts/options"):      # public: no sign-in needed to browse
+        import podscanner
+        user = current_user(handler)
+        hide = () if show_il(handler, qs, user) else ("he",)
+        g = lambda k: [x for x in (qs.get(k) or [""])[0].split(",") if x]
+        if path.endswith("/options"):
+            handler._json(dict(ok=True, **podscanner.charts_options(hide)))
+        else:
+            try:
+                pg = int((qs.get("page") or ["1"])[0])
+            except ValueError:
+                pg = 1
+            handler._json(dict(ok=True, **podscanner.charts_query(g("country"), g("language"), g("genre"), pg, hide)))
         return True
     if path.rstrip("/") in ("/vidsum/terms", "/vidsum/privacy", "/vidsum/takedown"):
         import pawed_legal

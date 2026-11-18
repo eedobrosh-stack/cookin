@@ -604,6 +604,8 @@ def _catalog():
             row["topic"] = _TOPIC_FIX.get(row["topic"], row["topic"])
             row["language"] = canon_lang(row["language"])
             row["_n"] = _nname(p["name"])
+            row["_ranks"] = {c: (r or 999) for c, r in (p.get("geo") or {}).items()}           # best Apple chart position per country (Charts page)
+            row["_genres"] = [g for g in (p.get("genres") or []) if g]
             row["_geo_all"] = sorted((p.get("geo") or {}), key=lambda c: ((p["geo"].get(c) or 999), c))     # every charted country, best rank first (the row keeps only 6)
             # the same show can be charted under several Apple ids (re-listed feeds): keep one, the best scored / most recently active
             key = row["_n"]
@@ -749,6 +751,74 @@ def catalog_origin(name):
                 m[r["_n"]] = first.upper()
         _LANG_IDX["omap"], _LANG_IDX["osrc"] = m, pods
     return _LANG_IDX["omap"].get(_nname(name), "")
+
+
+# ------------------------------------------------------------------ public Charts page
+_CAD_ORDER = [("daily", 0), ("2-3 / week", 1), ("weekly", 2), ("biweekly", 3), ("monthly", 4), ("rare", 5)]
+CHARTS_PAGE_SIZE = 100
+
+
+def _cad_rank(c):
+    c = (c or "").strip()
+    base = c.replace(" (irregular)", "")
+    for k, v in _CAD_ORDER:
+        if base == k:
+            return v + (0.5 if "(irregular)" in c else 0)
+    return 9
+
+
+def charts_options(hide=()):
+    langs, ctry, gen = {}, {}, {}
+    for r in _catalog():
+        if r["language"] in hide:
+            continue
+        if r["language"]:
+            langs[r["language"]] = langs.get(r["language"], 0) + 1
+        for c in r["_ranks"]:
+            if c in COUNTRIES and not (c == "il" and "he" in hide):
+                ctry[c] = ctry.get(c, 0) + 1
+        for g in set(r["_genres"]):
+            gen[g] = gen.get(g, 0) + 1
+    return {"languages": [{"code": k, "name": LANG_ENGLISH.get(k, k), "native": LANG_NATIVE.get(k, k), "n": v} for k, v in sorted(langs.items(), key=lambda kv: -kv[1])],
+            "countries": [{"code": c, "name": COUNTRIES[c][0], "n": n} for c, n in sorted(ctry.items(), key=lambda kv: -kv[1])],
+            "genres": [{"name": g, "n": n} for g, n in sorted(gen.items(), key=lambda kv: (-kv[1], kv[0]))]}
+
+
+def charts_query(countries=(), langs=(), genres=(), page=1, hide=()):
+    """Public popularity chart over the scanner catalog. Sort (in this order): Apple chart rank (best position in the chosen countries, else anywhere),
+    all-time episode count, cadence (daily first), last-episode date (newest first). Subscriber counts are not published by Apple or Spotify."""
+    countries, langs, genres = set(countries), set(langs), set(genres)
+    rows = []
+    for r in _catalog():
+        if r["language"] in hide:
+            continue
+        if langs and r["language"] not in langs:
+            continue
+        if genres and not (genres & set(r["_genres"])):
+            continue
+        rk = r["_ranks"]
+        if countries:
+            sel = [rk[c] for c in countries if c in rk]
+            if not sel:
+                continue
+            rank = min(sel)
+        else:
+            rank = min(rk.values()) if rk else 999
+        rows.append((rank, r))
+    rows.sort(key=lambda t: (t[0], -(t[1]["episodes"] or 0), _cad_rank(t[1]["cadence"]), -int((t[1]["last_ep"] or "0").replace("-", "") or 0), t[1]["name"].lower()))
+    total = len(rows)
+    page = max(1, int(page or 1))
+    lo = (page - 1) * CHARTS_PAGE_SIZE
+    mine = {_nname(c.get("name")) for c in va._load_ch()["channels"] if _nname(c.get("name"))}
+    out = []
+    for i, (rank, r) in enumerate(rows[lo:lo + CHARTS_PAGE_SIZE]):
+        k = _nname(r["name"])
+        out.append({"pos": lo + i + 1, "id": r["id"], "name": r["name"], "hosts": r["hosts"][:2], "image": r["image"], "language": r["language"],
+                    "genres": r["_genres"][:3], "rank": rank if rank < 999 else None,
+                    "countries": [{"code": c, "rank": v if v < 999 else None} for c, v in sorted(r["_ranks"].items(), key=lambda kv: (kv[1], kv[0])) if c in COUNTRIES][:4],
+                    "episodes": r["episodes"], "cadence": r["cadence"], "last_ep": r["last_ep"], "link": r["link"],
+                    "added": bool(len(k) >= 3 and any(o in k or k in o for o in mine))})
+    return {"total": total, "page": page, "size": CHARTS_PAGE_SIZE, "from": lo + 1 if total else 0, "to": min(lo + CHARTS_PAGE_SIZE, total), "pods": out}
 
 
 def catalog_pod(pid):

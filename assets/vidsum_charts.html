@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <script>(function(){var m=location.search.match(/[?&]geo=([A-Za-z_-]+)/);if(m){document.cookie="pawed_geo="+(m[1].toLowerCase()==="auto"?"; max-age=0":m[1].toLowerCase()+";max-age=31536000")+";path=/;samesite=lax";}})();</script>
+  <script>(function(){var m=document.cookie.match(/(?:^|;\s*)pawed_lang=(he|en|de|fr|it|es|pt|nl)/),l=m?m[1]:"he";window.LANG=l;var d=document.documentElement;d.lang=l;d.dir=l==="he"?"rtl":"ltr";})();</script>
+  <script src="/vidsum/i18n.js"></script>
+  <meta name="theme-color" content="#e3222b">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Charts | Pawed</title>
+  <meta name="description" content="Podcast charts by country, language and category">
+  <style>
+    :root { --red:#e3222b; --red-dark:#b9141c; --ink:#171717; --muted:#6c6c6c; --line:#e5e5e5; --soft:#f4f4f4; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:#fff; font-family:Arial, "Noto Sans Hebrew", sans-serif; }
+    a { color:inherit; text-decoration:none; }
+    .topline { height:5px; background:var(--red); }
+    .masthead, main { max-width:1180px; margin:auto; padding-inline:22px; }
+    .masthead { height:102px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+    .brand-wordmark { height:52px; display:block; }
+    .back { font-size:13px; color:#777; }
+    h1.page { font-size:34px; margin:6px 0 6px; letter-spacing:-1px; }
+    .lead-in { color:#555; margin:0 0 18px; line-height:1.5; max-width:820px; }
+    .filters { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; margin:0 0 14px; }
+    details.f { position:relative; }
+    details.f > summary { list-style:none; cursor:pointer; border:1px solid #cfcfcf; background:#fff; padding:9px 14px; font-size:14px; font-weight:700; border-radius:6px; min-width:150px; display:flex; justify-content:space-between; gap:10px; }
+    details.f > summary::-webkit-details-marker { display:none; }
+    details.f[open] > summary { border-color:var(--red); }
+    details.f .cnt { background:var(--red); color:#fff; border-radius:10px; padding:0 7px; font-size:12px; line-height:19px; }
+    .panel { position:absolute; z-index:20; top:100%; inset-inline-start:0; margin-top:4px; width:290px; background:#fff; border:1px solid #cfcfcf; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.14); padding:8px; }
+    .panel input[type=search] { width:100%; padding:7px 9px; border:1px solid #ddd; border-radius:4px; font-size:14px; margin-bottom:6px; }
+    .panel .list { max-height:260px; overflow:auto; }
+    .panel label { display:flex; align-items:center; gap:8px; padding:5px 4px; font-size:14px; cursor:pointer; }
+    .panel label:hover { background:var(--soft); }
+    .panel label small { margin-inline-start:auto; color:#999; }
+    .panel .clr { background:none; border:0; color:#1556d6; cursor:pointer; font-size:13px; padding:4px; }
+    .chips { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px; }
+    .chip { background:var(--soft); border:1px solid #ddd; border-radius:14px; padding:3px 10px; font-size:13px; cursor:pointer; }
+    .chip::after { content:" ×"; color:#999; }
+    .bar { display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; margin:6px 0 10px; font-size:14px; color:#444; }
+    .bar b { color:var(--ink); }
+    .note { font-size:12px; color:#888; margin:0 0 12px; }
+    .tw { overflow-x:auto; border-top:3px solid var(--ink); }
+    table { width:100%; border-collapse:collapse; font-size:14px; min-width:860px; }
+    th { text-align:start; font-size:12px; color:#777; font-weight:700; padding:10px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+    td { padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+    td.pos { color:#999; width:46px; font-variant-numeric:tabular-nums; }
+    .pod { display:flex; align-items:center; gap:12px; min-width:240px; }
+    .pod img { width:48px; height:48px; border-radius:6px; object-fit:cover; background:#eee; flex:none; }
+    .pod b { display:block; font-size:15px; line-height:1.25; }
+    .pod small { color:#888; }
+    .rk { font-weight:800; font-variant-numeric:tabular-nums; }
+    .ctry { color:#888; font-size:12px; }
+    .gen { font-size:12px; color:#555; }
+    .add { border:1px solid var(--red); background:var(--red); color:#fff; font-weight:700; font-size:13px; padding:7px 12px; border-radius:5px; cursor:pointer; white-space:nowrap; }
+    .add:disabled { background:#eee; border-color:#ddd; color:#777; cursor:default; }
+    .pager { display:flex; justify-content:space-between; align-items:center; margin:16px 0 50px; gap:12px; }
+    .pager button { border:1px solid #bbb; background:#fff; padding:9px 18px; font-weight:700; border-radius:5px; cursor:pointer; font-size:14px; }
+    .pager button:disabled { opacity:.35; cursor:default; }
+    .empty { padding:40px 0; color:#777; text-align:center; }
+    #toast { position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:50; max-width:90vw; padding:12px 18px; border-radius:6px; font-size:14px; color:#fff; background:#18723a; box-shadow:0 6px 22px rgba(0,0,0,.25); display:none; }
+    #toast.err { background:#b9141c; } #toast.info { background:#333; }
+    #toast a { text-decoration:underline; }
+    @media (max-width:640px) { .masthead, main { padding-inline:14px; } h1.page { font-size:27px; } .panel { width:260px; } }
+  </style>
+</head>
+<body>
+  <div class="topline"></div>
+  <header class="masthead">
+    <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
+    <a class="back" href="/vidsum" id="back"></a>
+  </header>
+  <main>
+    <h1 class="page" id="h1"></h1>
+    <p class="lead-in" id="lead"></p>
+    <div class="filters" id="filters"></div>
+    <div class="chips" id="chips"></div>
+    <div class="bar"><span id="range"></span></div>
+    <div class="tw"><table><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
+    <div id="empty" class="empty" hidden></div>
+    <div class="pager"><button id="prev"></button><span id="range2" style="color:#666;font-size:14px"></span><button id="next"></button></div>
+    <p class="note" id="note"></p>
+  </main>
+  <div id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const LANG=window.LANG||'he';
+const S={
+ en:{title:'Charts',back:'← Back to the home page',lead:'The most popular podcasts worldwide, from the Apple Podcasts charts of 25 countries. Filter by country, language and category, and add any show to your sources.',
+  country:'Country',language:'Language',category:'Category',search:'Search…',clear:'Clear',any:'All',
+  rank:'Chart rank',eps:'Episodes',cad:'Cadence',last:'Last episode',pod:'Podcast',add:'Add as source',added:'In your sources',already:'Already in the sources',
+  of:'of',prev:'← Previous 100',next:'Next 100 →',none:'No podcasts match these filters.',
+  ok:'✓ Added {n} source. Its new content will appear on the site in the coming hours.',notadded:'❌ Not added: ',signin:'Sign in with Google to add sources',signinlink:'Sign in',
+  note:'Sorted by: 1) chart rank (best position in the selected countries, otherwise anywhere), 2) all-time number of episodes, 3) cadence, 4) last episode date. Subscriber counts are not published by Apple or Spotify, so they are not used.',
+  daily:'Daily','2-3 / week':'2-3 / week',weekly:'Weekly',biweekly:'Every 2 weeks',monthly:'Monthly',rare:'Rare',irr:'irregular',pos:'#'},
+ he:{title:'צ׳ארטים',back:'← חזרה לעמוד הראשי',lead:'הפודקאסטים הפופולריים בעולם, מתוך הצ׳ארטים של Apple Podcasts ב-25 מדינות. סננו לפי מדינה, שפה וקטגוריה, והוסיפו כל תוכנית למקורות שלכם.',
+  country:'מדינה',language:'שפה',category:'קטגוריה',search:'חיפוש…',clear:'נקה',any:'הכול',
+  rank:'דירוג בצ׳ארט',eps:'פרקים',cad:'תדירות',last:'פרק אחרון',pod:'פודקאסט',add:'הוסף למקורות',added:'ברשימת המקורות',already:'כבר ברשימה',
+  of:'מתוך',prev:'100 הקודמים →',next:'← 100 הבאים',none:'לא נמצאו פודקאסטים לסינון הזה.',
+  ok:'✓ נוספו {n} מקורות. התוכן החדש שלהם יופיע באתר בשעות הקרובות.',notadded:'❌ לא נוספו: ',signin:'התחברו עם Google כדי להוסיף מקורות',signinlink:'התחברות',
+  note:'מיון לפי: 1) דירוג בצ׳ארט (המיקום הטוב ביותר במדינות שנבחרו, אחרת בכל מקום), 2) מספר הפרקים הכולל, 3) תדירות, 4) תאריך הפרק האחרון. מספר מנויים אינו מפורסם על ידי Apple או Spotify ולכן אינו בשימוש.',
+  daily:'יומי','2-3 / week':'2-3 בשבוע',weekly:'שבועי',biweekly:'אחת לשבועיים',monthly:'חודשי',rare:'נדיר',irr:'לא סדיר',pos:'#'},
+ de:{title:'Charts',back:'← Zurück zur Startseite',lead:'Die beliebtesten Podcasts weltweit, aus den Apple-Podcasts-Charts von 25 Ländern. Nach Land, Sprache und Kategorie filtern und jede Sendung zu den eigenen Quellen hinzufügen.',
+  country:'Land',language:'Sprache',category:'Kategorie',search:'Suchen…',clear:'Zurücksetzen',any:'Alle',rank:'Chart-Rang',eps:'Folgen',cad:'Rhythmus',last:'Letzte Folge',pod:'Podcast',add:'Als Quelle hinzufügen',added:'In deinen Quellen',already:'Schon in den Quellen',
+  of:'von',prev:'← Vorherige 100',next:'Nächste 100 →',none:'Keine Podcasts für diese Filter.',ok:'✓ {n} Quelle hinzugefügt. Die neuen Inhalte erscheinen in den nächsten Stunden auf der Seite.',notadded:'❌ Nicht hinzugefügt: ',signin:'Mit Google anmelden, um Quellen hinzuzufügen',signinlink:'Anmelden',
+  note:'Sortierung: 1) Chart-Rang (beste Platzierung in den gewählten Ländern, sonst überall), 2) Gesamtzahl der Folgen, 3) Rhythmus, 4) Datum der letzten Folge. Abonnentenzahlen veröffentlichen Apple und Spotify nicht, daher werden sie nicht genutzt.',
+  daily:'Täglich','2-3 / week':'2-3 / Woche',weekly:'Wöchentlich',biweekly:'Alle 2 Wochen',monthly:'Monatlich',rare:'Selten',irr:'unregelmäßig',pos:'#'},
+ fr:{title:'Classements',back:'← Retour à l’accueil',lead:'Les podcasts les plus populaires au monde, d’après les classements Apple Podcasts de 25 pays. Filtrez par pays, langue et catégorie, et ajoutez n’importe quelle émission à vos sources.',
+  country:'Pays',language:'Langue',category:'Catégorie',search:'Rechercher…',clear:'Effacer',any:'Tous',rank:'Rang',eps:'Épisodes',cad:'Rythme',last:'Dernier épisode',pod:'Podcast',add:'Ajouter comme source',added:'Dans vos sources',already:'Déjà dans les sources',
+  of:'sur',prev:'← 100 précédents',next:'100 suivants →',none:'Aucun podcast pour ces filtres.',ok:'✓ {n} source ajoutée. Son nouveau contenu apparaîtra sur le site dans les prochaines heures.',notadded:'❌ Non ajouté : ',signin:'Connectez-vous avec Google pour ajouter des sources',signinlink:'Se connecter',
+  note:'Tri : 1) rang au classement (meilleure place dans les pays choisis, sinon partout), 2) nombre total d’épisodes, 3) rythme, 4) date du dernier épisode. Apple et Spotify ne publient pas le nombre d’abonnés, il n’est donc pas utilisé.',
+  daily:'Quotidien','2-3 / week':'2-3 / semaine',weekly:'Hebdomadaire',biweekly:'Toutes les 2 semaines',monthly:'Mensuel',rare:'Rare',irr:'irrégulier',pos:'#'},
+ it:{title:'Classifiche',back:'← Torna alla home',lead:'I podcast più popolari al mondo, dalle classifiche di Apple Podcasts di 25 paesi. Filtra per paese, lingua e categoria e aggiungi qualsiasi programma alle tue fonti.',
+  country:'Paese',language:'Lingua',category:'Categoria',search:'Cerca…',clear:'Azzera',any:'Tutti',rank:'Posizione',eps:'Episodi',cad:'Cadenza',last:'Ultimo episodio',pod:'Podcast',add:'Aggiungi come fonte',added:'Nelle tue fonti',already:'Già nelle fonti',
+  of:'di',prev:'← Precedenti 100',next:'Successivi 100 →',none:'Nessun podcast per questi filtri.',ok:'✓ {n} fonte aggiunta. I suoi nuovi contenuti appariranno sul sito nelle prossime ore.',notadded:'❌ Non aggiunto: ',signin:'Accedi con Google per aggiungere fonti',signinlink:'Accedi',
+  note:'Ordinamento: 1) posizione in classifica (migliore nei paesi scelti, altrimenti ovunque), 2) numero totale di episodi, 3) cadenza, 4) data dell’ultimo episodio. Apple e Spotify non pubblicano il numero di iscritti, quindi non è usato.',
+  daily:'Giornaliero','2-3 / week':'2-3 / settimana',weekly:'Settimanale',biweekly:'Ogni 2 settimane',monthly:'Mensile',rare:'Raro',irr:'irregolare',pos:'#'},
+ es:{title:'Listas',back:'← Volver al inicio',lead:'Los podcasts más populares del mundo, según las listas de Apple Podcasts de 25 países. Filtra por país, idioma y categoría y añade cualquier programa a tus fuentes.',
+  country:'País',language:'Idioma',category:'Categoría',search:'Buscar…',clear:'Borrar',any:'Todos',rank:'Posición',eps:'Episodios',cad:'Frecuencia',last:'Último episodio',pod:'Podcast',add:'Añadir como fuente',added:'En tus fuentes',already:'Ya está en las fuentes',
+  of:'de',prev:'← 100 anteriores',next:'100 siguientes →',none:'Ningún podcast con estos filtros.',ok:'✓ {n} fuente añadida. Su contenido nuevo aparecerá en el sitio en las próximas horas.',notadded:'❌ No añadido: ',signin:'Inicia sesión con Google para añadir fuentes',signinlink:'Iniciar sesión',
+  note:'Orden: 1) posición en la lista (la mejor en los países elegidos, si no en cualquiera), 2) número total de episodios, 3) frecuencia, 4) fecha del último episodio. Apple y Spotify no publican el número de suscriptores, por eso no se usa.',
+  daily:'Diario','2-3 / week':'2-3 / semana',weekly:'Semanal',biweekly:'Cada 2 semanas',monthly:'Mensual',rare:'Raro',irr:'irregular',pos:'#'},
+ pt:{title:'Paradas',back:'← Voltar ao início',lead:'Os podcasts mais populares do mundo, segundo as paradas do Apple Podcasts de 25 países. Filtre por país, idioma e categoria e adicione qualquer programa às suas fontes.',
+  country:'País',language:'Idioma',category:'Categoria',search:'Buscar…',clear:'Limpar',any:'Todos',rank:'Posição',eps:'Episódios',cad:'Frequência',last:'Último episódio',pod:'Podcast',add:'Adicionar como fonte',added:'Nas suas fontes',already:'Já está nas fontes',
+  of:'de',prev:'← 100 anteriores',next:'Próximos 100 →',none:'Nenhum podcast para estes filtros.',ok:'✓ {n} fonte adicionada. O conteúdo novo aparecerá no site nas próximas horas.',notadded:'❌ Não adicionado: ',signin:'Entre com o Google para adicionar fontes',signinlink:'Entrar',
+  note:'Ordem: 1) posição na parada (a melhor nos países escolhidos, senão em qualquer lugar), 2) total de episódios, 3) frequência, 4) data do último episódio. Apple e Spotify não divulgam o número de assinantes, por isso não é usado.',
+  daily:'Diário','2-3 / week':'2-3 / semana',weekly:'Semanal',biweekly:'A cada 2 semanas',monthly:'Mensal',rare:'Raro',irr:'irregular',pos:'#'},
+ nl:{title:'Hitlijsten',back:'← Terug naar de homepage',lead:'De populairste podcasts ter wereld, uit de Apple Podcasts-hitlijsten van 25 landen. Filter op land, taal en categorie en voeg elk programma toe aan je bronnen.',
+  country:'Land',language:'Taal',category:'Categorie',search:'Zoeken…',clear:'Wissen',any:'Alle',rank:'Positie',eps:'Afleveringen',cad:'Frequentie',last:'Laatste aflevering',pod:'Podcast',add:'Toevoegen als bron',added:'In je bronnen',already:'Al in de bronnen',
+  of:'van',prev:'← Vorige 100',next:'Volgende 100 →',none:'Geen podcasts voor deze filters.',ok:'✓ {n} bron toegevoegd. De nieuwe inhoud verschijnt de komende uren op de site.',notadded:'❌ Niet toegevoegd: ',signin:'Log in met Google om bronnen toe te voegen',signinlink:'Inloggen',
+  note:'Sortering: 1) positie in de hitlijst (beste in de gekozen landen, anders overal), 2) totaal aantal afleveringen, 3) frequentie, 4) datum van de laatste aflevering. Apple en Spotify publiceren geen abonneeaantallen, dus die worden niet gebruikt.',
+  daily:'Dagelijks','2-3 / week':'2-3 / week',weekly:'Wekelijks',biweekly:'Om de 2 weken',monthly:'Maandelijks',rare:'Zelden',irr:'onregelmatig',pos:'#'}
+};
+const T=S[LANG]||S.en, tt=k=>T[k]||S.en[k]||k;
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+let RN, LN; try{ RN=new Intl.DisplayNames([LANG],{type:'region'}); LN=new Intl.DisplayNames([LANG],{type:'language'}); }catch(e){}
+const regionName=(c,fb)=>{ try{ return (RN&&RN.of(c.toUpperCase()))||fb; }catch(e){ return fb; } };
+const langName=(c,fb)=>{ try{ return (LN&&LN.of(c))||fb; }catch(e){ return fb; } };
+const FLAG=c=>c.length===2?String.fromCodePoint(...c.toUpperCase().split('').map(x=>127397+x.charCodeAt(0))):'';
+let OPT=null, SEL={country:new Set(),language:new Set(),genre:new Set()}, PAGE=1, ME={signed:false}, DATA=null;
+
+function readUrl(){ const q=new URLSearchParams(location.search); for(const k of Object.keys(SEL)) SEL[k]=new Set((q.get(k)||'').split(',').filter(Boolean)); PAGE=Math.max(1,parseInt(q.get('page')||'1',10)||1); }
+function writeUrl(){ const q=new URLSearchParams(); for(const k of Object.keys(SEL)) if(SEL[k].size) q.set(k,[...SEL[k]].join(',')); if(PAGE>1) q.set('page',PAGE); history.replaceState(null,'',location.pathname+(q.toString()?'?'+q:'')); }
+
+function labelOf(kind,v){
+  if(kind==='country'){ const o=OPT.countries.find(x=>x.code===v); return FLAG(v)+' '+regionName(v,o?o.name:v); }
+  if(kind==='language'){ const o=OPT.languages.find(x=>x.code===v); return langName(v,o?o.name:v); }
+  return v;
+}
+function items(kind){
+  if(kind==='country') return OPT.countries.map(o=>({v:o.code,n:o.n,l:labelOf('country',o.code)}));
+  if(kind==='language') return OPT.languages.map(o=>({v:o.code,n:o.n,l:labelOf('language',o.code)}));
+  return OPT.genres.map(o=>({v:o.name,n:o.n,l:o.name}));
+}
+function buildFilters(){
+  const kinds=[['country',tt('country')],['language',tt('language')],['genre',tt('category')]];
+  const open=new Set([...document.querySelectorAll('details.f[open]')].map(d=>d.dataset.k));
+  $('filters').innerHTML=kinds.map(([k,name])=>{
+    const n=SEL[k].size;
+    return '<details class="f" data-k="'+k+'"'+(open.has(k)?' open':'')+'><summary><span>'+esc(name)+'</span>'+(n?'<span class="cnt">'+n+'</span>':'')+'</summary><div class="panel"><input type="search" placeholder="'+esc(tt('search'))+'"><div class="list">'+
+      items(k).map(it=>'<label data-s="'+esc(it.l.toLowerCase())+'"><input type="checkbox" value="'+esc(it.v)+'"'+(SEL[k].has(it.v)?' checked':'')+'><span>'+esc(it.l)+'</span><small>'+it.n.toLocaleString()+'</small></label>').join('')+
+      '</div><button class="clr" type="button">'+esc(tt('clear'))+'</button></div></details>';
+  }).join('');
+  document.querySelectorAll('details.f').forEach(d=>{
+    const k=d.dataset.k;
+    d.querySelector('input[type=search]').oninput=e=>{ const q=e.target.value.trim().toLowerCase(); d.querySelectorAll('label').forEach(l=>l.style.display=!q||l.dataset.s.includes(q)?'':'none'); };
+    d.querySelectorAll('label input').forEach(c=>c.onchange=()=>{ c.checked?SEL[k].add(c.value):SEL[k].delete(c.value); PAGE=1; load(true); });
+    d.querySelector('.clr').onclick=()=>{ SEL[k].clear(); PAGE=1; load(true); };
+  });
+  $('chips').innerHTML=kinds.flatMap(([k])=>[...SEL[k]].map(v=>'<span class="chip" data-k="'+k+'" data-v="'+esc(v)+'">'+esc(labelOf(k,v))+'</span>')).join('');
+  $('chips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ SEL[c.dataset.k].delete(c.dataset.v); PAGE=1; load(true); });
+}
+document.addEventListener('click',e=>{ document.querySelectorAll('details.f[open]').forEach(d=>{ if(!d.contains(e.target)) d.open=false; }); });
+
+function cadLabel(c){ if(!c) return '–'; const irr=/\(irregular\)/.test(c), b=c.replace(' (irregular)',''); return esc(tt(b))+(irr?' <small style="color:#999">('+esc(tt('irr'))+')</small>':''); }
+function fmtDate(s){ if(!s) return '–'; try{ return new Date(s+'T12:00:00').toLocaleDateString(LANG,{year:'numeric',month:'short',day:'numeric'}); }catch(e){ return s; } }
+
+function render(){
+  const d=DATA, rows=d.pods;
+  $('thead').innerHTML='<tr><th>'+tt('pos')+'</th><th>'+tt('pod')+'</th><th>'+tt('rank')+'</th><th>'+tt('eps')+'</th><th>'+tt('cad')+'</th><th>'+tt('last')+'</th><th>'+tt('category')+'</th><th></th></tr>';
+  $('empty').hidden=!!rows.length; $('empty').textContent=tt('none');
+  const rng=d.total?(d.from.toLocaleString()+'–'+d.to.toLocaleString()+' '+tt('of')+' '+d.total.toLocaleString()):'0';
+  $('range').innerHTML='<b>'+rng+'</b>'; $('range2').textContent=rng;
+  $('prev').disabled=d.page<=1; $('next').disabled=d.to>=d.total;
+  $('rows').innerHTML=rows.map(p=>{
+    const ctry=p.countries.map(c=>FLAG(c.code)+(c.rank?' #'+c.rank:'')).join('  ');
+    const btn=p.added?'<button class="add" disabled>'+esc(tt('added'))+'</button>':'<button class="add" data-id="'+esc(p.id)+'">'+esc(tt('add'))+'</button>';
+    return '<tr><td class="pos">'+p.pos+'</td><td><div class="pod">'+(p.image?'<img loading="lazy" src="'+esc(p.image)+'" alt="">':'<img alt="">')+'<div><b>'+(p.link?'<a href="'+esc(p.link)+'" target="_blank" rel="noopener">'+esc(p.name)+'</a>':esc(p.name))+'</b><small>'+esc((p.hosts||[]).join(', '))+'</small></div></div></td>'+
+      '<td><span class="rk">'+(p.rank?'#'+p.rank:'–')+'</span><div class="ctry">'+ctry+'</div></td><td>'+(p.episodes!=null?p.episodes.toLocaleString():'–')+'</td><td>'+cadLabel(p.cadence)+'</td><td>'+fmtDate(p.last_ep)+'</td>'+
+      '<td class="gen">'+esc(langName(p.language,p.language))+' · '+esc((p.genres||[]).join(', '))+'</td><td>'+btn+'</td></tr>';
+  }).join('');
+  $('rows').querySelectorAll('button.add[data-id]').forEach(b=>b.onclick=()=>addSource(b));
+}
+let tmr; function toast(html,cls,keep){ const t=$('toast'); t.className=cls||''; t.innerHTML=html; t.style.display='block'; clearTimeout(tmr); if(!keep) tmr=setTimeout(()=>t.style.display='none',9000); }
+async function addSource(b){
+  if(!ME.signed){ toast(esc(tt('signin'))+' · <a href="/auth/login?next='+encodeURIComponent(location.pathname+location.search)+'">'+esc(tt('signinlink'))+'</a>','info',true); return; }
+  b.disabled=true; const name=b.closest('tr').querySelector('.pod b').textContent;
+  try{
+    const r=await fetch('/api/vidsum/sources/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({catalog_id:b.dataset.id})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||j.ok===false) throw new Error(j.error||('HTTP '+r.status));
+    b.textContent=tt('added'); toast(esc(tt('ok').replace('{n}','1')));
+  }catch(e){ b.disabled=false; toast(esc(tt('notadded')+name+' ('+e.message+')'),'err'); }
+}
+async function load(rebuild){
+  writeUrl(); if(rebuild) buildFilters();
+  const q=new URLSearchParams({page:PAGE}); for(const k of Object.keys(SEL)) if(SEL[k].size) q.set(k,[...SEL[k]].join(','));
+  $('rows').style.opacity=.4;
+  try{ DATA=await (await fetch('/api/vidsum/charts?'+q)).json(); }catch(e){ DATA={pods:[],total:0,page:1,from:0,to:0}; }
+  $('rows').style.opacity=1; render();
+}
+$('prev').onclick=()=>{ PAGE=Math.max(1,PAGE-1); load(); window.scrollTo({top:0,behavior:'smooth'}); };
+$('next').onclick=()=>{ PAGE++; load(); window.scrollTo({top:0,behavior:'smooth'}); };
+(async function(){
+  document.title=tt('title')+' | Pawed'; $('h1').textContent=tt('title'); $('lead').textContent=tt('lead'); $('back').textContent=tt('back'); $('note').textContent=tt('note');
+  $('prev').textContent=tt('prev'); $('next').textContent=tt('next');
+  readUrl();
+  try{ ME=await (await fetch('/api/vidsum/me')).json(); }catch(e){}
+  try{ OPT=await (await fetch('/api/vidsum/charts/options')).json(); }catch(e){ OPT={countries:[],languages:[],genres:[]}; }
+  await load(true);
+})();
+</script>
+</body>
+</html>
