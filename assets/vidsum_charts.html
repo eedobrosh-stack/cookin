@@ -214,7 +214,7 @@ async function load(rebuild){
 $('prev').onclick=()=>{ PAGE=Math.max(1,PAGE-1); load(); window.scrollTo({top:0,behavior:'smooth'}); };
 $('next').onclick=()=>{ PAGE++; load(); window.scrollTo({top:0,behavior:'smooth'}); };
 (async function(){
-  document.title=tt('title')+' | Pawed'; $('h1').textContent=tt('title'); if(window.piT) $('ix').textContent=piT('Index',LANG); $('lead').textContent=tt('lead'); $('back').textContent=tt('back'); $('note').textContent=tt('note');
+  document.title=tt('title')+' | Pawed'; $('h1').textContent=tt('title'); $('ix').textContent=LANG==='he'?'אינדקס':(window.piT?piT('Index',LANG):'Index'); $('lead').textContent=tt('lead'); $('back').textContent=tt('back'); $('note').textContent=tt('note');
   $('prev').textContent=tt('prev'); $('next').textContent=tt('next');
   readUrl();
   try{ ME=await (await fetch('/api/vidsum/me')).json(); }catch(e){}
