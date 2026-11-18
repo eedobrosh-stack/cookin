@@ -785,7 +785,7 @@ def charts_options(hide=()):
 
 
 def charts_query(countries=(), langs=(), genres=(), page=1, hide=()):
-    """Public popularity chart over the scanner catalog. Sort (in this order): Apple chart rank (best position in the chosen countries, else anywhere),
+    """Public popularity chart over the scanner catalog. Sort (in this order): chart points (sum of 101 - best Apple chart position over the chosen countries, else all),
     all-time episode count, cadence (daily first), last-episode date (newest first). Subscriber counts are not published by Apple or Spotify."""
     countries, langs, genres = set(countries), set(langs), set(genres)
     rows = []
@@ -797,15 +797,14 @@ def charts_query(countries=(), langs=(), genres=(), page=1, hide=()):
         if genres and not (genres & set(r["_genres"])):
             continue
         rk = r["_ranks"]
-        if countries:
-            sel = [rk[c] for c in countries if c in rk]
-            if not sel:
-                continue
-            rank = min(sel)
-        else:
-            rank = min(rk.values()) if rk else 999
-        rows.append((rank, r))
-    rows.sort(key=lambda t: (t[0], -(t[1]["episodes"] or 0), _cad_rank(t[1]["cadence"]), -int((t[1]["last_ep"] or "0").replace("-", "") or 0), t[1]["name"].lower()))
+        sel = [v for c, v in rk.items() if c in COUNTRIES and (not countries or c in countries)]
+        if countries and not sel:
+            continue
+        # one long ranking instead of many shared #1s: chart points = sum over the countries counted of (101 - position), so a show charting high in
+        # many countries outranks one that is #1 in a single genre chart
+        pts = sum(max(1, 101 - (v if v < 999 else 100)) for v in sel)
+        rows.append((pts, r))
+    rows.sort(key=lambda t: (-t[0], -(t[1]["episodes"] or 0), _cad_rank(t[1]["cadence"]), -int((t[1]["last_ep"] or "0").replace("-", "") or 0), t[1]["name"].lower()))
     total = len(rows)
     page = max(1, int(page or 1))
     lo = (page - 1) * CHARTS_PAGE_SIZE
@@ -814,7 +813,7 @@ def charts_query(countries=(), langs=(), genres=(), page=1, hide=()):
     for i, (rank, r) in enumerate(rows[lo:lo + CHARTS_PAGE_SIZE]):
         k = _nname(r["name"])
         out.append({"pos": lo + i + 1, "id": r["id"], "name": r["name"], "hosts": r["hosts"][:2], "image": r["image"], "language": r["language"],
-                    "genres": r["_genres"][:3], "rank": rank if rank < 999 else None,
+                    "genres": r["_genres"][:3], "points": rank,
                     "countries": [{"code": c, "rank": v if v < 999 else None} for c, v in sorted(r["_ranks"].items(), key=lambda kv: (kv[1], kv[0])) if c in COUNTRIES][:4],
                     "episodes": r["episodes"], "cadence": r["cadence"], "last_ep": r["last_ep"], "link": r["link"],
                     "added": bool(len(k) >= 3 and any(o in k or k in o for o in mine))})

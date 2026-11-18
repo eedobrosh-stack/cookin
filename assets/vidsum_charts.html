@@ -7,14 +7,15 @@
   <script src="/vidsum/i18n.js"></script>
   <meta name="theme-color" content="#e3222b">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Charts | Pawed</title>
-  <meta name="description" content="Podcast charts by country, language and category">
+  <title>Podcasts | Pawed</title>
+  <meta name="description" content="Top podcasts by country, language and category">
   <style>
     :root { --red:#e3222b; --red-dark:#b9141c; --ink:#171717; --muted:#6c6c6c; --line:#e5e5e5; --soft:#f4f4f4; }
     * { box-sizing:border-box; }
     body { margin:0; color:var(--ink); background:#fff; font-family:Arial, "Noto Sans Hebrew", sans-serif; }
     a { color:inherit; text-decoration:none; }
     .topline { height:5px; background:var(--red); }
+    .utility { border-bottom:1px solid var(--line); color:#777; font-size:12px; } .utility-inner { max-width:1180px; margin:auto; padding-inline:22px; min-height:34px; display:flex; align-items:center; justify-content:space-between; gap:18px; } .utility-links { display:flex; gap:18px; margin-inline-start:auto; }
     .masthead, main { max-width:1180px; margin:auto; padding-inline:22px; }
     .masthead { height:102px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
     .brand-wordmark { height:52px; display:block; }
@@ -66,6 +67,7 @@
 </head>
 <body>
   <div class="topline"></div>
+  <div class="utility"><div class="utility-inner"><span></span><div class="utility-links"><a href="/vidsum/index" id="ix">Index</a></div></div></div>
   <header class="masthead">
     <a class="brand" href="/"><img class="brand-wordmark" src="/vidsum/pawed-wordmark.png" alt="Pawed - Respect Your Pods"></a>
     <a class="back" href="/vidsum" id="back"></a>
@@ -86,49 +88,49 @@
 const $=id=>document.getElementById(id);
 const LANG=window.LANG||'he';
 const S={
- en:{title:'Charts',back:'← Back to the home page',lead:'The most popular podcasts worldwide, from the Apple Podcasts charts of 25 countries. Filter by country, language and category, and add any show to your sources.',
+ en:{title:'Podcasts',back:'← Back to the home page',lead:'The most popular podcasts worldwide, from the Apple Podcasts charts of 25 countries. Filter by country, language and category, and add any show to your sources.',
   country:'Country',language:'Language',category:'Category',search:'Search…',clear:'Clear',any:'All',
-  rank:'Chart rank',eps:'Episodes',cad:'Cadence',last:'Last episode',pod:'Podcast',add:'Add as source',added:'In your sources',already:'Already in the sources',
+  rank:'Chart points',eps:'Episodes',cad:'Cadence',last:'Last episode',pod:'Podcast',add:'Add as source',added:'In your sources',already:'Already in the sources',
   of:'of',prev:'← Previous 100',next:'Next 100 →',none:'No podcasts match these filters.',
   ok:'✓ Added {n} source. Its new content will appear on the site in the coming hours.',notadded:'❌ Not added: ',signin:'Sign in with Google to add sources',signinlink:'Sign in',
-  note:'Sorted by: 1) chart rank (best position in the selected countries, otherwise anywhere), 2) all-time number of episodes, 3) cadence, 4) last episode date. Subscriber counts are not published by Apple or Spotify, so they are not used.',
+  note:'Sorted by: 1) chart points (for every selected country, or all of them, 101 minus the show’s best Apple Podcasts position, summed), 2) all-time number of episodes, 3) cadence, 4) last episode date. Subscriber counts are not published by Apple or Spotify, so they are not used.',
   daily:'Daily','2-3 / week':'2-3 / week',weekly:'Weekly',biweekly:'Every 2 weeks',monthly:'Monthly',rare:'Rare',irr:'irregular',pos:'#'},
- he:{title:'צ׳ארטים',back:'← חזרה לעמוד הראשי',lead:'הפודקאסטים הפופולריים בעולם, מתוך הצ׳ארטים של Apple Podcasts ב-25 מדינות. סננו לפי מדינה, שפה וקטגוריה, והוסיפו כל תוכנית למקורות שלכם.',
+ he:{title:'פודקאסטים',back:'← חזרה לעמוד הראשי',lead:'הפודקאסטים הפופולריים בעולם, מתוך הצ׳ארטים של Apple Podcasts ב-25 מדינות. סננו לפי מדינה, שפה וקטגוריה, והוסיפו כל תוכנית למקורות שלכם.',
   country:'מדינה',language:'שפה',category:'קטגוריה',search:'חיפוש…',clear:'נקה',any:'הכול',
-  rank:'דירוג בצ׳ארט',eps:'פרקים',cad:'תדירות',last:'פרק אחרון',pod:'פודקאסט',add:'הוסף למקורות',added:'ברשימת המקורות',already:'כבר ברשימה',
+  rank:'נקודות צ׳ארט',eps:'פרקים',cad:'תדירות',last:'פרק אחרון',pod:'פודקאסט',add:'הוסף למקורות',added:'ברשימת המקורות',already:'כבר ברשימה',
   of:'מתוך',prev:'100 הקודמים →',next:'← 100 הבאים',none:'לא נמצאו פודקאסטים לסינון הזה.',
   ok:'✓ נוספו {n} מקורות. התוכן החדש שלהם יופיע באתר בשעות הקרובות.',notadded:'❌ לא נוספו: ',signin:'התחברו עם Google כדי להוסיף מקורות',signinlink:'התחברות',
-  note:'מיון לפי: 1) דירוג בצ׳ארט (המיקום הטוב ביותר במדינות שנבחרו, אחרת בכל מקום), 2) מספר הפרקים הכולל, 3) תדירות, 4) תאריך הפרק האחרון. מספר מנויים אינו מפורסם על ידי Apple או Spotify ולכן אינו בשימוש.',
+  note:'מיון לפי: 1) נקודות צ׳ארט (לכל מדינה שנבחרה, או לכולן: 101 פחות המיקום הטוב ביותר של התוכנית ב-Apple Podcasts, מסוכם), 2) מספר הפרקים הכולל, 3) תדירות, 4) תאריך הפרק האחרון. מספר מנויים אינו מפורסם על ידי Apple או Spotify ולכן אינו בשימוש.',
   daily:'יומי','2-3 / week':'2-3 בשבוע',weekly:'שבועי',biweekly:'אחת לשבועיים',monthly:'חודשי',rare:'נדיר',irr:'לא סדיר',pos:'#'},
- de:{title:'Charts',back:'← Zurück zur Startseite',lead:'Die beliebtesten Podcasts weltweit, aus den Apple-Podcasts-Charts von 25 Ländern. Nach Land, Sprache und Kategorie filtern und jede Sendung zu den eigenen Quellen hinzufügen.',
-  country:'Land',language:'Sprache',category:'Kategorie',search:'Suchen…',clear:'Zurücksetzen',any:'Alle',rank:'Chart-Rang',eps:'Folgen',cad:'Rhythmus',last:'Letzte Folge',pod:'Podcast',add:'Als Quelle hinzufügen',added:'In deinen Quellen',already:'Schon in den Quellen',
+ de:{title:'Podcasts',back:'← Zurück zur Startseite',lead:'Die beliebtesten Podcasts weltweit, aus den Apple-Podcasts-Charts von 25 Ländern. Nach Land, Sprache und Kategorie filtern und jede Sendung zu den eigenen Quellen hinzufügen.',
+  country:'Land',language:'Sprache',category:'Kategorie',search:'Suchen…',clear:'Zurücksetzen',any:'Alle',rank:'Chart-Punkte',eps:'Folgen',cad:'Rhythmus',last:'Letzte Folge',pod:'Podcast',add:'Als Quelle hinzufügen',added:'In deinen Quellen',already:'Schon in den Quellen',
   of:'von',prev:'← Vorherige 100',next:'Nächste 100 →',none:'Keine Podcasts für diese Filter.',ok:'✓ {n} Quelle hinzugefügt. Die neuen Inhalte erscheinen in den nächsten Stunden auf der Seite.',notadded:'❌ Nicht hinzugefügt: ',signin:'Mit Google anmelden, um Quellen hinzuzufügen',signinlink:'Anmelden',
-  note:'Sortierung: 1) Chart-Rang (beste Platzierung in den gewählten Ländern, sonst überall), 2) Gesamtzahl der Folgen, 3) Rhythmus, 4) Datum der letzten Folge. Abonnentenzahlen veröffentlichen Apple und Spotify nicht, daher werden sie nicht genutzt.',
+  note:'Sortierung: 1) Chart-Punkte (je gewähltem Land oder allen: 101 minus beste Apple-Podcasts-Platzierung, summiert), 2) Gesamtzahl der Folgen, 3) Rhythmus, 4) Datum der letzten Folge. Abonnentenzahlen veröffentlichen Apple und Spotify nicht, daher werden sie nicht genutzt.',
   daily:'Täglich','2-3 / week':'2-3 / Woche',weekly:'Wöchentlich',biweekly:'Alle 2 Wochen',monthly:'Monatlich',rare:'Selten',irr:'unregelmäßig',pos:'#'},
- fr:{title:'Classements',back:'← Retour à l’accueil',lead:'Les podcasts les plus populaires au monde, d’après les classements Apple Podcasts de 25 pays. Filtrez par pays, langue et catégorie, et ajoutez n’importe quelle émission à vos sources.',
-  country:'Pays',language:'Langue',category:'Catégorie',search:'Rechercher…',clear:'Effacer',any:'Tous',rank:'Rang',eps:'Épisodes',cad:'Rythme',last:'Dernier épisode',pod:'Podcast',add:'Ajouter comme source',added:'Dans vos sources',already:'Déjà dans les sources',
+ fr:{title:'Podcasts',back:'← Retour à l’accueil',lead:'Les podcasts les plus populaires au monde, d’après les classements Apple Podcasts de 25 pays. Filtrez par pays, langue et catégorie, et ajoutez n’importe quelle émission à vos sources.',
+  country:'Pays',language:'Langue',category:'Catégorie',search:'Rechercher…',clear:'Effacer',any:'Tous',rank:'Points',eps:'Épisodes',cad:'Rythme',last:'Dernier épisode',pod:'Podcast',add:'Ajouter comme source',added:'Dans vos sources',already:'Déjà dans les sources',
   of:'sur',prev:'← 100 précédents',next:'100 suivants →',none:'Aucun podcast pour ces filtres.',ok:'✓ {n} source ajoutée. Son nouveau contenu apparaîtra sur le site dans les prochaines heures.',notadded:'❌ Non ajouté : ',signin:'Connectez-vous avec Google pour ajouter des sources',signinlink:'Se connecter',
-  note:'Tri : 1) rang au classement (meilleure place dans les pays choisis, sinon partout), 2) nombre total d’épisodes, 3) rythme, 4) date du dernier épisode. Apple et Spotify ne publient pas le nombre d’abonnés, il n’est donc pas utilisé.',
+  note:'Tri : 1) points de classement (par pays choisi, ou tous : 101 moins la meilleure place sur Apple Podcasts, additionnés), 2) nombre total d’épisodes, 3) rythme, 4) date du dernier épisode. Apple et Spotify ne publient pas le nombre d’abonnés, il n’est donc pas utilisé.',
   daily:'Quotidien','2-3 / week':'2-3 / semaine',weekly:'Hebdomadaire',biweekly:'Toutes les 2 semaines',monthly:'Mensuel',rare:'Rare',irr:'irrégulier',pos:'#'},
- it:{title:'Classifiche',back:'← Torna alla home',lead:'I podcast più popolari al mondo, dalle classifiche di Apple Podcasts di 25 paesi. Filtra per paese, lingua e categoria e aggiungi qualsiasi programma alle tue fonti.',
-  country:'Paese',language:'Lingua',category:'Categoria',search:'Cerca…',clear:'Azzera',any:'Tutti',rank:'Posizione',eps:'Episodi',cad:'Cadenza',last:'Ultimo episodio',pod:'Podcast',add:'Aggiungi come fonte',added:'Nelle tue fonti',already:'Già nelle fonti',
+ it:{title:'Podcast',back:'← Torna alla home',lead:'I podcast più popolari al mondo, dalle classifiche di Apple Podcasts di 25 paesi. Filtra per paese, lingua e categoria e aggiungi qualsiasi programma alle tue fonti.',
+  country:'Paese',language:'Lingua',category:'Categoria',search:'Cerca…',clear:'Azzera',any:'Tutti',rank:'Punti',eps:'Episodi',cad:'Cadenza',last:'Ultimo episodio',pod:'Podcast',add:'Aggiungi come fonte',added:'Nelle tue fonti',already:'Già nelle fonti',
   of:'di',prev:'← Precedenti 100',next:'Successivi 100 →',none:'Nessun podcast per questi filtri.',ok:'✓ {n} fonte aggiunta. I suoi nuovi contenuti appariranno sul sito nelle prossime ore.',notadded:'❌ Non aggiunto: ',signin:'Accedi con Google per aggiungere fonti',signinlink:'Accedi',
-  note:'Ordinamento: 1) posizione in classifica (migliore nei paesi scelti, altrimenti ovunque), 2) numero totale di episodi, 3) cadenza, 4) data dell’ultimo episodio. Apple e Spotify non pubblicano il numero di iscritti, quindi non è usato.',
+  note:'Ordinamento: 1) punti di classifica (per ogni paese scelto, o tutti: 101 meno la migliore posizione su Apple Podcasts, sommati), 2) numero totale di episodi, 3) cadenza, 4) data dell’ultimo episodio. Apple e Spotify non pubblicano il numero di iscritti, quindi non è usato.',
   daily:'Giornaliero','2-3 / week':'2-3 / settimana',weekly:'Settimanale',biweekly:'Ogni 2 settimane',monthly:'Mensile',rare:'Raro',irr:'irregolare',pos:'#'},
- es:{title:'Listas',back:'← Volver al inicio',lead:'Los podcasts más populares del mundo, según las listas de Apple Podcasts de 25 países. Filtra por país, idioma y categoría y añade cualquier programa a tus fuentes.',
-  country:'País',language:'Idioma',category:'Categoría',search:'Buscar…',clear:'Borrar',any:'Todos',rank:'Posición',eps:'Episodios',cad:'Frecuencia',last:'Último episodio',pod:'Podcast',add:'Añadir como fuente',added:'En tus fuentes',already:'Ya está en las fuentes',
+ es:{title:'Podcasts',back:'← Volver al inicio',lead:'Los podcasts más populares del mundo, según las listas de Apple Podcasts de 25 países. Filtra por país, idioma y categoría y añade cualquier programa a tus fuentes.',
+  country:'País',language:'Idioma',category:'Categoría',search:'Buscar…',clear:'Borrar',any:'Todos',rank:'Puntos',eps:'Episodios',cad:'Frecuencia',last:'Último episodio',pod:'Podcast',add:'Añadir como fuente',added:'En tus fuentes',already:'Ya está en las fuentes',
   of:'de',prev:'← 100 anteriores',next:'100 siguientes →',none:'Ningún podcast con estos filtros.',ok:'✓ {n} fuente añadida. Su contenido nuevo aparecerá en el sitio en las próximas horas.',notadded:'❌ No añadido: ',signin:'Inicia sesión con Google para añadir fuentes',signinlink:'Iniciar sesión',
-  note:'Orden: 1) posición en la lista (la mejor en los países elegidos, si no en cualquiera), 2) número total de episodios, 3) frecuencia, 4) fecha del último episodio. Apple y Spotify no publican el número de suscriptores, por eso no se usa.',
+  note:'Orden: 1) puntos de lista (por cada país elegido, o todos: 101 menos la mejor posición en Apple Podcasts, sumados), 2) número total de episodios, 3) frecuencia, 4) fecha del último episodio. Apple y Spotify no publican el número de suscriptores, por eso no se usa.',
   daily:'Diario','2-3 / week':'2-3 / semana',weekly:'Semanal',biweekly:'Cada 2 semanas',monthly:'Mensual',rare:'Raro',irr:'irregular',pos:'#'},
- pt:{title:'Paradas',back:'← Voltar ao início',lead:'Os podcasts mais populares do mundo, segundo as paradas do Apple Podcasts de 25 países. Filtre por país, idioma e categoria e adicione qualquer programa às suas fontes.',
-  country:'País',language:'Idioma',category:'Categoria',search:'Buscar…',clear:'Limpar',any:'Todos',rank:'Posição',eps:'Episódios',cad:'Frequência',last:'Último episódio',pod:'Podcast',add:'Adicionar como fonte',added:'Nas suas fontes',already:'Já está nas fontes',
+ pt:{title:'Podcasts',back:'← Voltar ao início',lead:'Os podcasts mais populares do mundo, segundo as paradas do Apple Podcasts de 25 países. Filtre por país, idioma e categoria e adicione qualquer programa às suas fontes.',
+  country:'País',language:'Idioma',category:'Categoria',search:'Buscar…',clear:'Limpar',any:'Todos',rank:'Pontos',eps:'Episódios',cad:'Frequência',last:'Último episódio',pod:'Podcast',add:'Adicionar como fonte',added:'Nas suas fontes',already:'Já está nas fontes',
   of:'de',prev:'← 100 anteriores',next:'Próximos 100 →',none:'Nenhum podcast para estes filtros.',ok:'✓ {n} fonte adicionada. O conteúdo novo aparecerá no site nas próximas horas.',notadded:'❌ Não adicionado: ',signin:'Entre com o Google para adicionar fontes',signinlink:'Entrar',
-  note:'Ordem: 1) posição na parada (a melhor nos países escolhidos, senão em qualquer lugar), 2) total de episódios, 3) frequência, 4) data do último episódio. Apple e Spotify não divulgam o número de assinantes, por isso não é usado.',
+  note:'Ordem: 1) pontos da parada (por país escolhido, ou todos: 101 menos a melhor posição no Apple Podcasts, somados), 2) total de episódios, 3) frequência, 4) data do último episódio. Apple e Spotify não divulgam o número de assinantes, por isso não é usado.',
   daily:'Diário','2-3 / week':'2-3 / semana',weekly:'Semanal',biweekly:'A cada 2 semanas',monthly:'Mensal',rare:'Raro',irr:'irregular',pos:'#'},
- nl:{title:'Hitlijsten',back:'← Terug naar de homepage',lead:'De populairste podcasts ter wereld, uit de Apple Podcasts-hitlijsten van 25 landen. Filter op land, taal en categorie en voeg elk programma toe aan je bronnen.',
-  country:'Land',language:'Taal',category:'Categorie',search:'Zoeken…',clear:'Wissen',any:'Alle',rank:'Positie',eps:'Afleveringen',cad:'Frequentie',last:'Laatste aflevering',pod:'Podcast',add:'Toevoegen als bron',added:'In je bronnen',already:'Al in de bronnen',
+ nl:{title:'Podcasts',back:'← Terug naar de homepage',lead:'De populairste podcasts ter wereld, uit de Apple Podcasts-hitlijsten van 25 landen. Filter op land, taal en categorie en voeg elk programma toe aan je bronnen.',
+  country:'Land',language:'Taal',category:'Categorie',search:'Zoeken…',clear:'Wissen',any:'Alle',rank:'Punten',eps:'Afleveringen',cad:'Frequentie',last:'Laatste aflevering',pod:'Podcast',add:'Toevoegen als bron',added:'In je bronnen',already:'Al in de bronnen',
   of:'van',prev:'← Vorige 100',next:'Volgende 100 →',none:'Geen podcasts voor deze filters.',ok:'✓ {n} bron toegevoegd. De nieuwe inhoud verschijnt de komende uren op de site.',notadded:'❌ Niet toegevoegd: ',signin:'Log in met Google om bronnen toe te voegen',signinlink:'Inloggen',
-  note:'Sortering: 1) positie in de hitlijst (beste in de gekozen landen, anders overal), 2) totaal aantal afleveringen, 3) frequentie, 4) datum van de laatste aflevering. Apple en Spotify publiceren geen abonneeaantallen, dus die worden niet gebruikt.',
+  note:'Sortering: 1) hitlijstpunten (per gekozen land, of alle: 101 min de beste Apple Podcasts-positie, opgeteld), 2) totaal aantal afleveringen, 3) frequentie, 4) datum van de laatste aflevering. Apple en Spotify publiceren geen abonneeaantallen, dus die worden niet gebruikt.',
   daily:'Dagelijks','2-3 / week':'2-3 / week',weekly:'Wekelijks',biweekly:'Om de 2 weken',monthly:'Maandelijks',rare:'Zelden',irr:'onregelmatig',pos:'#'}
 };
 const T=S[LANG]||S.en, tt=k=>T[k]||S.en[k]||k;
@@ -186,7 +188,7 @@ function render(){
     const ctry=p.countries.map(c=>FLAG(c.code)+(c.rank?' #'+c.rank:'')).join('  ');
     const btn=p.added?'<button class="add" disabled>'+esc(tt('added'))+'</button>':'<button class="add" data-id="'+esc(p.id)+'">'+esc(tt('add'))+'</button>';
     return '<tr><td class="pos">'+p.pos+'</td><td><div class="pod">'+(p.image?'<img loading="lazy" src="'+esc(p.image)+'" alt="">':'<img alt="">')+'<div><b>'+(p.link?'<a href="'+esc(p.link)+'" target="_blank" rel="noopener">'+esc(p.name)+'</a>':esc(p.name))+'</b><small>'+esc((p.hosts||[]).join(', '))+'</small></div></div></td>'+
-      '<td><span class="rk">'+(p.rank?'#'+p.rank:'–')+'</span><div class="ctry">'+ctry+'</div></td><td>'+(p.episodes!=null?p.episodes.toLocaleString():'–')+'</td><td>'+cadLabel(p.cadence)+'</td><td>'+fmtDate(p.last_ep)+'</td>'+
+      '<td><span class="rk">'+p.points.toLocaleString()+'</span><div class="ctry">'+ctry+'</div></td><td>'+(p.episodes!=null?p.episodes.toLocaleString():'–')+'</td><td>'+cadLabel(p.cadence)+'</td><td>'+fmtDate(p.last_ep)+'</td>'+
       '<td class="gen">'+esc(langName(p.language,p.language))+' · '+esc((p.genres||[]).join(', '))+'</td><td>'+btn+'</td></tr>';
   }).join('');
   $('rows').querySelectorAll('button.add[data-id]').forEach(b=>b.onclick=()=>addSource(b));
@@ -212,7 +214,7 @@ async function load(rebuild){
 $('prev').onclick=()=>{ PAGE=Math.max(1,PAGE-1); load(); window.scrollTo({top:0,behavior:'smooth'}); };
 $('next').onclick=()=>{ PAGE++; load(); window.scrollTo({top:0,behavior:'smooth'}); };
 (async function(){
-  document.title=tt('title')+' | Pawed'; $('h1').textContent=tt('title'); $('lead').textContent=tt('lead'); $('back').textContent=tt('back'); $('note').textContent=tt('note');
+  document.title=tt('title')+' | Pawed'; $('h1').textContent=tt('title'); if(window.piT) $('ix').textContent=piT('Index',LANG); $('lead').textContent=tt('lead'); $('back').textContent=tt('back'); $('note').textContent=tt('note');
   $('prev').textContent=tt('prev'); $('next').textContent=tt('next');
   readUrl();
   try{ ME=await (await fetch('/api/vidsum/me')).json(); }catch(e){}
