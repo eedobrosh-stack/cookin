@@ -1079,7 +1079,7 @@ def relay_discovered(req):
         # a new subscription takes the newest episode (from the last 30 days) right away instead of waiting for the next one
         latest_set = set()                                   # the newest N episodes (N = take_latest, default 3 for a new source)
         if ch.get("take_latest"):
-            cut = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time() - 30 * 86400))
+            cut = ""                                         # no age limit: the 3 latest, however old
             fresh = [i for i in req.get("items") or [] if re.fullmatch(r"[\w-]{11}", str(i.get("vid") or "")) and str(i.get("vid")) not in seen
                      and (i.get("duration") or 999) >= 150 and (i.get("published") or "").replace("T", " ").replace("Z", "")[:19] >= cut]
             fresh.sort(key=lambda i: i.get("published", ""), reverse=True)
@@ -2131,7 +2131,7 @@ def watch_rss():
         items = feed["items"]
         n_latest = int(ch.pop("take_latest", 0) or 0)
         if n_latest and items:                               # new subscription: the latest N episodes (if recent), nothing older
-            fresh = [i for i in items if i["published_at"] and i["published_at"] >= time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 30 * 86400))]
+            fresh = sorted([i for i in items if i["published_at"]], key=lambda i: i["published_at"], reverse=True)   # no age limit: dormant shows still get their 3 latest
             first = fresh[:n_latest]
             for i in items:
                 if not any(i is f for f in first):
@@ -2655,7 +2655,7 @@ def add_source(req, user=None):
             d["channels"].append({"id": cid, "kind": "rss", "feed_url": info["feed_url"], "image": info["image"],
                                   "name": (name or info["name"])[:120], "url": url[:300], "language": req.get("language") if req.get("language") in LANGS else info["language"],
                                   "lang_full": str(req.get("lang_full") or "")[:5],
-                                  "vertical": vert, "vertical_auto": v_auto, "added": time.strftime("%Y-%m-%d %H:%M:%S"), "take_latest": 1,   # podcasts: 1 until transcription is server-side (Whisper on the Mac is serial)
+                                  "vertical": vert, "vertical_auto": v_auto, "added": time.strftime("%Y-%m-%d %H:%M:%S"), "take_latest": 3,   # rule: every new source starts with its 3 most recent episodes, however old
                                   "owner_id": owner_id, "owner_name": owner_name})
             _save_ch(d)
         return cid
@@ -3693,7 +3693,7 @@ def handle_post(handler, path, req):
                             if info["id"] != c["id"] and any(x["id"] == info["id"] for x in d["channels"]):
                                 raise ValueError("this source is already in the table")
                             c.update(id=info["id"], kind="rss", feed_url=info["feed_url"], image=info["image"], url=req["url"].strip()[:300],
-                                     added=time.strftime("%Y-%m-%d %H:%M:%S"), take_latest=True)
+                                     added=time.strftime("%Y-%m-%d %H:%M:%S"), take_latest=3)
                             c.pop("seen", None)
                         elif (req.get("url") or "").strip():
                             newid, _found = resolve_channel(req["url"].strip())      # raises if not a valid channel
@@ -3758,7 +3758,7 @@ def handle_post(handler, path, req):
                     n = 0
                     for c in d["channels"]:
                         if c["id"] in ids and c.get("kind") != "rss":
-                            c["take_latest"] = True
+                            c["take_latest"] = 3
                             c["seen"] = []                      # the next scan sees the whole feed again; only the newest is taken
                             n += 1
                     _save_ch(d)
