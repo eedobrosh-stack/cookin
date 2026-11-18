@@ -131,7 +131,8 @@ def _status(**kw):
 # ------------------------------------------------------------------ step 1: charts
 def _chart(cc, genre, limit):
     try:
-        d = _json_get(f"https://itunes.apple.com/{cc}/rss/toppodcasts/limit={limit}/genre={genre}/json")
+        gpart = f"/genre={genre}" if genre else ""                       # genre 0 = the overall top podcasts chart of the country
+        d = _json_get(f"https://itunes.apple.com/{cc}/rss/toppodcasts/limit={limit}{gpart}/json")
     except Exception as e:
         log(f"chart {cc}/{genre} failed: {str(e)[:100]}")
         return []
@@ -145,12 +146,15 @@ def _chart(cc, genre, limit):
     return out
 
 
+OVERALL_LIMIT = 200
+
+
 def stage_charts(d, countries, genres, limit):
-    jobs = [(cc, g) for cc in countries for g in genres]
+    jobs = [(cc, g) for cc in countries for g in [0] + list(genres)]     # 0 = overall chart (Charts page ranking), then every genre chart
     _status(stage="charts", done=0, total=len(jobs))
     seen_new = 0
     with ThreadPoolExecutor(6) as ex:
-        for n, ((cc, g), rows) in enumerate(zip(jobs, ex.map(lambda j: _chart(j[0], j[1], limit), jobs)), 1):
+        for n, ((cc, g), rows) in enumerate(zip(jobs, ex.map(lambda j: _chart(j[0], j[1], OVERALL_LIMIT if j[1] == 0 else limit), jobs)), 1):
             for pid, rank, name in rows:
                 key = "a%d" % pid
                 p = d["pods"].get(key)
@@ -161,6 +165,10 @@ def stage_charts(d, countries, genres, limit):
                 best = p["geo"].get(cc)
                 if best is None or rank < best:
                     p["geo"][cc] = rank
+                ck = "%s:%s" % (cc, g)                                    # per-chart position, e.g. "il:1488" (Israel / True Crime), "il:0" (Israel / overall)
+                ch = p.setdefault("charts", {})
+                if ck not in ch or rank < ch[ck]:
+                    ch[ck] = rank
             _status(done=n)
     log(f"charts: {len(jobs)} charts, {seen_new} new pods, {len(d['pods'])} total")
     return seen_new
@@ -606,6 +614,7 @@ def _catalog():
             row["_n"] = _nname(p["name"])
             row["_ranks"] = {c: (r or 999) for c, r in (p.get("geo") or {}).items()}           # best Apple chart position per country (Charts page)
             row["_genres"] = [g for g in (p.get("genres") or []) if g]
+            row["_charts"] = p.get("charts") or {}
             row["_geo_all"] = sorted((p.get("geo") or {}), key=lambda c: ((p["geo"].get(c) or 999), c))     # every charted country, best rank first (the row keeps only 6)
             # the same show can be charted under several Apple ids (re-listed feeds): keep one, the best scored / most recently active
             key = row["_n"]
@@ -784,10 +793,30 @@ def charts_options(hide=()):
             "genres": [{"name": g, "n": n} for g, n in sorted(gen.items(), key=lambda kv: (-kv[1], kv[0]))]}
 
 
+def _country_points(r, c, gids):
+    """Chart points of one show in one country. The overall chart (top 200) counts in full: 201 - position. A genre chart counts 40% (a #1 in a niche
+    genre is worth less than #3 overall). With a genre filter the positions in the chosen genre charts count instead (101 - position)."""
+    ch = r["_charts"]
+    if not ch:                                                              # not re-scanned yet: the old best-position-anywhere number
+        v = r["_ranks"].get(c, 999)
+        return 0.4 * max(1, 101 - (v if v < 999 else 100))
+    overall = ch.get("%s:0" % c)
+    if gids:
+        sel = [ch[k] for k in (("%s:%s" % (c, g)) for g in gids) if k in ch]
+        if sel:
+            return (101 - min(sel)) + (0.01 * (201 - overall) if overall else 0)
+    gen = [v for k, v in ch.items() if k.startswith(c + ":") and not k.endswith(":0")]
+    pts = 0.4 * (101 - min(gen)) if gen else 0
+    if overall:
+        pts = max(pts, 201 - overall)
+    return pts
+
+
 def charts_query(countries=(), langs=(), genres=(), page=1, hide=()):
     """Public popularity chart over the scanner catalog. Sort (in this order): chart points (sum of 101 - best Apple chart position over the chosen countries, else all),
     all-time episode count, cadence (daily first), last-episode date (newest first). Subscriber counts are not published by Apple or Spotify."""
     countries, langs, genres = set(countries), set(langs), set(genres)
+    gids = {i for i, n in GENRES.items() if n in genres}
     rows = []
     for r in _catalog():
         if r["language"] in hide:
@@ -797,12 +826,10 @@ def charts_query(countries=(), langs=(), genres=(), page=1, hide=()):
         if genres and not (genres & set(r["_genres"])):
             continue
         rk = r["_ranks"]
-        sel = [v for c, v in rk.items() if c in COUNTRIES and (not countries or c in countries)]
-        if countries and not sel:
+        ctry = [c for c in rk if c in COUNTRIES and (not countries or c in countries)]
+        if countries and not ctry:
             continue
-        # one long ranking instead of many shared #1s: chart points = sum over the countries counted of (101 - position), so a show charting high in
-        # many countries outranks one that is #1 in a single genre chart
-        pts = sum(max(1, 101 - (v if v < 999 else 100)) for v in sel)
+        pts = sum(_country_points(r, c, gids) for c in ctry)
         rows.append((pts, r))
     rows.sort(key=lambda t: (-t[0], -(t[1]["episodes"] or 0), _cad_rank(t[1]["cadence"]), -int((t[1]["last_ep"] or "0").replace("-", "") or 0), t[1]["name"].lower()))
     total = len(rows)
@@ -813,8 +840,9 @@ def charts_query(countries=(), langs=(), genres=(), page=1, hide=()):
     for i, (rank, r) in enumerate(rows[lo:lo + CHARTS_PAGE_SIZE]):
         k = _nname(r["name"])
         out.append({"pos": lo + i + 1, "id": r["id"], "name": r["name"], "hosts": r["hosts"][:2], "image": r["image"], "language": r["language"],
-                    "genres": r["_genres"][:3], "points": rank,
-                    "countries": [{"code": c, "rank": v if v < 999 else None} for c, v in sorted(r["_ranks"].items(), key=lambda kv: (kv[1], kv[0])) if c in COUNTRIES][:4],
+                    "genres": r["_genres"][:3], "points": round(rank),
+                    "countries": [{"code": c, "rank": (r["_charts"].get("%s:0" % c) or (v if v < 999 else None)), "overall": bool(r["_charts"].get("%s:0" % c))}
+                                  for c, v in sorted(r["_ranks"].items(), key=lambda kv: (r["_charts"].get("%s:0" % kv[0]) or 500 + kv[1], kv[0])) if c in COUNTRIES][:4],
                     "episodes": r["episodes"], "cadence": r["cadence"], "last_ep": r["last_ep"], "link": r["link"],
                     "added": bool(len(k) >= 3 and any(o in k or k in o for o in mine))})
     return {"total": total, "page": page, "size": CHARTS_PAGE_SIZE, "from": lo + 1 if total else 0, "to": min(lo + CHARTS_PAGE_SIZE, total), "pods": out}
