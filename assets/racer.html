@@ -101,7 +101,7 @@ h2{font:800 26px var(--display);text-transform:uppercase;letter-spacing:.06em;ma
 </div></div>
 
 <canvas id="game"></canvas>
-<div id="hudBtns"><button id="bScores">Scores</button><button id="bRespawn">Reset kart</button><button id="bPause">Pause</button></div>
+<div id="hudBtns"><button id="bBail">Bail out</button><button id="bScores">Scores</button><button id="bRespawn">Reset kart</button><button id="bPause">Pause</button></div>
 <div id="touch">
   <div class="grp"><button class="tb" id="tL">&lt;</button><button class="tb" id="tR">&gt;</button></div>
   <div class="grp"><button class="tb" id="tH">DRIFT</button><button class="tb" id="tB">BRAKE</button><button class="tb" id="tG">GAS</button></div>
@@ -787,6 +787,9 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{keys[e.code]=false});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;if(G&&!G.done)setPause(true)});
 function setPause(p){if(!G||G.done)return;G.paused=p;$('#pauseOv').style.display=p?'flex':'none';setHush(p)}
+/* bail out: leaves the race straight for the main menu (nothing is saved). A second tap within 2.5 s confirms, so a stray touch does not end a race. */
+{let armed=0,tm=null;const b=$('#bBail'),reset=()=>{armed=0;b.textContent='Bail out';b.style.borderColor='';clearTimeout(tm)};
+ b.onclick=()=>{if(!G)return;if(armed){reset();endRace(true);return}armed=1;b.textContent='Tap again to quit';b.style.borderColor='#e5484d';tm=setTimeout(reset,2500)}}
 $('#bPause').onclick=()=>setPause(!G.paused);$('#pResume').onclick=()=>setPause(false);$('#pQuit').onclick=()=>endRace(true);$('#bRespawn').onclick=()=>{if(G&&!G.paused)respawn(G.pl)};
 for(const[id,k]of[['tL','L'],['tR','R'],['tG','G'],['tB','B'],['tH','H']]){const b=$('#'+id);
  const on=e=>{e.preventDefault();touch[k]=1;b.classList.add('on')},off=()=>{touch[k]=0;b.classList.remove('on')};
