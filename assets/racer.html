@@ -70,13 +70,22 @@ h2{font:800 26px var(--display);text-transform:uppercase;letter-spacing:.06em;ma
 .row button.alt{background:#2a2e36;color:var(--chalk)}
 .msg{margin:10px 0 0;font-size:13.5px;color:var(--dim)}
 .msg.good{color:var(--cyan)}
+#hsOv{z-index:5}
+.hs{width:min(620px,100%)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.tabs button{padding:6px 10px;font:600 13px var(--body)}
+.tabs button.on{border-color:var(--amber);color:var(--amber)}
+.hsT{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px;min-width:420px}
+.hsT th,.hsT td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.hsT th{color:var(--dim);font:800 14px var(--display);letter-spacing:.08em;text-transform:uppercase}
+.hsT tr.me td{color:var(--amber);font-weight:600}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
 <div id="menu"><div class="wrap">
   <div class="top">
     <div><h1>Shadow <span>Racer</span></h1><p class="sub">Indoor kart arena with drivable bridges, tire walls, night laps and slow traffic to pass. Every finished race is recorded and the fastest runs come back as shadow karts.</p></div>
-    <div class="pills"><div class="pill">DRIVER <b id="who">?</b></div><button class="ghost" id="mute">Sound on</button></div>
+    <div class="pills"><div class="pill">DRIVER <b id="who">?</b></div><button class="ghost" id="hsMenu">High scores</button><button class="ghost" id="mute">Sound on</button></div>
   </div>
   <div class="cols">
     <section><h2>Tune your kart</h2>
@@ -92,7 +101,7 @@ h2{font:800 26px var(--display);text-transform:uppercase;letter-spacing:.06em;ma
 </div></div>
 
 <canvas id="game"></canvas>
-<div id="hudBtns"><button id="bRespawn">Reset kart</button><button id="bPause">Pause</button></div>
+<div id="hudBtns"><button id="bScores">Scores</button><button id="bRespawn">Reset kart</button><button id="bPause">Pause</button></div>
 <div id="touch">
   <div class="grp"><button class="tb" id="tL">&lt;</button><button class="tb" id="tR">&gt;</button></div>
   <div class="grp"><button class="tb" id="tH">DRIFT</button><button class="tb" id="tB">BRAKE</button><button class="tb" id="tG">GAS</button></div>
@@ -102,10 +111,11 @@ h2{font:800 26px var(--display);text-transform:uppercase;letter-spacing:.06em;ma
   <input type="text" id="nameIn" maxlength="14" autocomplete="off" placeholder="Name">
   <label style="margin-top:14px">Tune your kart for this race</label>
   <div class="panel" id="dialsM"></div>
-  <div class="row"><button type="submit" id="nameGo">Race</button><button type="button" class="alt" id="nameCancel">Back</button></div>
+  <div class="row"><button type="submit" id="nameGo">Race</button><button type="button" class="alt" id="nameScores">High scores</button><button type="button" class="alt" id="nameCancel">Back</button></div>
   <p class="msg" id="nameMsg"></p></form></div>
-<div class="ov" id="pauseOv"><div class="card"><h3>Paused</h3><div class="row"><button id="pResume">Resume</button><button class="alt" id="pQuit">Quit race</button></div></div></div>
+<div class="ov" id="pauseOv"><div class="card"><h3>Paused</h3><div class="row"><button id="pResume">Resume</button><button class="alt" id="pScores">High scores</button><button class="alt" id="pQuit">Quit race</button></div></div></div>
 <div class="ov" id="resOv"><div class="card" id="resCard"></div></div>
+<div class="ov" id="hsOv"><div class="card hs"><h3>High scores</h3><p class="msg" style="margin:0">Each player's best time on every arena.</p><div class="tabs" id="hsTabs"></div><div style="overflow-x:auto"><table class="hsT" id="hsTab"></table></div><div class="row"><button id="hsClose">Close</button></div></div></div>
 
 <script>
 (()=>{
@@ -136,6 +146,7 @@ function carStats(d){return{max:170+d[0]*3.6,acc:120+d[1]*4.4,grip:6+d[2]*.14,st
 /* ---------- identity & shared records ---------- */
 /* On jarcud.com/racer the server keeps the best run per player. Inside the artifact preview the shared database is used instead. */
 const API=location.pathname.indexOf('/racer')===0;
+const PLAT=(matchMedia('(pointer:coarse)').matches||/iPhone|iPad|Android/i.test(navigator.userAgent))?'Mobile':'Desktop';
 const getCookie=k=>{try{const m=document.cookie.match(new RegExp('(?:^|;\\s*)'+k+'=([^;]*)'));return m?decodeURIComponent(m[1]):''}catch(e){return ''}};
 const setCookie=(k,v)=>{try{document.cookie=k+'='+encodeURIComponent(v)+';max-age=31536000;path=/;SameSite=Lax'}catch(e){}};
 const keyOf=n=>String(n||'').trim().replace(/\s+/g,' ').toLowerCase();
@@ -144,7 +155,7 @@ const myKey=()=>UID||(API?keyOf(name):null);
 const isMine=(r,ti)=>{const k=myKey();return !!k&&r.id==='t'+ti+'_'+k};
 async function refreshRecords(){
  try{const r=await fetch('/api/racer/records?v='+TRACK_V,{cache:'no-store'}),d=await r.json(),out=[];
-  for(const tk in d.records)for(const e of d.records[tk])out.push({id:'t'+tk+'_'+keyOf(e.n),track:+tk,v:TRACK_V,name:e.n,time:e.t});
+  for(const tk in d.records)for(const e of d.records[tk])out.push({id:'t'+tk+'_'+keyOf(e.n),track:+tk,v:TRACK_V,name:e.n,time:e.t,ts:e.ts,plat:e.p});
   runs=out;netNote=''}catch(e){netNote='Could not reach the shared records. Racing still works.'}
  renderTracks()}
 (async()=>{try{
@@ -158,7 +169,7 @@ async function refreshRecords(){
 const runTrack=r=>r.v===TRACK_V?r.track:-1;
 const trackRuns=ti=>runs.filter(r=>runTrack(r)===ti&&isFinite(r.time)).sort((a,b)=>a.time-b.time);
 async function loadShadows(ti){
- /* at most 3 shadows: the 3 fastest players, which can include you */
+ /* at most 5 shadows: the 5 fastest players, which can include you */
  let out=[];
  if(API){try{const r=await fetch('/api/racer/shadows?v='+TRACK_V+'&track='+ti,{cache:'no-store'}),d=await r.json();out=(d.shadows||[]).map(s=>({name:s.n,time:s.t,s:s.s,id:'t'+ti+'_'+keyOf(s.n)}))}catch(e){}}
  else{
@@ -167,7 +178,7 @@ async function loadShadows(ti){
  }
  const pb=ls.get('rl_pb3_'+ti,null);
  if(pb&&pb.s&&!out.some(o=>isMine(o,ti)))out.push({name:pb.name||name||'You',time:pb.time,s:pb.s,id:'local'});
- out.sort((a,b)=>a.time-b.time);const seen=new Set(),u=[];for(const o of out){const k=keyOf(o.name);if(seen.has(k))continue;seen.add(k);u.push(o)}return u.slice(0,3);
+ out.sort((a,b)=>a.time-b.time);const seen=new Set(),u=[];for(const o of out){const k=keyOf(o.name);if(seen.has(k))continue;seen.add(k);u.push(o)}return u.slice(0,5);
 }
 
 /* ---------- audio ---------- */
@@ -570,7 +581,7 @@ function record(){
  const best=trackRuns(ti)[0];
  finishInfo={time,prevBest,newPB:time<prevBest,newRecord:!best||time<best.time,saved:null,s:G.rec.slice()};
  if(finishInfo.newPB){ls.set('rl_pb3_'+ti,{name,time,s:finishInfo.s});
-  if(API){(async()=>{try{const r=await fetch('/api/racer/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({v:TRACK_V,track:ti,name,time,s:finishInfo.s})}),d=await r.json();finishInfo.saved=!!(d&&d.saved);finishInfo.reason=d&&d.reason}catch(e){finishInfo.saved=false;finishInfo.reason='net'}refreshRecords();if(G&&G.done)showSaveMsg()})()}
+  if(API){(async()=>{try{const r=await fetch('/api/racer/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({v:TRACK_V,track:ti,name,time,s:finishInfo.s,platform:PLAT})}),d=await r.json();finishInfo.saved=!!(d&&d.saved);finishInfo.reason=d&&d.reason}catch(e){finishInfo.saved=false;finishInfo.reason='net'}refreshRecords();if(G&&G.done)showSaveMsg()})()}
   else if(DB&&UID&&CANWRITE!==false){const id='t'+ti+'_'+UID;
    (async()=>{try{await DB.doc('traces/'+id).set({s:finishInfo.s});await DB.doc('runs/'+id).set({track:ti,v:TRACK_V,name,time,ts:Date.now()});finishInfo.saved=true}catch(e){finishInfo.saved=false}if(G&&G.done)showSaveMsg()})()}
   else finishInfo.saved=false}
@@ -578,7 +589,7 @@ function record(){
 }
 function showSaveMsg(){const el=$('#saveMsg');if(!el||!finishInfo)return;
  el.className='msg'+(finishInfo.newPB&&finishInfo.saved?' good':'');
- el.textContent=!finishInfo.newPB?'Not faster than your recorded run, so it was not saved.':finishInfo.saved===true?'Saved. The 3 fastest runs become shadows for every player.':finishInfo.saved===false?(API?(finishInfo.reason==='slower'?'The server already has a faster run from you, so this one was not saved.':'Could not reach the server, so this run is only saved on this device.'):'Saved on this device only (sign in with write access to share it).'):'Saving your run...'}
+ el.textContent=!finishInfo.newPB?'Not faster than your recorded run, so it was not saved.':finishInfo.saved===true?'Saved. The 5 fastest runs become shadows for every player.':finishInfo.saved===false?(API?(finishInfo.reason==='slower'?'The server already has a faster run from you, so this one was not saved.':'Could not reach the server, so this run is only saved on this device.'):'Saved on this device only (sign in with write access to share it).'):'Saving your run...'}
 function finishRace(){
  fastForward();G.done=true;G.conf.parts=[];G.conf.ground=[];setHush(true);const pos=G.posNow,fi=finishInfo,ti=G.ti;
  const rows=[];
@@ -591,7 +602,7 @@ function finishRace(){
  const allTime=fi.newPB?`New personal best: #${rankRun} all-time of ${total} drivers in ${G.TD.name}.`:`This run ranks #${rankRun} all-time of ${total}. Your best (${fmt(myBest)}) is #${rankBest}.`;
  $('#resCard').innerHTML=`<h3></h3><p class="msg" style="margin:0 0 6px" id="resSub"></p>
  <table class="res" id="resTab"></table><p class="msg good" id="allTime"></p><p class="msg" id="saveMsg"></p>
- <div class="row"><button id="rAgain">Race again</button><button class="alt" id="rMenu">Menu</button></div>`;
+ <div class="row"><button id="rAgain">Race again</button><button class="alt" id="rScores">High scores</button><button class="alt" id="rMenu">Menu</button></div>`;
  $('#resCard h3').textContent=fi.newRecord?'New record':mePos===1?'Winner':mePos<=3?'Podium':'Finished';
  $('#resSub').textContent=`Overall P${mePos} of ${rows.length} (rivals and shadows) · vs rivals P${pos} of ${FIELD} · best lap ${fmt(G.best)}`;
  const tab=$('#resTab');
@@ -600,7 +611,7 @@ function finishRace(){
   a.textContent=i+1;b.textContent=r.n+(r.k==='me'?' (you)':r.k==='shadow'?' best':'');if(r.k==='shadow')b.style.color='var(--cyan)';
   c.textContent=r.t!=null?fmt(r.t):'DNF';tr.append(a,b,c);tab.append(tr)});
  $('#allTime').textContent=allTime;
- showSaveMsg();$('#resOv').style.display='flex';$('#rAgain').onclick=()=>{endRace(true);openName()};$('#rMenu').onclick=()=>endRace(true);
+ showSaveMsg();$('#resOv').style.display='flex';$('#rScores').onclick=openScores;$('#rAgain').onclick=()=>{endRace(true);openName()};$('#rMenu').onclick=()=>endRace(true);
 }
 
 /* ---------- render ---------- */
@@ -810,6 +821,25 @@ function renderTracks(){
   m.append('Your best ');const b2=document.createElement('b');b2.textContent=mt<1e9?fmt(mt):'--';m.append(b2);
   d.append(nm,m);b.append(d);b.onclick=()=>{selTrack=i;ls.set('rl_track3',i);renderTracks()};tw.append(b)});
 }
+/* ---------- high scores: every player's best time per arena, with date, time of day and device ---------- */
+let hsTab=0;
+function fmtWhen(e){if(!e.ts)return['-','-'];const d=new Date(e.ts),h=d.getHours(),m=d.getMinutes();return[d.toLocaleString('en-US',{month:'short'})+' '+d.getDate()+" '"+String(d.getFullYear()).slice(2),((h+11)%12+1)+'.'+String(m).padStart(2,'0')+(h<12?'am':'pm')]}
+function renderScores(){
+ const tabs=$('#hsTabs');tabs.innerHTML='';
+ TRACKS.forEach((T,i)=>{const b=document.createElement('button');b.className='ghost'+(i===hsTab?' on':'');b.textContent=T.name;b.onclick=()=>{hsTab=i;renderScores()};tabs.append(b)});
+ const tab=$('#hsTab');tab.innerHTML='';
+ const hd=document.createElement('tr');['#','Player','Best time','Date','Time','Device'].forEach(h=>{const th=document.createElement('th');th.textContent=h;hd.append(th)});tab.append(hd);
+ const rows=trackRuns(hsTab);
+ if(!rows.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.textContent='No runs yet. Finish a race to set the first one.';tr.append(td);tab.append(tr);return}
+ rows.forEach((r,i)=>{const tr=document.createElement('tr');if(isMine(r,hsTab))tr.className='me';const w=fmtWhen(r);
+  [i+1,r.name,fmt(r.time),w[0],w[1],r.plat||'-'].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td)});tab.append(tr)})}
+async function openScores(){
+ if(G&&!G.done&&!G.paused)setPause(true);
+ hsTab=G?G.ti:selTrack;$('#hsOv').style.display='flex';renderScores();
+ if(API){await refreshRecords();renderScores()}}
+function closeScores(){$('#hsOv').style.display='none'}
+for(const[id,fn]of[['hsMenu',openScores],['bScores',openScores],['pScores',openScores],['nameScores',openScores],['hsClose',closeScores]])$('#'+id).onclick=fn;
+addEventListener('keydown',e=>{if($('#hsOv').style.display==='flex'&&e.code==='Escape'){closeScores();e.stopPropagation()}},true);
 function openName(){
  renderDials();
  $('#nameIn').value=name;$('#nameMsg').textContent='';$('#nameOv').style.display='flex';$('#nameGo').disabled=!name.trim();
@@ -822,5 +852,6 @@ $('#nameForm').addEventListener('submit',e=>{e.preventDefault();const v=$('#name
 $('#go').onclick=openName;
 $('#mute').onclick=()=>{muted=!muted;$('#mute').textContent=muted?'Sound off':'Sound on';if(AC)try{master.gain.setTargetAtTime(hush||muted?0:.9,T0(),.05)}catch(e){}};
 renderDials();renderTracks();
+if(location.hash==='#scores')openScores();
 })();
 </script>

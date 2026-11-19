@@ -634,15 +634,15 @@ def racer_records(v):
     for t in range(0, 10):
         top = racer_sorted(d, v, t)[:30]
         if top:
-            out[str(t)] = [{"n": e["n"], "t": e["t"]} for e in top]
+            out[str(t)] = [{"n": e["n"], "t": e["t"], "ts": e.get("ts"), "p": e.get("p")} for e in top]
     return out
 
 def racer_shadows(v, track):
-    """The 3 fastest players on this arena, each with the recorded path."""
+    """The 5 fastest players on this arena, each with the recorded path."""
     d = racer_load()
-    return [{"n": e["n"], "t": e["t"], "s": e["s"]} for e in racer_sorted(d, v, track) if e.get("s")][:3]
+    return [{"n": e["n"], "t": e["t"], "s": e["s"]} for e in racer_sorted(d, v, track) if e.get("s")][:5]
 
-def racer_save(v, track, name, t, s):
+def racer_save(v, track, name, t, s, platform=None):
     v = int(v); track = int(track); t = float(t)
     if not (0 < v < 100 and 0 <= track < 10):
         raise ValueError("bad arena")
@@ -657,7 +657,7 @@ def racer_save(v, track, name, t, s):
         raise ValueError("path does not match time")
     name = racer_name(name)
     key = re.sub(r"\s+", " ", name).lower()
-    entry = {"n": name, "t": round(t, 3), "s": s, "ts": int(time.time() * 1000)}
+    entry = {"n": name, "t": round(t, 3), "s": s, "ts": int(time.time() * 1000), "p": platform if platform in ("Desktop", "Mobile") else None}
     with RACER_LOCK:
         d = racer_load()
         board = d.setdefault("%d:%d" % (v, track), {})
@@ -1145,6 +1145,12 @@ class Handler(SimpleHTTPRequestHandler):
             except OSError:
                 self._json({"error": "paddle not found"}, 404)
             return
+        if self._is_main_host() and p in ("/racer/scores", "/racer/scores/", "/racer/highscores"):
+            self.send_response(302)
+            self.send_header("Location", "/racer#scores")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         if self._is_main_host() and p in ("/racer", "/racer/", "/shadowracer", "/shadowracer/"):
             try:
                 with open(RACER_PATH, encoding="utf-8") as f:
@@ -1282,7 +1288,7 @@ class Handler(SimpleHTTPRequestHandler):
                 RACER_LAST_POST.clear()
             req = self._read_json() or {}
             try:
-                saved, rank = racer_save(req.get("v"), req.get("track"), req.get("name"), req.get("time"), req.get("s"))
+                saved, rank = racer_save(req.get("v"), req.get("track"), req.get("name"), req.get("time"), req.get("s"), req.get("platform"))
             except (ValueError, TypeError):
                 self._json({"error": "bad run"}, 400)
                 return
