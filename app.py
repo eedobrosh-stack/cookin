@@ -610,6 +610,7 @@ def paddle_add(name, score, level, platform=None):
 RACER_RUNS_PATH = os.path.join(DATA_DIR, "racer_runs.json")
 RACER_LOCK = threading.Lock()
 RACER_LAST_POST = {}
+RACER_BOTS = {"mika", "dante"}   # rival drivers in the game: never real players
 
 def racer_load():
     try:
@@ -632,7 +633,7 @@ def racer_records(v):
     d = racer_load()
     out = {}
     for t in range(0, 10):
-        top = racer_sorted(d, v, t)[:30]
+        top = [e for e in racer_sorted(d, v, t) if e["n"].strip().lower() not in RACER_BOTS][:30]
         if top:
             out[str(t)] = [{"n": e["n"], "t": e["t"], "ts": e.get("ts"), "p": e.get("p")} for e in top]
     return out
@@ -640,7 +641,7 @@ def racer_records(v):
 def racer_shadows(v, track):
     """The 5 fastest players on this arena, each with the recorded path."""
     d = racer_load()
-    return [{"n": e["n"], "t": e["t"], "s": e["s"]} for e in racer_sorted(d, v, track) if e.get("s")][:5]
+    return [{"n": e["n"], "t": e["t"], "s": e["s"]} for e in racer_sorted(d, v, track) if e.get("s") and e["n"].strip().lower() not in RACER_BOTS][:5]
 
 def racer_save(v, track, name, t, s, platform=None):
     v = int(v); track = int(track); t = float(t)
@@ -656,6 +657,8 @@ def racer_save(v, track, name, t, s, platform=None):
     if abs(len(s) / 3 * 0.125 - t) > 4:
         raise ValueError("path does not match time")
     name = racer_name(name)
+    if name.strip().lower() in RACER_BOTS:
+        raise ValueError("reserved name")
     key = re.sub(r"\s+", " ", name).lower()
     entry = {"n": name, "t": round(t, 3), "s": s, "ts": int(time.time() * 1000), "p": platform if platform in ("Desktop", "Mobile") else None}
     with RACER_LOCK:

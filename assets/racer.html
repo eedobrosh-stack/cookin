@@ -150,6 +150,7 @@ const PLAT=(matchMedia('(pointer:coarse)').matches||/iPhone|iPad|Android/i.test(
 const getCookie=k=>{try{const m=document.cookie.match(new RegExp('(?:^|;\\s*)'+k+'=([^;]*)'));return m?decodeURIComponent(m[1]):''}catch(e){return ''}};
 const setCookie=(k,v)=>{try{document.cookie=k+'='+encodeURIComponent(v)+';max-age=31536000;path=/;SameSite=Lax'}catch(e){}};
 const keyOf=n=>String(n||'').trim().replace(/\s+/g,' ').toLowerCase();
+const BOTS=['mika','dante'];   /* the rival drivers: never listed as players */
 let name=getCookie('racer_name')||ls.get('rl_name','')||'',DB=null,UID=null,CANWRITE=null,runs=[],netNote='';
 const myKey=()=>UID||(API?keyOf(name):null);
 const isMine=(r,ti)=>{const k=myKey();return !!k&&r.id==='t'+ti+'_'+k};
@@ -829,7 +830,7 @@ function renderScores(){
  TRACKS.forEach((T,i)=>{const b=document.createElement('button');b.className='ghost'+(i===hsTab?' on':'');b.textContent=T.name;b.onclick=()=>{hsTab=i;renderScores()};tabs.append(b)});
  const tab=$('#hsTab');tab.innerHTML='';
  const hd=document.createElement('tr');['#','Player','Best time','Date','Time','Device'].forEach(h=>{const th=document.createElement('th');th.textContent=h;hd.append(th)});tab.append(hd);
- const rows=trackRuns(hsTab);
+ const rows=trackRuns(hsTab).filter(r=>!BOTS.includes(keyOf(r.name)));
  if(!rows.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.textContent='No runs yet. Finish a race to set the first one.';tr.append(td);tab.append(tr);return}
  rows.forEach((r,i)=>{const tr=document.createElement('tr');if(isMine(r,hsTab))tr.className='me';const w=fmtWhen(r);
   [i+1,r.name,fmt(r.time),w[0],w[1],r.plat||'-'].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td)});tab.append(tr)})}
@@ -848,6 +849,7 @@ function openName(){
 $('#nameIn').addEventListener('input',()=>{$('#nameGo').disabled=!$('#nameIn').value.trim()});
 $('#nameCancel').onclick=()=>{$('#nameOv').style.display='none'};
 $('#nameForm').addEventListener('submit',e=>{e.preventDefault();const v=$('#nameIn').value.trim().slice(0,14);if(!v){$('#nameMsg').textContent='Enter a name to race.';return}
+ if(BOTS.includes(keyOf(v))){$('#nameMsg').textContent='Mika and Dante are rival drivers. Pick another name.';return}
  name=v;ls.set('rl_name',name);setCookie('racer_name',name);audioInit();beginRace()});
 $('#go').onclick=openName;
 $('#mute').onclick=()=>{muted=!muted;$('#mute').textContent=muted?'Sound off':'Sound on';if(AC)try{master.gain.setTargetAtTime(hush||muted?0:.9,T0(),.05)}catch(e){}};
