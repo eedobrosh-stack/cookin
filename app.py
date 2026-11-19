@@ -643,42 +643,80 @@ def racer_shadows(v, track):
     d = racer_load()
     return [{"n": e["n"], "t": e["t"], "s": e["s"]} for e in racer_sorted(d, v, track) if e.get("s") and e["n"].strip().lower() not in RACER_BOTS][:5]
 
-def racer_save(v, track, name, t, s, platform=None):
-    v = int(v); track = int(track); t = float(t)
+def racer_laps(v):
+    """Best single lap per player, per arena."""
+    d = racer_load().get("laps", {})
+    out = {}
+    for t in range(0, 10):
+        rows = [e for e in d.get("%d:%d" % (v, t), {}).values() if e["n"].strip().lower() not in RACER_BOTS]
+        rows.sort(key=lambda e: e["l"])
+        if rows:
+            out[str(t)] = [{"n": e["n"], "l": e["l"], "ts": e.get("ts"), "p": e.get("p")} for e in rows[:30]]
+    return out
+
+def racer_save(v, track, name, t, s, platform=None, lap=None):
+    """Store a finished race: the best run (with its path, when s is sent) and the best lap, each kept per player."""
+    v = int(v); track = int(track)
     if not (0 < v < 100 and 0 <= track < 10):
         raise ValueError("bad arena")
-    if not (5 <= t <= 900):
-        raise ValueError("bad time")
-    if not isinstance(s, list) or len(s) % 3 or not (6 <= len(s) <= 24000):
-        raise ValueError("bad path")
-    s = [int(x) for x in s]
-    if any(abs(x) > 200000 for x in s) or any(abs(s[i]) > 700 for i in range(2, len(s), 3)):
-        raise ValueError("bad path")
-    if abs(len(s) / 3 * 0.125 - t) > 4:
-        raise ValueError("path does not match time")
     name = racer_name(name)
     if name.strip().lower() in RACER_BOTS:
         raise ValueError("reserved name")
     key = re.sub(r"\s+", " ", name).lower()
-    entry = {"n": name, "t": round(t, 3), "s": s, "ts": int(time.time() * 1000), "p": platform if platform in ("Desktop", "Mobile") else None}
+    plat = platform if platform in ("Desktop", "Mobile") else None
+    now = int(time.time() * 1000)
+    entry = None
+    if s is not None:
+        t = float(t)
+        if not (5 <= t <= 900):
+            raise ValueError("bad time")
+        if not isinstance(s, list) or len(s) % 3 or not (6 <= len(s) <= 24000):
+            raise ValueError("bad path")
+        s = [int(x) for x in s]
+        if any(abs(x) > 200000 for x in s) or any(abs(s[i]) > 700 for i in range(2, len(s), 3)):
+            raise ValueError("bad path")
+        if abs(len(s) / 3 * 0.125 - t) > 4:
+            raise ValueError("path does not match time")
+        entry = {"n": name, "t": round(t, 3), "s": s, "ts": now, "p": plat}
+    lapv = None
+    if lap is not None:
+        lapv = float(lap)
+        if not (3 <= lapv <= 300):
+            raise ValueError("bad lap")
+        if t is not None and float(t) + 0.5 < lapv:
+            raise ValueError("lap longer than the race")
+    if entry is None and lapv is None:
+        raise ValueError("nothing to save")
+    saved, rank, changed = False, None, False
     with RACER_LOCK:
         d = racer_load()
-        board = d.setdefault("%d:%d" % (v, track), {})
-        old = board.get(key)
-        saved = old is None or entry["t"] < old["t"]
-        if saved:
-            board[key] = entry
-            ranked = sorted(board.items(), key=lambda kv: kv[1]["t"])
-            for i, (k, e) in enumerate(ranked):
-                if i >= 10 and "s" in e:
-                    del e["s"]          # only the fastest 10 keep their path
+        if entry is not None:
+            board = d.setdefault("%d:%d" % (v, track), {})
+            old = board.get(key)
+            saved = old is None or entry["t"] < old["t"]
+            if saved:
+                board[key] = entry
+                changed = True
+                ranked = sorted(board.items(), key=lambda kv: kv[1]["t"])
+                for i, (k, e) in enumerate(ranked):
+                    if i >= 10 and "s" in e:
+                        del e["s"]          # only the fastest 10 keep their path
+            rank = 1 + sum(1 for e in board.values() if e["t"] < min(entry["t"], old["t"] if old else 1e9))
+        lap_saved = False
+        if lapv is not None:
+            laps = d.setdefault("laps", {}).setdefault("%d:%d" % (v, track), {})
+            oldl = laps.get(key)
+            if oldl is None or lapv < oldl["l"]:
+                laps[key] = {"n": name, "l": round(lapv, 3), "ts": now, "p": plat}
+                lap_saved = True
+                changed = True
+        if changed:
             os.makedirs(DATA_DIR, exist_ok=True)
             tmp = RACER_RUNS_PATH + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(d, f)
             os.replace(tmp, RACER_RUNS_PATH)
-        rank = 1 + sum(1 for e in board.values() if e["t"] < min(entry["t"], old["t"] if old else 1e9))
-    return saved, rank
+    return saved, rank, lap_saved
 
 JARCUD_LANDING = """<!doctype html>
 <meta charset="utf-8">
@@ -1217,7 +1255,7 @@ class Handler(SimpleHTTPRequestHandler):
         if p == "/api/racer/records":
             rq = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             try:
-                self._json({"records": racer_records(int(rq.get("v", ["0"])[0]))})
+                self._json({"records": racer_records(int(rq.get("v", ["0"])[0])), "laps": racer_laps(int(rq.get("v", ["0"])[0]))})
             except (ValueError, TypeError):
                 self._json({"error": "bad request"}, 400)
             return
@@ -1291,11 +1329,11 @@ class Handler(SimpleHTTPRequestHandler):
                 RACER_LAST_POST.clear()
             req = self._read_json() or {}
             try:
-                saved, rank = racer_save(req.get("v"), req.get("track"), req.get("name"), req.get("time"), req.get("s"), req.get("platform"))
+                saved, rank, lap_saved = racer_save(req.get("v"), req.get("track"), req.get("name"), req.get("time"), req.get("s"), req.get("platform"), req.get("lap"))
             except (ValueError, TypeError):
                 self._json({"error": "bad run"}, 400)
                 return
-            self._json({"saved": saved, "reason": None if saved else "slower", "rank": rank})
+            self._json({"saved": saved, "reason": None if saved else "slower", "rank": rank, "lap_saved": lap_saved})
             return
         if p == "/api/paddle/game":
             req = self._read_json() or {}

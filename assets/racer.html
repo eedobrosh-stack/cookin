@@ -115,7 +115,7 @@ h2{font:800 26px var(--display);text-transform:uppercase;letter-spacing:.06em;ma
   <p class="msg" id="nameMsg"></p></form></div>
 <div class="ov" id="pauseOv"><div class="card"><h3>Paused</h3><div class="row"><button id="pResume">Resume</button><button class="alt" id="pScores">High scores</button><button class="alt" id="pQuit">Quit race</button></div></div></div>
 <div class="ov" id="resOv"><div class="card" id="resCard"></div></div>
-<div class="ov" id="hsOv"><div class="card hs"><h3>High scores</h3><p class="msg" style="margin:0">Each player's best time on every arena.</p><div class="tabs" id="hsTabs"></div><div style="overflow-x:auto"><table class="hsT" id="hsTab"></table></div><div class="row"><button id="hsClose">Close</button></div></div></div>
+<div class="ov" id="hsOv"><div class="card hs"><h3>High scores</h3><p class="msg" style="margin:0">Each player's best time on every arena.</p><div class="tabs" id="hsMode"></div><div class="tabs" id="hsTabs"></div><div style="overflow-x:auto"><table class="hsT" id="hsTab"></table></div><div class="row"><button id="hsClose">Close</button></div></div></div>
 
 <script>
 (()=>{
@@ -151,13 +151,13 @@ const getCookie=k=>{try{const m=document.cookie.match(new RegExp('(?:^|;\\s*)'+k
 const setCookie=(k,v)=>{try{document.cookie=k+'='+encodeURIComponent(v)+';max-age=31536000;path=/;SameSite=Lax'}catch(e){}};
 const keyOf=n=>String(n||'').trim().replace(/\s+/g,' ').toLowerCase();
 const BOTS=['mika','dante'];   /* the rival drivers: never listed as players */
-let name=getCookie('racer_name')||ls.get('rl_name','')||'',DB=null,UID=null,CANWRITE=null,runs=[],netNote='';
+let name=getCookie('racer_name')||ls.get('rl_name','')||'',DB=null,UID=null,CANWRITE=null,runs=[],lapRuns=[],netNote='';
 const myKey=()=>UID||(API?keyOf(name):null);
 const isMine=(r,ti)=>{const k=myKey();return !!k&&r.id==='t'+ti+'_'+k};
 async function refreshRecords(){
  try{const r=await fetch('/api/racer/records?v='+TRACK_V,{cache:'no-store'}),d=await r.json(),out=[];
   for(const tk in d.records)for(const e of d.records[tk])out.push({id:'t'+tk+'_'+keyOf(e.n),track:+tk,v:TRACK_V,name:e.n,time:e.t,ts:e.ts,plat:e.p});
-  runs=out;netNote=''}catch(e){netNote='Could not reach the shared records. Racing still works.'}
+  runs=out;lapRuns=[];for(const tk in (d.laps||{}))for(const e of d.laps[tk])lapRuns.push({track:+tk,name:e.n,time:e.l,ts:e.ts,plat:e.p});netNote=''}catch(e){netNote='Could not reach the shared records. Racing still works.'}
  renderTracks()}
 (async()=>{try{
  await 0;if(API){refreshRecords();return}
@@ -582,10 +582,11 @@ function record(){
  const best=trackRuns(ti)[0];
  finishInfo={time,prevBest,newPB:time<prevBest,newRecord:!best||time<best.time,saved:null,s:G.rec.slice()};
  if(finishInfo.newPB){ls.set('rl_pb3_'+ti,{name,time,s:finishInfo.s});
-  if(API){(async()=>{try{const r=await fetch('/api/racer/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({v:TRACK_V,track:ti,name,time,s:finishInfo.s,platform:PLAT})}),d=await r.json();finishInfo.saved=!!(d&&d.saved);finishInfo.reason=d&&d.reason}catch(e){finishInfo.saved=false;finishInfo.reason='net'}refreshRecords();if(G&&G.done)showSaveMsg()})()}
+  if(API){(async()=>{try{const r=await fetch('/api/racer/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({v:TRACK_V,track:ti,name,time,lap:G.best,s:finishInfo.s,platform:PLAT})}),d=await r.json();finishInfo.saved=!!(d&&d.saved);finishInfo.reason=d&&d.reason}catch(e){finishInfo.saved=false;finishInfo.reason='net'}refreshRecords();if(G&&G.done)showSaveMsg()})()}
   else if(DB&&UID&&CANWRITE!==false){const id='t'+ti+'_'+UID;
    (async()=>{try{await DB.doc('traces/'+id).set({s:finishInfo.s});await DB.doc('runs/'+id).set({track:ti,v:TRACK_V,name,time,ts:Date.now()});finishInfo.saved=true}catch(e){finishInfo.saved=false}if(G&&G.done)showSaveMsg()})()}
   else finishInfo.saved=false}
+ else if(API&&G.best!=null){fetch('/api/racer/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({v:TRACK_V,track:ti,name,time,lap:G.best,platform:PLAT})}).then(()=>refreshRecords()).catch(()=>{})}
  fanfare(finishInfo.newRecord);
 }
 function showSaveMsg(){const el=$('#saveMsg');if(!el||!finishInfo)return;
@@ -823,16 +824,18 @@ function renderTracks(){
   d.append(nm,m);b.append(d);b.onclick=()=>{selTrack=i;ls.set('rl_track3',i);renderTracks()};tw.append(b)});
 }
 /* ---------- high scores: every player's best time per arena, with date, time of day and device ---------- */
-let hsTab=0;
+let hsTab=0,hsMode='time';
 function fmtWhen(e){if(!e.ts)return['-','-'];const d=new Date(e.ts),h=d.getHours(),m=d.getMinutes();return[d.toLocaleString('en-US',{month:'short'})+' '+d.getDate()+" '"+String(d.getFullYear()).slice(2),((h+11)%12+1)+'.'+String(m).padStart(2,'0')+(h<12?'am':'pm')]}
 function renderScores(){
  const tabs=$('#hsTabs');tabs.innerHTML='';
  TRACKS.forEach((T,i)=>{const b=document.createElement('button');b.className='ghost'+(i===hsTab?' on':'');b.textContent=T.name;b.onclick=()=>{hsTab=i;renderScores()};tabs.append(b)});
+ const mode=$('#hsMode');mode.innerHTML='';
+ [['time','Best race time'],['lap','Best lap']].forEach(([k,l])=>{const b=document.createElement('button');b.className='ghost'+(k===hsMode?' on':'');b.textContent=l;b.onclick=()=>{hsMode=k;renderScores()};mode.append(b)});
  const tab=$('#hsTab');tab.innerHTML='';
- const hd=document.createElement('tr');['#','Player','Best time','Date','Time','Device'].forEach(h=>{const th=document.createElement('th');th.textContent=h;hd.append(th)});tab.append(hd);
- const rows=trackRuns(hsTab).filter(r=>!BOTS.includes(keyOf(r.name)));
- if(!rows.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.textContent='No runs yet. Finish a race to set the first one.';tr.append(td);tab.append(tr);return}
- rows.forEach((r,i)=>{const tr=document.createElement('tr');if(isMine(r,hsTab))tr.className='me';const w=fmtWhen(r);
+ const hd=document.createElement('tr');['#','Player',hsMode==='lap'?'Best lap':'Best time','Date','Time','Device'].forEach(h=>{const th=document.createElement('th');th.textContent=h;hd.append(th)});tab.append(hd);
+ const rows=(hsMode==='lap'?lapRuns.filter(r=>r.track===hsTab).sort((a,b)=>a.time-b.time):trackRuns(hsTab)).filter(r=>!BOTS.includes(keyOf(r.name)));
+ if(!rows.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.textContent=hsMode==='lap'&&!API?'Lap records are kept on jarcud.com/racer.':'No runs yet. Finish a race to set the first one.';tr.append(td);tab.append(tr);return}
+ rows.forEach((r,i)=>{const tr=document.createElement('tr');if(keyOf(r.name)===keyOf(name)||isMine(r,hsTab))tr.className='me';const w=fmtWhen(r);
   [i+1,r.name,fmt(r.time),w[0],w[1],r.plat||'-'].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td)});tab.append(tr)})}
 async function openScores(){
  if(G&&!G.done&&!G.paused)setPause(true);
