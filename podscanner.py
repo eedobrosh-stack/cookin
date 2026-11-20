@@ -762,6 +762,19 @@ def catalog_origin(name):
     return _LANG_IDX["omap"].get(_nname(name), "")
 
 
+def catalog_country(name):
+    """country code (lowercase) where a catalog podcast charts best, '' when unknown"""
+    pods = _catalog()
+    if _LANG_IDX.get("csrc") is not pods:
+        m = {}
+        for r in pods:
+            codes = [c for c in (r.get("_geo_all") or []) if c in COUNTRIES]
+            if codes:
+                m[r["_n"]] = codes[0]
+        _LANG_IDX["cmap"], _LANG_IDX["csrc"] = m, pods
+    return _LANG_IDX["cmap"].get(_nname(name), "")
+
+
 # ------------------------------------------------------------------ public Charts page
 _CAD_ORDER = [("daily", 0), ("2-3 / week", 1), ("weekly", 2), ("biweekly", 3), ("monthly", 4), ("rare", 5)]
 CHARTS_PAGE_SIZE = 100

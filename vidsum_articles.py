@@ -1297,14 +1297,24 @@ def article_html(a):
 def index_html():
     e = _html.escape
     arts = _article_index()
+    import podscanner
+    chs = _load_ch()["channels"]
+    chmap = {c["id"]: c for c in chs}
+    resolve = _source_resolver(chs)
+    flag = lambda cc: "".join(chr(127397 + ord(x)) for x in cc.upper()) if len(cc) == 2 else ""
     rows = []
     for a in arts:
+        ch = chmap.get(resolve(a))
+        lang = audio_lang(a, ch)
+        cc = podscanner.catalog_country(a.get("channel") or (ch or {}).get("name") or "") or {"he": "il", "en": "us"}.get(lang[:2], "")
+        cname = podscanner.COUNTRIES.get(cc, ("", ""))[0]
+        cats = " · ".join(article_topics(a))
         rel = _rel(a)
         has_t = len((a.get("published_at") or "")) >= 19
         rel_txt = (rel[:16] if has_t else rel[:10]) if rel else "?"
         added = (a.get("created") or "")[:19]
         rows.append(f'<a class="item" data-added="{e(added)}" data-rel="{e(rel)}" href="/vidsum/article/{urllib.parse.quote(a["slug"])}"><span class="n"></span>{e(a["title"])}'
-                    f'<small>{e(a.get("channel", ""))}</small>'
+                    f'<small>פודקאסט: {e(a.get("channel", ""))} &middot; קטגוריה: {e(cats)} &middot; מדינה: {flag(cc)} {e(cname) or "?"} &middot; שפת מקור: {e(podscanner.LANG_NATIVE.get(lang[:2], lang) if lang else "?")}</small>'
                     f'<small class="d"><span class="da">נוסף ל-Pawed: {e(added[:16])}</span> &middot; <span class="dr">יצא: {e(rel_txt)}</span></small></a>')
     ctl = ('<div class="sortbar">מיון: <button type="button" data-k="added" class="on">נוסף ל-Pawed</button>'
            '<button type="button" data-k="rel">תאריך יציאת הפרק</button><span class="sub"> (שעון UTC)</span></div>')
