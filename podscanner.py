@@ -770,7 +770,8 @@ def catalog_country(name):
         for r in pods:
             codes = [c for c in (r.get("_geo_all") or []) if c in COUNTRIES]
             if codes:
-                m[r["_n"]] = codes[0]
+                same = [c for c in codes if COUNTRIES[c][1] == r.get("language")]          # a country where the show's own language is spoken
+                m[r["_n"]] = "us" if (r.get("language") == "en" and "us" in codes) else (same or codes)[0]
         _LANG_IDX["cmap"], _LANG_IDX["csrc"] = m, pods
     return _LANG_IDX["cmap"].get(_nname(name), "")
 
