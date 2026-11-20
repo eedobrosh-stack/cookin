@@ -848,6 +848,19 @@ def charts_query(countries=(), langs=(), genres=(), page=1, hide=()):
     return {"total": total, "page": page, "size": CHARTS_PAGE_SIZE, "from": lo + 1 if total else 0, "to": min(lo + CHARTS_PAGE_SIZE, total), "pods": out}
 
 
+def topic_for_add(p):
+    """Pawed section a podcast is filed under when it is added as a source: the scanner's topic, else the Apple genre mapping, else Culture"""
+    t = _TOPIC_FIX.get(p.get("topic"), p.get("topic"))
+    if t in va.TOPICS:
+        return t
+    for g in p.get("genres") or []:
+        if g in GENRE_TOPIC:
+            return GENRE_TOPIC[g]
+        if "News" in g:
+            return "פוליטיקה"
+    return "תרבות"
+
+
 def catalog_pod(pid):
     with LOCK:
         d = _load()
@@ -1043,7 +1056,7 @@ def handle_post(handler, path, req):
                 continue
             try:
                 va.add_source({"url": p["feed"], "name": p.get("name"), "language": p.get("language") if p.get("language") in va.LANGS else "he",
-                               "vertical": p.get("topic") if p.get("topic") in va.TOPICS else "תרבות"}, user)
+                               "vertical": topic_for_add(p)}, user)
                 err = None
             except ValueError as e:
                 err = str(e)

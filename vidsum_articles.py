@@ -3728,7 +3728,7 @@ def handle_post(handler, path, req):
                     if twin:
                         raise ValueError(f"already in the sources table as \"{twin}\"")
                     req = {"url": p["feed"], "name": p["name"], "lang_full": p["language"], "language": p["language"] if p["language"] in LANGS else "other",
-                           "vertical": p["topic"] if p["topic"] in TOPICS else "תרבות"}
+                           "vertical": podscanner.topic_for_add(p)}
                 add_source(req, user)
             elif path in ("/api/vidsum/sources/remove", "/api/vidsum/sources/update"):
                 with LOCK:
