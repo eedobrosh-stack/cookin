@@ -1313,19 +1313,43 @@ def index_html():
         has_t = len((a.get("published_at") or "")) >= 19
         rel_txt = (rel[:16] if has_t else rel[:10]) if rel else "?"
         added = (a.get("created") or "")[:19]
-        rows.append(f'<a class="item" data-added="{e(added)}" data-rel="{e(rel)}" href="/vidsum/article/{urllib.parse.quote(a["slug"])}"><span class="n"></span>{e(a["title"])}'
+        lname = podscanner.LANG_NATIVE.get(lang[:2], lang) if lang else ""
+        rows.append(f'<a class="item" data-pod="{e(a.get("channel", ""))}" data-cat="{e("|".join(article_topics(a)))}" data-ctry="{e(cname)}" data-lang="{e(lname)}" '
+                    f'data-added="{e(added)}" data-rel="{e(rel)}" href="/vidsum/article/{urllib.parse.quote(a["slug"])}"><span class="n"></span>{e(a["title"])}'
                     f'<small>פודקאסט: {e(a.get("channel", ""))} &middot; קטגוריה: {e(cats)} &middot; מדינה: {flag(cc)} {e(cname) or "?"} &middot; שפת מקור: {e(podscanner.LANG_NATIVE.get(lang[:2], lang) if lang else "?")}</small>'
                     f'<small class="d"><span class="da">נוסף ל-Pawed: {e(added[:16])}</span> &middot; <span class="dr">יצא: {e(rel_txt)}</span></small></a>')
+    flt = ('<div class="fbar"><div class="ac"><input id="q" type="search" placeholder="חיפוש: פודקאסט, קטגוריה, מדינה, שפה או מילים מהכותרת" autocomplete="off"><div id="sg" hidden></div></div>'
+           '<select id="f_pod"><option value="">כל הפודקאסטים</option></select><select id="f_cat"><option value="">כל הקטגוריות</option></select>'
+           '<select id="f_ctry"><option value="">כל המדינות</option></select><select id="f_lang"><option value="">כל השפות</option></select>'
+           '<button type="button" id="f_clr">נקה</button></div>')
     ctl = ('<div class="sortbar">מיון: <button type="button" data-k="added" class="on">נוסף ל-Pawed</button>'
            '<button type="button" data-k="rel">תאריך יציאת הפרק</button><span class="sub"> (שעון UTC)</span></div>')
-    js = ("<script>(function(){var L=document.querySelector('.list'),B=document.querySelectorAll('.sortbar button');"
+    js = ("<script>(function(){var L=document.querySelector('.list'),B=document.querySelectorAll('.sortbar button'),ALL=[].slice.call(L.children),TOT=ALL.length,H=document.getElementById('cnt');"
+          "var Q=document.getElementById('q'),SG=document.getElementById('sg'),F={pod:document.getElementById('f_pod'),cat:document.getElementById('f_cat'),ctry:document.getElementById('f_ctry'),lang:document.getElementById('f_lang')};"
+          "var TL={pod:'פודקאסט',cat:'קטגוריה',ctry:'מדינה',lang:'שפה'},V={pod:{},cat:{},ctry:{},lang:{}};"
+          "ALL.forEach(function(n){var d=n.dataset;n._q=n.textContent.toLowerCase();V.pod[d.pod]=(V.pod[d.pod]||0)+1;"
+          "d.cat.split('|').forEach(function(c){if(c)V.cat[c]=(V.cat[c]||0)+1});if(d.ctry)V.ctry[d.ctry]=(V.ctry[d.ctry]||0)+1;if(d.lang)V.lang[d.lang]=(V.lang[d.lang]||0)+1;});"
+          "Object.keys(F).forEach(function(k){Object.keys(V[k]).sort(function(a,b){return V[k][b]-V[k][a]||a.localeCompare(b)}).forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v+' ('+V[k][v]+')';F[k].appendChild(o)});F[k].onchange=apply});"
+          "function ok(n){var d=n.dataset,t=Q.value.trim().toLowerCase();"
+          "if(F.pod.value&&d.pod!==F.pod.value)return false;if(F.cat.value&&('|'+d.cat+'|').indexOf('|'+F.cat.value+'|')<0)return false;"
+          "if(F.ctry.value&&d.ctry!==F.ctry.value)return false;if(F.lang.value&&d.lang!==F.lang.value)return false;"
+          "if(t&&(n._q+' '+d.pod+' '+d.cat+' '+d.ctry+' '+d.lang).toLowerCase().indexOf(t)<0)return false;return true;}"
+          "function apply(){var c=0;[].slice.call(L.children).forEach(function(n){var v=ok(n);n.style.display=v?'':'none';if(v){c++;n.querySelector('.n').textContent=c+'. ';}});"
+          "H.textContent='('+(c===TOT?c.toLocaleString():c.toLocaleString()+' מתוך '+TOT.toLocaleString())+')';}"
           "function go(k){var it=[].slice.call(L.children);it.sort(function(a,b){var x=a.dataset[k]||'',y=b.dataset[k]||'';return x<y?1:x>y?-1:0;});"
-          "it.forEach(function(n,i){L.appendChild(n);n.querySelector('.n').textContent=(i+1)+'. '});B.forEach(function(b){b.classList.toggle('on',b.dataset.k===k)});"
+          "it.forEach(function(n){L.appendChild(n)});B.forEach(function(b){b.classList.toggle('on',b.dataset.k===k)});apply();"
           "try{localStorage.setItem('artsort',k)}catch(e){}}"
+          "function sugg(){var t=Q.value.trim().toLowerCase();if(!t){SG.hidden=true;return;}var out=[];"
+          "Object.keys(V).forEach(function(k){Object.keys(V[k]).forEach(function(v){var i=v.toLowerCase().indexOf(t);if(i>=0)out.push({k:k,v:v,n:V[k][v],r:(i===0?0:1)+(k==='pod'?0:0.1)});});});"
+          "out.sort(function(a,b){return a.r-b.r||b.n-a.n}).splice(12);"
+          "SG.innerHTML=out.map(function(o,i){return '<div data-i=\"'+i+'\"><b>'+TL[o.k]+'</b> '+o.v.replace(/</g,'&lt;')+' <small>'+o.n+'</small></div>'}).join('');SG._o=out;SG.hidden=!out.length;}"
+          "SG.onclick=function(e){var d=e.target.closest('[data-i]');if(!d)return;var o=SG._o[+d.dataset.i];F[o.k].value=o.v;Q.value='';SG.hidden=true;apply();};"
+          "Q.oninput=function(){sugg();apply();};Q.onfocus=sugg;document.addEventListener('click',function(e){if(!e.target.closest('.ac'))SG.hidden=true;});"
+          "document.getElementById('f_clr').onclick=function(){Q.value='';Object.keys(F).forEach(function(k){F[k].value=''});SG.hidden=true;apply();};"
           "B.forEach(function(b){b.onclick=function(){go(b.dataset.k)}});var k='added';try{k=localStorage.getItem('artsort')||'added'}catch(e){}go(k==='rel'?'rel':'added');})();</script>")
     css = ("<style>.sortbar{margin:10px 0 16px;font-size:14px}.sortbar button{border:1px solid #bbb;background:#fff;padding:5px 12px;margin-inline-end:6px;border-radius:5px;cursor:pointer;font-size:14px}"
-           ".sortbar button.on{background:#e3222b;border-color:#e3222b;color:#fff}.item .d{display:block}.item .n{color:#999;font-variant-numeric:tabular-nums;margin-inline-end:4px}</style>")
-    body = ('<p class="kicker"><a href="/vidsum">&larr; Pawed</a></p><h1>סיכומי וידאו <span class="sub">(' + format(len(arts), ",") + ')</span></h1>' + css + ctl +
+           ".sortbar button.on{background:#e3222b;border-color:#e3222b;color:#fff}.item .d{display:block}.fbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;align-items:center}.fbar select,.fbar input,.fbar button{padding:7px 9px;border:1px solid #bbb;border-radius:5px;font-size:14px;background:#fff;max-width:220px}.fbar .ac{position:relative;flex:1 1 280px}.fbar .ac input{width:100%;max-width:none}#sg{position:absolute;z-index:9;top:100%;inset-inline:0;background:#fff;border:1px solid #bbb;border-radius:5px;box-shadow:0 6px 18px rgba(0,0,0,.15);max-height:320px;overflow:auto}#sg div{padding:7px 10px;cursor:pointer;font-size:14px}#sg div:hover{background:#f3f3f3}#sg b{color:#e3222b;font-size:12px;margin-inline-end:6px}#sg small{color:#999;float:left}.item .n{color:#999;font-variant-numeric:tabular-nums;margin-inline-end:4px}</style>")
+    body = ('<p class="kicker"><a href="/vidsum">&larr; Pawed</a></p><h1>סיכומי וידאו <span class="sub" id="cnt">(' + format(len(arts), ",") + ')</span></h1>' + css + flt + ctl +
             f'<div class="list">{"".join(rows) or "<p class=sub>אין עדיין סיכומים.</p>"}</div>' + js)
     return _page("סיכומי וידאו", body)
 
