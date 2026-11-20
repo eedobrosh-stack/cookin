@@ -1297,11 +1297,26 @@ def article_html(a):
 def index_html():
     e = _html.escape
     arts = _article_index()
-    items = "".join(
-        f'<a class="item" href="/vidsum/article/{urllib.parse.quote(a["slug"])}">{e(a["title"])}'
-        f'<small>{e(a.get("channel", ""))} &middot; {e(a["created"][:10])}</small></a>' for a in arts)
-    body = ('<p class="kicker"><a href="/vidsum">&larr; Pawed</a></p><h1>סיכומי וידאו</h1>'
-            f'<div class="list">{items or "<p class=sub>אין עדיין סיכומים.</p>"}</div>')
+    rows = []
+    for a in arts:
+        rel = _rel(a)
+        has_t = len((a.get("published_at") or "")) >= 19
+        rel_txt = (rel[:16] if has_t else rel[:10]) if rel else "?"
+        added = (a.get("created") or "")[:19]
+        rows.append(f'<a class="item" data-added="{e(added)}" data-rel="{e(rel)}" href="/vidsum/article/{urllib.parse.quote(a["slug"])}">{e(a["title"])}'
+                    f'<small>{e(a.get("channel", ""))}</small>'
+                    f'<small class="d"><span class="da">נוסף ל-Pawed: {e(added[:16])}</span> &middot; <span class="dr">יצא: {e(rel_txt)}</span></small></a>')
+    ctl = ('<div class="sortbar">מיון: <button type="button" data-k="added" class="on">נוסף ל-Pawed</button>'
+           '<button type="button" data-k="rel">תאריך יציאת הפרק</button><span class="sub"> (שעון UTC)</span></div>')
+    js = ("<script>(function(){var L=document.querySelector('.list'),B=document.querySelectorAll('.sortbar button');"
+          "function go(k){var it=[].slice.call(L.children);it.sort(function(a,b){var x=a.dataset[k]||'',y=b.dataset[k]||'';return x<y?1:x>y?-1:0;});"
+          "it.forEach(function(n){L.appendChild(n)});B.forEach(function(b){b.classList.toggle('on',b.dataset.k===k)});"
+          "try{localStorage.setItem('artsort',k)}catch(e){}}"
+          "B.forEach(function(b){b.onclick=function(){go(b.dataset.k)}});var k='added';try{k=localStorage.getItem('artsort')||'added'}catch(e){}go(k==='rel'?'rel':'added');})();</script>")
+    css = ("<style>.sortbar{margin:10px 0 16px;font-size:14px}.sortbar button{border:1px solid #bbb;background:#fff;padding:5px 12px;margin-inline-end:6px;border-radius:5px;cursor:pointer;font-size:14px}"
+           ".sortbar button.on{background:#e3222b;border-color:#e3222b;color:#fff}.item .d{display:block}</style>")
+    body = ('<p class="kicker"><a href="/vidsum">&larr; Pawed</a></p><h1>סיכומי וידאו</h1>' + css + ctl +
+            f'<div class="list">{"".join(rows) or "<p class=sub>אין עדיין סיכומים.</p>"}</div>' + js)
     return _page("סיכומי וידאו", body)
 
 
