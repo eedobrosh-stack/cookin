@@ -2530,6 +2530,33 @@ def _tail_lines(path, max_bytes=1_500_000):
     return data.splitlines()[1 if size > max_bytes else 0:]
 
 
+def transcripts_report(lang=None, limit=0):
+    """admin: how many full transcripts are kept on disk, per audio language (count, MB, words); with lang= also the vids"""
+    by, vids = {}, []
+    for i in news_items():
+        l = ((i.get("lang") or "other").split("-")[0].lower()) or "other"
+        d = by.setdefault(l, {"lang": l, "name": LANG_NAMES.get(l, l), "articles": 0, "stored": 0, "bytes": 0, "chars": 0})
+        d["articles"] += 1
+        fp = os.path.join(TR_DIR, (i.get("vid") or "") + ".json")
+        if i.get("vid") and os.path.exists(fp):
+            d["stored"] += 1
+            d["bytes"] += os.path.getsize(fp)
+            if lang == l:
+                vids.append({"vid": i["vid"], "channel": i.get("channel"), "kind": i.get("kind"), "bytes": os.path.getsize(fp)})
+    for d in by.values():
+        d["mb"] = round(d["bytes"] / 1048576, 1)
+    tot = {"articles": sum(d["articles"] for d in by.values()), "stored": sum(d["stored"] for d in by.values()),
+           "mb": round(sum(d["bytes"] for d in by.values()) / 1048576, 1)}
+    try:
+        tot["files_on_disk"] = len([f for f in os.listdir(TR_DIR) if f.endswith(".json")])
+    except OSError:
+        tot["files_on_disk"] = 0
+    out = {"ok": True, "total": tot, "by_lang": sorted(by.values(), key=lambda d: -d["stored"])}
+    if lang:
+        out["vids"] = vids[:limit] if limit else vids
+    return out
+
+
 def health_report(qs=None):
     """Admin: what the server knows about its own health, for the QA agent: memory, uptime, loops, disk, and the error lines of the
     persistent log grouped by kind (the log survives restarts and out-of-memory kills, unlike the dashboard's live tail)."""
@@ -3075,6 +3102,22 @@ def handle_get(handler, path, qs):
         return True
     if path in ("/vidsum/stats", "/vidsum/stats/"):
         _serve(handler, STATS_PAGE)
+        return True
+    if path == "/api/vidsum/admin/transcripts":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            vid = (qs.get("vid") or [""])[0]
+            if vid:
+                fp = os.path.join(TR_DIR, vid + ".json") if re.fullmatch(r"[\w-]{11}", vid) else ""
+                if fp and os.path.exists(fp):
+                    with open(fp, encoding="utf-8") as f:
+                        handler._json({"ok": True, "vid": vid, **json.load(f)})
+                else:
+                    handler._json({"error": "no transcript"}, 404)
+            else:
+                handler._json(transcripts_report((qs.get("lang") or [""])[0] or None, int((qs.get("limit") or ["0"])[0] or 0)))
         return True
     if path == "/api/vidsum/admin/stats":
         user = current_user(handler)
