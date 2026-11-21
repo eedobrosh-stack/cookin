@@ -514,7 +514,7 @@ def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio="
                '<span>Summarized by Pawed (by Mr. Brosh)</span></div></footer>')
     desc = e(a["standfirst"])
     refresh = '<meta http-equiv="refresh" content="60">' if en and not translated else ""
-    return (f'<!doctype html><html lang="{lang}" dir="{"ltr" if en else "rtl"}"><head><meta charset="utf-8">'
+    return (f'<!doctype html><html lang="{"zh-Hant" if lang == "zh" else lang}" dir="{"ltr" if en else "rtl"}"><head><meta charset="utf-8">'
             f'<meta name="theme-color" content="#e3222b"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(a["title"])} | Pawed</title>'
             f'<meta name="description" content="{desc}"><link rel="canonical" href="{SITE}/vidsum/article/{urllib.parse.quote(pawed_bm.pretty_slug(a["slug"], a.get("title")))}">'
             f'<meta property="og:url" content="{SITE}/vidsum/article/{urllib.parse.quote(pawed_bm.pretty_slug(a["slug"], a.get("title")))}"><meta property="og:title" content="{e(a["title"])}">'
