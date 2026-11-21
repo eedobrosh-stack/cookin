@@ -8,9 +8,13 @@ import json
 import pawed_bm
 
 ORDER = ("de", "fr", "it", "es", "pt", "nl")               # the order of every tuple below
-UI_LANGS = ("he", "en") + ORDER
-NATIVE = {"he": "עברית", "en": "English", "de": "Deutsch", "fr": "Français", "it": "Italiano", "es": "Español", "pt": "Português", "nl": "Nederlands"}
-LOCALE = {"he": "he-IL", "en": "en-US", "de": "de-DE", "fr": "fr-FR", "it": "it-IT", "es": "es-ES", "pt": "pt-BR", "nl": "nl-NL"}
+ORDER_X = ("ja", "zh", "ko", "sv", "no", "fi")             # added 2026-11: Japanese, Traditional Chinese, Korean, Swedish, Norwegian, Finnish
+ALL = ORDER + ORDER_X                                      # every language with a UI: tuples below are extended to this order at import
+UI_LANGS = ("he", "en") + ALL
+NATIVE = {"he": "עברית", "en": "English", "de": "Deutsch", "fr": "Français", "it": "Italiano", "es": "Español", "pt": "Português", "nl": "Nederlands",
+          "ja": "日本語", "zh": "繁體中文", "ko": "한국어", "sv": "Svenska", "no": "Norsk", "fi": "Suomi"}
+LOCALE = {"he": "he-IL", "en": "en-US", "de": "de-DE", "fr": "fr-FR", "it": "it-IT", "es": "es-ES", "pt": "pt-BR", "nl": "nl-NL",
+          "ja": "ja-JP", "zh": "zh-TW", "ko": "ko-KR", "sv": "sv-SE", "no": "nb-NO", "fi": "fi-FI"}
 
 T = {
     "Index": ("Index", "Index", "Indice", "Índice", "Índice", "Index"),
@@ -205,17 +209,27 @@ P = [
 ]
 
 
+try:
+    from pawed_i18n_x import TX
+except Exception:
+    TX = {}
+for _k, _v in list(T.items()):                             # extend every row to the new languages ("" = not translated: the English text shows)
+    T[_k] = tuple(_v) + tuple((TX.get(_l) or {}).get("T", {}).get(_k, "") for _l in ORDER_X)
+for _i, (_pat, _r) in enumerate(P):
+    P[_i] = (_pat, tuple(_r) + tuple(((TX.get(_l) or {}).get("P") or [""] * 99)[_i] if len((TX.get(_l) or {}).get("P") or []) > _i else "" for _l in ORDER_X))
+
+
 def lookup(en, lang):
     """English UI text -> text in `lang`, or None. Leading/trailing whitespace of the key is honoured, then ignored as a fallback."""
-    if lang not in ORDER:
+    if lang not in ALL:
         return None
-    i = ORDER.index(lang)
+    i = ALL.index(lang)
     v = T.get(en)
     if v:
-        return v[i]
+        return v[i] or None
     core = en.strip()
     v = T.get(core)
-    if v:
+    if v and v[i]:
         return en[:len(en) - len(en.lstrip())] + v[i] + en[len(en.rstrip()):]
     return None
 
@@ -226,7 +240,8 @@ def strings_for(lang, base):
 
 
 FLAG = {"he": "\U0001F1EE\U0001F1F1", "en": "\U0001F1FA\U0001F1F8", "de": "\U0001F1E9\U0001F1EA", "fr": "\U0001F1EB\U0001F1F7",
-        "it": "\U0001F1EE\U0001F1F9", "es": "\U0001F1EA\U0001F1F8", "pt": "\U0001F1E7\U0001F1F7", "nl": "\U0001F1F3\U0001F1F1"}
+        "it": "\U0001F1EE\U0001F1F9", "es": "\U0001F1EA\U0001F1F8", "pt": "\U0001F1E7\U0001F1F7", "nl": "\U0001F1F3\U0001F1F1",
+        "ja": "\U0001F1EF\U0001F1F5", "zh": "\U0001F1F9\U0001F1FC", "ko": "\U0001F1F0\U0001F1F7", "sv": "\U0001F1F8\U0001F1EA", "no": "\U0001F1F3\U0001F1F4", "fi": "\U0001F1EB\U0001F1EE"}
 SWITCH_JS = (
     "(function(){var N=%s,F=%s;function go(){var sw=document.querySelector('.langsw');if(!sw)return;var cur=window.LANG||document.documentElement.lang||'he';"
     "sw.textContent='';Object.keys(N).forEach(function(k){var a=document.createElement('a');a.dataset.l=k;a.title=N[k];a.textContent=F[k];a.setAttribute('role','button');"
@@ -276,12 +291,15 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 """
 
 
+USER_JS = USER_JS.replace("var lang=window.LANG||", "Object.assign(L,%s);var lang=window.LANG||" % json.dumps({l: (TX.get(l) or {}).get("USER") for l in ORDER_X if (TX.get(l) or {}).get("USER")}, ensure_ascii=False), 1)
+
+
 def js():
     """the browser side: window.PI = {order, T, P}; piT(english, lang) -> translation or the English text; plus the language menu"""
     pats = [[p, list(r)] for p, r in P]
-    return ("window.PI={order:%s,T:%s,P:%s};\n" % (json.dumps(list(ORDER)), json.dumps(T, ensure_ascii=False), json.dumps(pats, ensure_ascii=False)) +
-            "window.piT=function(en,lang){var i=PI.order.indexOf(lang);if(i<0||typeof en!=='string')return en;var v=PI.T[en];if(v)return v[i];"
-            "var m=en.match(/^(\\s*)([\\s\\S]*?)(\\s*)$/);if(m[2]&&m[2]!==en){v=PI.T[m[2]];if(v)return m[1]+v[i]+m[3];}"
-            "var s=m[2];for(var k=0;k<PI.P.length;k++){var re=new RegExp(PI.P[k][0]);if(re.test(s)){return m[1]+s.replace(re,function(){var a=arguments,t=PI.P[k][1][i];"
+    return ("window.PI={order:%s,T:%s,P:%s};\n" % (json.dumps(list(ALL)), json.dumps(T, ensure_ascii=False), json.dumps(pats, ensure_ascii=False)) +
+            "window.piT=function(en,lang){var i=PI.order.indexOf(lang);if(i<0||typeof en!=='string')return en;var v=PI.T[en];if(v&&v[i])return v[i];"
+            "var m=en.match(/^(\\s*)([\\s\\S]*?)(\\s*)$/);if(m[2]&&m[2]!==en){v=PI.T[m[2]];if(v&&v[i])return m[1]+v[i]+m[3];}"
+            "var s=m[2];for(var k=0;k<PI.P.length;k++){var re=new RegExp(PI.P[k][0]);if(re.test(s)){return m[1]+s.replace(re,function(){var a=arguments,t=PI.P[k][1][i]||PI.P[k][1][0];"
             "return t.replace(/\\$(\\d)/g,function(_,n){return a[+n]===undefined?'':a[+n];});})+m[3];}}return en;};\n"
             + SWITCH_JS % (json.dumps(NATIVE, ensure_ascii=False), json.dumps(FLAG, ensure_ascii=False)) + USER_JS + pawed_bm.BM_JS + ERR_JS)

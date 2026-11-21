@@ -469,6 +469,12 @@ CONSENT_TEXT = {
     "es": ("Usamos Google Analytics para entender cómo se usa el sitio. Solo instala cookies si aceptas.", "Aceptar", "Rechazar", "Política de privacidad"),
     "pt": ("Usamos o Google Analytics para entender como o site é usado. Ele só define cookies se você aceitar.", "Aceitar", "Recusar", "Política de privacidade"),
     "nl": ("We gebruiken Google Analytics om te begrijpen hoe de site wordt gebruikt. Het plaatst alleen cookies als je accepteert.", "Accepteren", "Weigeren", "Privacybeleid"),
+    "ja": ("当サイトでは、利用状況を把握するためにGoogleアナリティクスを使用しています。同意いただいた場合のみCookieを設定します。", "同意する", "同意しない", "プライバシーポリシー"),
+    "zh": ("我們使用 Google Analytics 了解網站的使用情況，僅在您接受時才會設定 Cookie。", "接受", "拒絕", "隱私權政策"),
+    "ko": ("Google Analytics를 사용해 사이트 이용 현황을 파악해요. 동의하시는 경우에만 쿠키가 설정됩니다.", "수락", "거부", "개인정보처리방침"),
+    "sv": ("Vi använder Google Analytics för att förstå hur sajten används. Cookies sätts bara om du godkänner.", "Godkänn", "Avvisa", "Integritetspolicy"),
+    "no": ("Vi bruker Google Analytics for å forstå hvordan nettstedet brukes. Det settes informasjonskapsler bare hvis du godtar.", "Godta", "Avslå", "Personvernerklæring"),
+    "fi": ("Käytämme Google Analyticsia ymmärtääksemme, miten sivustoa käytetään. Evästeet asetetaan vain, jos hyväksyt ne.", "Hyväksy", "Hylkää", "Tietosuojakäytäntö"),
 }
 
 
@@ -921,7 +927,7 @@ class Handler(SimpleHTTPRequestHandler):
         if st == "no":
             return body
         if st == "ask":
-            m = re.search(r"(?:^|;\s*)pawed_lang=(he|en|de|fr|it|es|pt|nl)\b", self.headers.get("Cookie") or "")
+            m = re.search(r"(?:^|;\s*)pawed_lang=(he|en|de|fr|it|es|pt|nl|ja|zh|ko|sv|no|fi)\b", self.headers.get("Cookie") or "")
             cc = (self.headers.get("CF-IPCountry") or "").strip().upper()
             geo_lang = geo_suites.GEOS[geo_suites.CC2SLUG[cc]][4] if cc in geo_suites.CC2SLUG else "en"     # no choice yet: the visitor's country language
             snip = consent_banner(m.group(1) if m else geo_lang, self._is_pawed_host()).encode("utf-8")

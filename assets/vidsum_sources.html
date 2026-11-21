@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <script>(function(){var m=location.search.match(/[?&]geo=([A-Za-z_-]+)/);if(m){document.cookie="pawed_geo="+(m[1].toLowerCase()==="auto"?"; max-age=0":m[1].toLowerCase()+";max-age=31536000")+";path=/;samesite=lax";}})();</script>
-  <script>(function(){var m=document.cookie.match(/(?:^|;\s*)pawed_lang=(he|en|de|fr|it|es|pt|nl)/),l=m?m[1]:"he";window.LANG=l;var d=document.documentElement;d.lang=l;d.dir=l==="he"?"rtl":"ltr";})();</script>
+  <script>(function(){var m=document.cookie.match(/(?:^|;\s*)pawed_lang=(he|en|de|fr|it|es|pt|nl|ja|zh|ko|sv|no|fi)/),l=m?m[1]:"he";window.LANG=l;var d=document.documentElement;d.lang=l;d.dir=l==="he"?"rtl":"ltr";})();</script>
   <script src="/vidsum/i18n.js"></script>
   <meta name="theme-color" content="#e3222b">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -390,7 +390,7 @@ async function renderGeo(){
   const rn = c => { try{ return new Intl.DisplayNames([window.LANG],{type:'region'}).of(c); }catch(e){ return c; } };
   const ln = l => { try{ return new Intl.DisplayNames([l],{type:'language'}).of(l); }catch(e){ return l; } };
   const flag = c => String.fromCodePoint(...[...c].map(ch=>0x1F1E6+ch.charCodeAt(0)-65));
-  const LANGS = [['en','US'],['fr','FR'],['es','ES'],['he','IL'],['de','DE'],['it','IT'],['pt','BR'],['nl','NL']];   // Hebrew sits mid-row, not first
+  const LANGS = [['en','US'],['fr','FR'],['es','ES'],['he','IL'],['de','DE'],['it','IT'],['pt','BR'],['nl','NL'],['ja','JP'],['zh','TW'],['ko','KR'],['sv','SE'],['no','NO'],['fi','FI']];   // Hebrew sits mid-row, not first
   const mid = a => { const r = a.filter(x=>x.slug!=='il'), i = a.find(x=>x.slug==='il'); if(i) r.splice(Math.floor(r.length/2), 0, i); return r; };   // Israel mid-row, not first
   const HE = window.LANG === 'he';
   const X = HE ? {lang:'שפה', langHelp:'שפת הממשק ושפת סיכומי הכתבות בכל המסכים. ברירת המחדל נקבעת לפי המדינה שזוהתה.', src:'מקור התוכן (בחירה מרובה)',
@@ -644,7 +644,7 @@ async function load(){
   if(!$('n_lang').options.length){ $('n_lang').innerHTML = opts(D.languages,'he'); $('n_vert').innerHTML = '<option value="">אוטומטי (לפי התוכן)</option>'+opts(D.verticals,''); }
   render(); loadUsers();
 }
-document.getElementById('today').textContent = new Date().toLocaleDateString(({he:'he-IL',en:'en-US',de:'de-DE',fr:'fr-FR',it:'it-IT',es:'es-ES',pt:'pt-BR',nl:'nl-NL'})[window.LANG]||'en-US',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+document.getElementById('today').textContent = new Date().toLocaleDateString(({he:'he-IL',en:'en-US',de:'de-DE',fr:'fr-FR',it:'it-IT',es:'es-ES',pt:'pt-BR',nl:'nl-NL',ja:'ja-JP',zh:'zh-TW',ko:'ko-KR',sv:'sv-SE',no:'nb-NO',fi:'fi-FI'})[window.LANG]||'en-US',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 load().catch(()=>{ $('rows').innerHTML='<tr><td colspan="6">שגיאה בטעינה</td></tr>'; });
 </script>
 <script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>

@@ -342,8 +342,13 @@ MONTHS_L = {
     "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
     "pt": ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"],
     "nl": ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"],
+    "ja": [str(i) for i in range(1, 13)], "zh": [str(i) for i in range(1, 13)], "ko": [str(i) for i in range(1, 13)],
+    "sv": ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"],
+    "no": ["januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember"],
+    "fi": ["tammikuuta", "helmikuuta", "maaliskuuta", "huhtikuuta", "toukokuuta", "kesäkuuta", "heinäkuuta", "elokuuta", "syyskuuta", "lokakuuta", "marraskuuta", "joulukuuta"],
 }
-_DATE_FMT = {"de": "{d}. {m} {y}", "fr": "{d} {m} {y}", "it": "{d} {m} {y}", "es": "{d} de {m} de {y}", "pt": "{d} de {m} de {y}", "nl": "{d} {m} {y}"}
+_DATE_FMT = {"de": "{d}. {m} {y}", "fr": "{d} {m} {y}", "it": "{d} {m} {y}", "es": "{d} de {m} de {y}", "pt": "{d} de {m} de {y}", "nl": "{d} {m} {y}",
+             "ja": "{y}年{m}月{d}日", "zh": "{y}年{m}月{d}日", "ko": "{y}년 {m}월 {d}일", "sv": "{d} {m} {y}", "no": "{d}. {m} {y}", "fi": "{d}. {m} {y}"}
 
 
 def _loc_date(iso, lang):
@@ -390,20 +395,20 @@ def _overlay_en(a):
 def render(a, latest=(), base="", disclaimer="", lang="he", platform="", audio=""):
     """a: article dict. latest: [{slug,title,topic,vid,channel}] newest first. base: URL prefix ('' on the server)."""
     en = lang != "he"                       # every non-Hebrew edition reads left to right and uses the English text until its own exists
-    S = pawed_i18n.strings_for(lang, STR["en"]) if lang in pawed_i18n.ORDER else STR["en" if en else "he"]
+    S = pawed_i18n.strings_for(lang, STR["en"]) if lang in pawed_i18n.ALL else STR["en" if en else "he"]
     translated = True
     if en:
-        ed = (a.get("tr") or {}).get(lang) if lang in pawed_i18n.ORDER else None
+        ed = (a.get("tr") or {}).get(lang) if lang in pawed_i18n.ALL else None
         if ed:                                              # this language's own edition (same shape as an "original" English one)
             a, translated = _overlay_en(dict(a, en=ed))
         else:
             a, translated = _overlay_en(a)
-            if lang in pawed_i18n.ORDER:
+            if lang in pawed_i18n.ALL:
                 translated = False                          # English (or Hebrew) shown with a "translation is being prepared" note
         latest = [dict(x, title=(x.get("tr") or {}).get(lang, [None])[0] or x.get("title_en") or x["title"]) for x in latest]
         disclaimer = EN_DISCLAIMER if disclaimer else ""
     tname = (lambda t: (pawed_i18n.lookup(EN_TOPICS.get(t, t), lang) or EN_TOPICS.get(t, t))) if en else (lambda t: t)
-    fdate = (lambda iso: _loc_date(iso, lang)) if lang in pawed_i18n.ORDER else (_en_date if en else _he_date)
+    fdate = (lambda iso: _loc_date(iso, lang)) if lang in pawed_i18n.ALL else (_en_date if en else _he_date)
     a = clean_dashes(a)
     latest = clean_dashes(list(latest))
     e = _html.escape

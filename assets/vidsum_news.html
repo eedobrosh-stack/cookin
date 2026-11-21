@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <script>(function(){var m=location.search.match(/[?&]geo=([A-Za-z_-]+)/);if(m){document.cookie="pawed_geo="+(m[1].toLowerCase()==="auto"?"; max-age=0":m[1].toLowerCase()+";max-age=31536000")+";path=/;samesite=lax";}})();</script>
-  <script>(function(){var m=document.cookie.match(/(?:^|;\s*)pawed_lang=(he|en|de|fr|it|es|pt|nl)/),l=m?m[1]:"he";window.LANG=l;var d=document.documentElement;d.lang=l;d.dir=l==="he"?"rtl":"ltr";})();</script>
+  <script>(function(){var m=document.cookie.match(/(?:^|;\s*)pawed_lang=(he|en|de|fr|it|es|pt|nl|ja|zh|ko|sv|no|fi)/),l=m?m[1]:"he";window.LANG=l;var d=document.documentElement;d.lang=l;d.dir=l==="he"?"rtl":"ltr";})();</script>
   <script src="/vidsum/i18n.js"></script>
   <meta name="theme-color" content="#e3222b">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -406,7 +406,7 @@ const bg = v => ['maxresdefault','hq720','mqdefault'].map(f=>'url(https://i.ytim
 const tone = a => TONES[[...a.vid].reduce((x,c)=>x+c.charCodeAt(0),0) % TONES.length];
 // ---- English edition: LANG comes from the pawed_lang cookie (set by the flags / the server for signed-in users) ----
 const EN = LANG!=='he';        // every non-Hebrew edition reads left to right; de/fr/it/es/pt/nl look strings up in pawed_i18n via piT
-const LOCS = {he:'he-IL',en:'en-US',de:'de-DE',fr:'fr-FR',it:'it-IT',es:'es-ES',pt:'pt-BR',nl:'nl-NL'};
+const LOCS = {he:'he-IL',en:'en-US',de:'de-DE',fr:'fr-FR',it:'it-IT',es:'es-ES',pt:'pt-BR',nl:'nl-NL',ja:'ja-JP',zh:'zh-TW',ko:'ko-KR',sv:'sv-SE',no:'nb-NO',fi:'fi-FI'};
 const trl = s => (LANG!=='he' && LANG!=='en' && window.piT) ? piT(s,LANG) : s;
 const I18N = {
   live:['● מתעדכן אוטומטית','● Updating automatically'], index:['אינדקס','Index'], log:['יומן','Log'], terms:['תנאי שימוש','Terms'], privacy:['פרטיות','Privacy'], takedown:['הסרה ופניות','Takedown'], all:['כל הסיכומים','All summaries'], sources:['מקורות','Resources'],

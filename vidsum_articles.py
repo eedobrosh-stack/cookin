@@ -2937,7 +2937,7 @@ def handle_get(handler, path, qs):
             if lang != "he" and a.get("blocks") and not a.get("en"):
                 import vidsum_translate
                 vidsum_translate.want(a["slug"])                       # not translated yet: do this one next
-            elif lang in pawed_i18n.ORDER and a.get("blocks") and not (a.get("tr") or {}).get(lang):
+            elif lang in pawed_i18n.ALL and a.get("blocks") and not (a.get("tr") or {}).get(lang):
                 import vidsum_translate
                 vidsum_translate.want_lang(a["slug"], lang)            # this language edition does not exist yet (recent articles only)
             try:

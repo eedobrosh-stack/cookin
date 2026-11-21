@@ -30,7 +30,7 @@ COUNTRIES = {
     "es": ("Spain", "es"), "mx": ("Mexico", "es"), "ar": ("Argentina", "es"), "br": ("Brazil", "pt"),
     "it": ("Italy", "it"), "nl": ("Netherlands", "nl"), "se": ("Sweden", "sv"), "no": ("Norway", "no"),
     "pl": ("Poland", "pl"), "ru": ("Russia", "ru"), "tr": ("Turkey", "tr"), "jp": ("Japan", "ja"), "kr": ("South Korea", "ko"),
-    "ae": ("United Arab Emirates", "ar"),
+    "ae": ("United Arab Emirates", "ar"), "cn": ("China", "zh"), "fi": ("Finland", "fi"),
 }
 GENRES = {1301: "Arts", 1303: "Comedy", 1304: "Education", 1305: "Kids & Family", 1307: "Health & Fitness", 1309: "TV & Film",
           1310: "Music", 1311: "News", 1545: "Sports", 1314: "Religion & Spirituality", 1315: "Science", 1316: "Sports", 1318: "Technology",

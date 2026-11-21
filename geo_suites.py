@@ -26,10 +26,17 @@ GEOS = {
     "mx": ("MX", "Mexico", "מקסיקו", "es", "es"),
     "br": ("BR", "Brazil", "ברזיל", "pt", "pt"),
     "nl": ("NL", "Netherlands", "הולנד", "nl", "nl"),
+    "jp": ("JP", "Japan", "יפן", "ja", "ja"),
+    "cn": ("CN", "China", "סין", "zh", "zh"),           # UI edition is Traditional Chinese (zh-TW wording)
+    "kr": ("KR", "South Korea", "דרום קוריאה", "ko", "ko"),
+    "se": ("SE", "Sweden", "שוודיה", "sv", "sv"),
+    "no": ("NO", "Norway", "נורווגיה", "no", "no"),
+    "fi": ("FI", "Finland", "פינלנד", "fi", "fi"),
 }
 ALIASES = {"uk": "gb", "britain": "gb", "england": "gb", "unitedkingdom": "gb", "usa": "us", "unitedstates": "us", "america": "us",
            "germany": "de", "deutschland": "de", "france": "fr", "italy": "it", "spain": "es", "mexico": "mx", "brazil": "br", "brasil": "br",
-           "canada": "ca", "australia": "au", "netherlands": "nl", "holland": "nl", "israel": "il"}
+           "canada": "ca", "australia": "au", "netherlands": "nl", "holland": "nl", "israel": "il", "japan": "jp", "china": "cn", "southkorea": "kr", "korea": "kr",
+           "sweden": "se", "norway": "no", "finland": "fi"}
 for _s, _v in GEOS.items():
     ALIASES[_s] = _s
     ALIASES[_v[1].lower().replace(" ", "")] = _s
