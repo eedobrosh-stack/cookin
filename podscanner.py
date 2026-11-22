@@ -97,6 +97,7 @@ def _save(d):
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(d, f, ensure_ascii=False)
     os.replace(tmp, DATA_PATH)
+    _write_catalog(d)
 
 
 def _http(url, timeout=25, limit=None):
@@ -595,35 +596,67 @@ _CAT = {"mtime": 0.0, "pods": []}
 _TOPIC_FIX = {"רכילות": "בריאות", "לייפסטייל": "בריאות"}
 
 
-def _catalog():
-    """lightweight pod list for search/browse; cached until the scanner file changes"""
+CAT_PATH = os.path.join(multiuser.DATA_DIR, "podscanner_catalog.json")
+
+
+def _build_catalog(d):
+    """the lightweight row list for search/browse, derived from the full scanner dict"""
+    seen_n = {}
+    for p in d["pods"].values():
+        if p.get("missing") or not p.get("feed") or not p.get("name"):
+            continue
+        row = _row(p)
+        row["topic"] = _TOPIC_FIX.get(row["topic"], row["topic"])
+        row["language"] = canon_lang(row["language"])
+        row["_n"] = _nname(p["name"])
+        row["_ranks"] = {c: (r or 999) for c, r in (p.get("geo") or {}).items()}           # best Apple chart position per country (Charts page)
+        row["_genres"] = [g for g in (p.get("genres") or []) if g]
+        row["_charts"] = p.get("charts") or {}
+        row["_geo_all"] = sorted((p.get("geo") or {}), key=lambda c: ((p["geo"].get(c) or 999), c))     # every charted country, best rank first (the row keeps only 6)
+        # the same show can be charted under several Apple ids (re-listed feeds): keep one, the best scored / most recently active
+        key = row["_n"]
+        old_r = seen_n.get(key)
+        if old_r is not None and (old_r["score"], -(old_r["days_since"] or 9999)) >= (row["score"], -(row["days_since"] or 9999)):
+            continue
+        seen_n[key] = row
+    return list(seen_n.values())
+
+
+def _write_catalog(d):
+    """called by _save with the dict it already holds, so the full file is never parsed just to rebuild the catalog"""
     try:
-        m = os.path.getmtime(DATA_PATH)
+        pods = _build_catalog(d)
+        tmp = CAT_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(pods, f, ensure_ascii=False)
+        os.replace(tmp, CAT_PATH)
+        return pods
+    except Exception as e:
+        log(f"catalog write failed: {str(e)[:120]}")
+        return None
+
+
+def _catalog():
+    """lightweight pod list for search/browse; reloaded from the small catalog file (written on every save), never from the full scanner file"""
+    try:
+        m = os.path.getmtime(CAT_PATH)
     except OSError:
-        return []
-    if m != _CAT["mtime"]:
+        m = None
+    if m is None:                                         # first run after this change: build it once from the full file
         with LOCK:
-            d = _load()
-        seen_n = {}
-        for p in d["pods"].values():
-            if p.get("missing") or not p.get("feed") or not p.get("name"):
-                continue
-            row = _row(p)
-            row["topic"] = _TOPIC_FIX.get(row["topic"], row["topic"])
-            row["language"] = canon_lang(row["language"])
-            row["_n"] = _nname(p["name"])
-            row["_ranks"] = {c: (r or 999) for c, r in (p.get("geo") or {}).items()}           # best Apple chart position per country (Charts page)
-            row["_genres"] = [g for g in (p.get("genres") or []) if g]
-            row["_charts"] = p.get("charts") or {}
-            row["_geo_all"] = sorted((p.get("geo") or {}), key=lambda c: ((p["geo"].get(c) or 999), c))     # every charted country, best rank first (the row keeps only 6)
-            # the same show can be charted under several Apple ids (re-listed feeds): keep one, the best scored / most recently active
-            key = row["_n"]
-            old_r = seen_n.get(key)
-            if old_r is not None and (old_r["score"], -(old_r["days_since"] or 9999)) >= (row["score"], -(row["days_since"] or 9999)):
-                continue
-            seen_n[key] = row
-        pods = list(seen_n.values())
-        _CAT["mtime"], _CAT["pods"] = m, pods
+            if not os.path.exists(CAT_PATH) and os.path.exists(DATA_PATH):
+                _write_catalog(_load())
+        try:
+            m = os.path.getmtime(CAT_PATH)
+        except OSError:
+            return _CAT["pods"]
+    if m != _CAT["mtime"]:
+        try:
+            with open(CAT_PATH, encoding="utf-8") as f:
+                _CAT["pods"] = json.load(f)
+            _CAT["mtime"] = m
+        except Exception as e:
+            log(f"catalog read failed: {str(e)[:120]}")
     return _CAT["pods"]
 
 
@@ -1002,7 +1035,6 @@ def prune(dry=True, max_days=365):
             del d["pods"][pid]
         with LOCK:
             _save(d)
-        _CAT["mtime"], _CAT["pods"] = 0.0, []
         log(f"prune dropped {len(drop)} pods, kept {out['keep']}")
     return out
 

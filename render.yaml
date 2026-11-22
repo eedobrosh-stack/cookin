@@ -8,6 +8,8 @@ services:
     envVars:
       - key: DATA_DIR
         value: /var/data
+      - key: MALLOC_ARENA_MAX
+        value: "2"
     disk:
       name: cookin-data
       mountPath: /var/data

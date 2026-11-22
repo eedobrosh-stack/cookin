@@ -8,7 +8,10 @@ Mutable data lives on the persistent disk (DATA_DIR, default /var/data):
 
 Pure stdlib — no requirements. Includes HTTP Range support (Safari/iOS video).
 """
-import json, os, re, random, threading, datetime, time
+import json, os, re, random, threading, datetime, time, sys
+if __name__ == "__main__" and sys.platform.startswith("linux") and not os.environ.get("MALLOC_ARENA_MAX"):
+    os.environ["MALLOC_ARENA_MAX"] = "2"                    # glibc: at most 2 allocator arenas (many threads otherwise fragment and never give memory back); needs a fresh process
+    os.execv(sys.executable, [sys.executable] + sys.argv)
 import urllib.request, urllib.parse
 from collections import Counter
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler

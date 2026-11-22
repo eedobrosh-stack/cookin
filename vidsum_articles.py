@@ -2557,6 +2557,94 @@ def transcripts_report(lang=None, limit=0):
     return out
 
 
+def _deep_size(o, seen=None, budget=3_000_000):
+    """rough recursive size in bytes of a JSON-like structure (dict/list/str/number), capped by object count"""
+    seen = set() if seen is None else seen
+    total, stack = 0, [o]
+    while stack and budget > 0:
+        x = stack.pop()
+        if id(x) in seen:
+            continue
+        seen.add(id(x))
+        budget -= 1
+        total += sys.getsizeof(x)
+        if isinstance(x, dict):
+            stack.extend(x.keys()); stack.extend(x.values())
+        elif isinstance(x, (list, tuple, set)):
+            stack.extend(x)
+    return total
+
+
+def memory_report(trim=False):
+    """Admin: where the process memory is. RSS split, the C allocator's in-use vs free bytes (free = fragmentation that malloc_trim can give
+    back), the big in-process caches, Python object counts by type and the size of the data files. trim=True calls malloc_trim(0) first-and-after."""
+    import ctypes, gc, collections
+    out = {}
+    try:
+        with open("/proc/self/status") as f:
+            st = dict(l.split(":", 1) for l in f.read().splitlines() if ":" in l)
+        out["rss_mb"] = {k: int(st[k].split()[0]) // 1024 for k in ("VmRSS", "RssAnon", "RssFile", "VmHWM") if k in st}
+    except Exception:
+        pass
+    libc = None
+    try:
+        libc = ctypes.CDLL("libc.so.6")
+    except Exception:
+        pass
+
+    def alloc():
+        try:
+            class MI(ctypes.Structure):
+                _fields_ = [(n, ctypes.c_size_t) for n in ("arena", "ordblks", "smblks", "hblks", "hblkhd", "usmblks", "fsmblks", "uordblks", "fordblks", "keepcost")]
+            libc.mallinfo2.restype = MI
+            m = libc.mallinfo2()
+            return {"heap_mb": (m.arena + m.hblkhd) // 1048576, "in_use_mb": (m.uordblks + m.hblkhd) // 1048576, "free_mb": m.fordblks // 1048576, "mmap_mb": m.hblkhd // 1048576}
+        except Exception as e:
+            return {"error": str(e)[:80]}
+    out["allocator"] = alloc() if libc else None
+    if trim and libc:
+        try:
+            libc.malloc_trim(0)
+            out["allocator_after_trim"] = alloc()
+            with open("/proc/self/status") as f:
+                out["rss_after_trim_mb"] = next(int(l.split()[1]) // 1024 for l in f if l.startswith("VmRSS"))
+        except Exception as e:
+            out["trim_error"] = str(e)[:80]
+    caches = {}
+    try:
+        import podscanner
+        caches["podscanner_catalog_rows"] = (len(podscanner._CAT["pods"]), _deep_size(podscanner._CAT["pods"]) // 1048576)
+    except Exception:
+        pass
+    caches["article_index_items"] = (len(_IDX["items"]), _deep_size(_IDX["items"]) // 1048576)
+    caches["article_index_files"] = (len(_IDX_FILES), _deep_size(_IDX_FILES) // 1048576)
+    try:
+        caches["jobs"] = (lambda j: (len(j), _deep_size(j) // 1048576))(_load_jobs())
+        caches["channels"] = (lambda c: (len(c), _deep_size(c) // 1048576))(_load_ch()["channels"])
+    except Exception:
+        pass
+    for modname, attr in (("app", "_VIDSUM_TOP_CACHE"),):
+        try:
+            v = getattr(sys.modules[modname], attr)
+            caches[modname + "." + attr] = (len(v), _deep_size(v) // 1048576)
+        except Exception:
+            pass
+    out["caches_count_mb"] = caches
+    try:
+        c = collections.Counter(type(o).__name__ for o in gc.get_objects())
+        out["gc_objects"] = c.most_common(8)
+        out["gc_total"] = sum(c.values())
+    except Exception:
+        pass
+    files = {}
+    for nm in ("podscanner.json", "podscanner_catalog.json", "geo_suites.json", "vidsum_jobs.json", "vidsum_channels.json"):
+        fp = os.path.join(multiuser.DATA_DIR, nm)
+        if os.path.exists(fp):
+            files[nm] = round(os.path.getsize(fp) / 1048576, 1)
+    out["files_mb"] = files
+    return out
+
+
 def health_report(qs=None):
     """Admin: what the server knows about its own health, for the QA agent: memory, uptime, loops, disk, and the error lines of the
     persistent log grouped by kind (the log survives restarts and out-of-memory kills, unlike the dashboard's live tail)."""
@@ -3172,6 +3260,13 @@ def handle_get(handler, path, qs):
             handler._json({"error": "not found"}, 404)
             return True
         handler._json(health_report(qs))
+        return True
+    if path == "/api/vidsum/admin/memory":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "not found"}, 404)
+            return True
+        handler._json({"ok": True, **memory_report(trim=(qs.get("trim") or [""])[0] == "1")})
         return True
     if path == "/api/vidsum/admin/ytcheck":
         user = current_user(handler)
