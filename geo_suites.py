@@ -58,7 +58,7 @@ def resolve(handler, qs=None):
         q = m.group(1) if m else ""
     s = norm(q)
     if s:
-        return [s], True
+        return list(dict.fromkeys([s, "us"])), True            # ?geo=X previews a visitor from X: their suite plus the US one, like the detected country
     ck = handler.headers.get("Cookie") or ""
     m = re.search(r"(?:^|;\s*)pawed_geos=([a-z,]{2,60})", ck)
     sel = list(dict.fromkeys(g for g in (norm(x) for x in (m.group(1).split(",") if m else [])) if g))
