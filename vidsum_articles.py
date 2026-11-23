@@ -1581,6 +1581,32 @@ _NEWS_C = {"t": 0.0, "items": None}
 _NEWS_LOCK = threading.Lock()
 _NEWS_SEM = threading.BoundedSemaphore(8)          # at most 8 homepage-feed responses being assembled at once (a restart makes every open page re-request it together)
 NEWS_TTL = 30
+NEWS_RATE = (8, 60)                                # per IP: 8 feed requests per 60 s (a page load makes 1-2)
+_RATE = {}
+_RATE_LOCK = threading.Lock()
+
+
+def _client_ip(handler):
+    h = handler.headers
+    ip = (h.get("CF-Connecting-IP") or (h.get("X-Forwarded-For") or "").split(",")[0] or "").strip()
+    return ip or (handler.client_address[0] if getattr(handler, "client_address", None) else "?")
+
+
+def rate_limited(handler, bucket="news", limit=None):
+    """True when this IP already used its quota for the bucket in the window (the request should get a 429). Admins are exempt."""
+    n, win = limit or NEWS_RATE
+    now = time.time()
+    key = (bucket, _client_ip(handler))
+    with _RATE_LOCK:
+        q = [t for t in _RATE.get(key, ()) if now - t < win]
+        hit = len(q) >= n
+        if not hit:
+            q.append(now)
+        _RATE[key] = q
+        if len(_RATE) > 5000:                                  # drop idle IPs
+            for k in [k for k, v in _RATE.items() if not v or now - v[-1] >= win]:
+                del _RATE[k]
+    return hit
 
 
 def news_items():
@@ -3469,8 +3495,17 @@ def handle_get(handler, path, qs):
         handler._json({"ok": True, "lang": ul, "entry": info, "articles": rows, "total": total, "offset": off})
         return True
     if path == "/api/vidsum/news":
+        user = current_user(handler)
+        if not (user and user.get("admin")) and rate_limited(handler):
+            handler.send_response(429)
+            handler.send_header("Retry-After", "30")
+            handler.send_header("Content-Type", "application/json; charset=utf-8")
+            body = b'{"ok": false, "error": "too many requests"}'
+            handler.send_header("Content-Length", str(len(body)))
+            handler.end_headers()
+            handler.wfile.write(body)
+            return True
         with _NEWS_SEM:
-            user = current_user(handler)
             as_id = (qs.get("as") or [""])[0]
             if as_id and user and user.get("admin"):                      # admin preview: the homepage exactly as that user gets it
                 with multiuser.db() as c:
