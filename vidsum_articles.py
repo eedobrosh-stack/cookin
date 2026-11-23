@@ -1574,7 +1574,52 @@ def visible_news_items(handler, qs, user, ul):
     gone = removed_topics(user)
     if gone:
         items = [i for i in items if i["topic"] not in gone]
-    return items
+    return dedupe_episodes(items)
+
+
+_STOP = {"with", "from", "that", "this", "about", "says", "said", "tells", "into", "over", "their", "have", "your", "what", "when", "will", "than", "they", "them"}
+
+
+def _toks(i):
+    return {w for w in re.findall(r"[^\W_]{4,}", ((i.get("title_en") or "") + " " + (i.get("channel") or "") * 0).lower()) if w not in _STOP}
+
+
+def _same_episode(a, b):
+    """The same episode listed twice (a YouTube channel and the show's own podcast feed): published within minutes of each other (the exact
+    timestamp), the same length to the minute, and headlines naming the same people/topics. Different shows covering one story never match."""
+    try:
+        t1 = datetime.datetime.fromisoformat(str(a["released"])[:19]); t2 = datetime.datetime.fromisoformat(str(b["released"])[:19])
+    except (ValueError, KeyError, TypeError):
+        return False
+    if len(str(a["released"])) < 19 or len(str(b["released"])) < 19 or abs((t1 - t2).total_seconds()) > 300:
+        return False
+    ma, mb = a.get("minutes") or 0, b.get("minutes") or 0
+    if min(ma, mb) < 15 or abs(ma - mb) > 1:
+        return False
+    ta, tb = _toks(a), _toks(b)
+    return len(ta & tb) >= 2
+
+
+def dedupe_episodes(items):
+    """One card per episode. Of the copies, keep the one from the show's own feed (podcast over a YouTube re-upload), then the oldest-added."""
+    by_day, drop = {}, set()
+    for n, i in enumerate(items):
+        by_day.setdefault(str(i.get("released") or "")[:10], []).append(n)
+    days = sorted(by_day)
+    for k, day in enumerate(days):
+        near = [n for d in days[max(0, k - 1):k + 2] for n in by_day[d]] if day else by_day[day]
+        for n in by_day[day]:
+            if n in drop:
+                continue
+            for m in near:
+                if m <= n or m in drop or items[m].get("channel") == items[n].get("channel"):
+                    continue
+                if _same_episode(items[n], items[m]):
+                    rank = lambda x: (x.get("kind") != "rss", str(x.get("created") or ""))
+                    drop.add(m if rank(items[n]) <= rank(items[m]) else n)
+                    if n in drop:
+                        break
+    return [i for n, i in enumerate(items) if n not in drop]
 
 
 _NEWS_C = {"t": 0.0, "items": None}
