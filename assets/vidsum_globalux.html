@@ -36,7 +36,7 @@
 <body>
 <main>
   <h1>GlobalUX</h1>
-  <p class="sub">What a first-time visitor (no cookie, signed out) sees by default, per country. <a href="/vidsum/news">Back to Pawed</a> · <a href="/vidsum/geo">Geo suites</a></p>
+  <p class="sub">What a first-time, non-admin visitor (no cookie, signed out) sees by default; Hebrew content only from Israel, per country. <a href="/vidsum/news">Back to Pawed</a> · <a href="/vidsum/geo">Geo suites</a></p>
   <div class="tabs" id="tabs"></div>
   <div id="view"></div>
   <h2 style="font-size:17px;margin:26px 0 8px">All countries</h2>
@@ -48,7 +48,9 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 let D=[], cur=location.hash.slice(1)||'il';
 const flag=cc=>cc&&cc.length==2?String.fromCodePoint(...[...cc].map(c=>127397+c.charCodeAt(0))):'🌐';
 const LANG={he:'Hebrew',en:'English',de:'German',fr:'French',it:'Italian',es:'Spanish',pt:'Portuguese',nl:'Dutch',ja:'Japanese',zh:'Chinese',ko:'Korean',sv:'Swedish',no:'Norwegian',fi:'Finnish'};
-function tabs(){ $('tabs').innerHTML=D.map(c=>`<button class="tab ${c.slug==cur?'on':''} ${c.suite_live?'':'off'}" data-s="${c.slug}">${flag(c.cc)} ${esc(c.name)} <small>${c.count}</small></button>`).join('');
+function tabs(){ const ex=D.filter(c=>c.extra);
+  $('tabs').innerHTML=D.filter(c=>!c.extra).map(c=>`<button class="tab ${c.slug==cur?'on':''} ${c.suite_live?'':'off'}" data-s="${c.slug}">${flag(c.cc)} ${esc(c.name)} <small>${c.count}</small></button>`).join('')+`<select id="more" class="tab ${(D.find(x=>x.slug==cur)||{}).extra?'on':''}"><option value="">More countries (${ex.length})…</option>${ex.map(c=>`<option value="${c.slug}" ${c.slug==cur?'selected':''}>${esc(c.name)} · ${esc(c.basis)}</option>`).join('')}</select>`;
+  $('more').onchange=e=>{ if(e.target.value){cur=e.target.value;location.hash=cur;tabs();view();} };
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{cur=b.dataset.s;location.hash=cur;tabs();view();}); }
 function view(){
   const c=D.find(x=>x.slug==cur)||D[0]; if(!c) return;
@@ -56,12 +58,13 @@ function view(){
     <div><b>Country</b>${flag(c.cc)} ${esc(c.name)} (${esc(c.cc)})</div>
     <div><b>UI language</b>${esc(LANG[c.ui]||c.ui)}</div>
     <div><b>Podcast language</b>${esc(LANG[c.audio]||c.audio)}</div>
-    <div><b>Own suite</b><span class="pill ${c.suite_live?'ok':'warn'}">${c.suite_live?'live':'not live: falls back to US'}</span></div>
+    ${c.basis?`<div><b>Added because</b>${esc(c.basis)} top 100</div>`:''}
+    <div><b>Own suite</b><span class="pill ${c.suite_live?'ok':'warn'}">${c.suite_live?'live':(c.extra?'none: US suite, English':'not live: falls back to US')}</span></div>
     <div><b>Suites merged</b>${c.suites.map(esc).join(' + ')}</div>
     <div><b>Podcasts</b>${c.count}</div></div>
   <div class="grid">${c.sections.map(s=>`<div class="sec"><h3>${esc(s.topic)}<span>${s.pods.length}</span></h3>${s.pods.map(p=>`<div class="p ${p.own?'':'us'}"><span>${esc(p.name)}</span><span class="l">${esc(p.language)}${p.own?'':' · US'}</span></div>`).join('')}</div>`).join('')||'<p class="sub">No podcasts.</p>'}</div>`;
 }
-function sum(){ $('sum').innerHTML='<tr><th>Country</th><th>UI</th><th>Suite</th><th>Merged with</th><th>Podcasts</th><th>Sections</th></tr>'+D.map(c=>`<tr><td><a href="#${c.slug}" onclick="cur='${c.slug}';tabs();view();">${flag(c.cc)} ${esc(c.name)}</a></td><td>${esc(c.ui)}</td><td><span class="pill ${c.suite_live?'ok':'warn'}">${c.suite_live?'live':'US fallback'}</span></td><td>${c.suites.map(esc).join(' + ')}</td><td>${c.count}</td><td>${c.sections.length}</td></tr>`).join(''); }
+function sum(){ $('sum').innerHTML='<tr><th>Country</th><th>UI</th><th>Suite</th><th>Merged with</th><th>Podcasts</th><th>Sections</th></tr>'+D.map(c=>`<tr><td><a href="#${c.slug}" onclick="cur='${c.slug}';tabs();view();">${flag(c.cc)} ${esc(c.name)}</a></td><td>${esc(c.ui)}</td><td><span class="pill ${c.suite_live?'ok':'warn'}">${c.suite_live?'live':(c.extra?'none':'US fallback')}</span></td><td>${c.suites.map(esc).join(' + ')}</td><td>${c.count}</td><td>${c.sections.length}</td></tr>`).join(''); }
 fetch('/api/vidsum/admin/globalux').then(r=>r.json()).then(j=>{D=j.countries||[];tabs();view();sum();});
 </script>
 </body>

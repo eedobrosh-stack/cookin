@@ -2977,17 +2977,121 @@ def cooking_today():
 ART_PREFIX = "/vidsum/article/"
 
 
+# Countries with no suite and no UI language of their own (top-100 GDP or GDP per capita): they get the US suite in English
+EXTRA_COUNTRIES = [
+    ('CN', 'China', 'GDP'),
+    ('IN', 'India', 'GDP'),
+    ('RU', 'Russia', 'GDP'),
+    ('TR', 'Turkey', 'GDP/GDP per capita'),
+    ('SA', 'Saudi Arabia', 'GDP/GDP per capita'),
+    ('ID', 'Indonesia', 'GDP'),
+    ('PL', 'Poland', 'GDP/GDP per capita'),
+    ('CH', 'Switzerland', 'GDP/GDP per capita'),
+    ('TW', 'Taiwan', 'GDP'),
+    ('BE', 'Belgium', 'GDP'),
+    ('AR', 'Argentina', 'GDP'),
+    ('IE', 'Ireland', 'GDP/GDP per capita'),
+    ('SG', 'Singapore', 'GDP/GDP per capita'),
+    ('AE', 'United Arab Emirates', 'GDP/GDP per capita'),
+    ('TH', 'Thailand', 'GDP'),
+    ('AT', 'Austria', 'GDP'),
+    ('PH', 'Philippines', 'GDP'),
+    ('VN', 'Vietnam', 'GDP'),
+    ('BD', 'Bangladesh', 'GDP'),
+    ('DK', 'Denmark', 'GDP/GDP per capita'),
+    ('MY', 'Malaysia', 'GDP/GDP per capita'),
+    ('ZA', 'South Africa', 'GDP'),
+    ('EG', 'Egypt', 'GDP'),
+    ('HK', 'Hong Kong', 'GDP/GDP per capita'),
+    ('IR', 'Iran', 'GDP'),
+    ('PK', 'Pakistan', 'GDP'),
+    ('NG', 'Nigeria', 'GDP'),
+    ('CL', 'Chile', 'GDP/GDP per capita'),
+    ('RO', 'Romania', 'GDP/GDP per capita'),
+    ('CO', 'Colombia', 'GDP'),
+    ('CZ', 'Czechia', 'GDP/GDP per capita'),
+    ('PT', 'Portugal', 'GDP/GDP per capita'),
+    ('PE', 'Peru', 'GDP'),
+    ('NZ', 'New Zealand', 'GDP/GDP per capita'),
+    ('KZ', 'Kazakhstan', 'GDP/GDP per capita'),
+    ('GR', 'Greece', 'GDP/GDP per capita'),
+    ('IQ', 'Iraq', 'GDP'),
+    ('DZ', 'Algeria', 'GDP'),
+    ('QA', 'Qatar', 'GDP/GDP per capita'),
+    ('HU', 'Hungary', 'GDP/GDP per capita'),
+    ('KW', 'Kuwait', 'GDP/GDP per capita'),
+    ('ET', 'Ethiopia', 'GDP'),
+    ('MA', 'Morocco', 'GDP'),
+    ('DO', 'Dominican Republic', 'GDP'),
+    ('SK', 'Slovakia', 'GDP/GDP per capita'),
+    ('EC', 'Ecuador', 'GDP'),
+    ('KE', 'Kenya', 'GDP'),
+    ('AO', 'Angola', 'GDP'),
+    ('OM', 'Oman', 'GDP/GDP per capita'),
+    ('GT', 'Guatemala', 'GDP'),
+    ('BG', 'Bulgaria', 'GDP/GDP per capita'),
+    ('LU', 'Luxembourg', 'GDP/GDP per capita'),
+    ('UZ', 'Uzbekistan', 'GDP'),
+    ('UA', 'Ukraine', 'GDP'),
+    ('CR', 'Costa Rica', 'GDP'),
+    ('PA', 'Panama', 'GDP/GDP per capita'),
+    ('RS', 'Serbia', 'GDP'),
+    ('HR', 'Croatia', 'GDP/GDP per capita'),
+    ('LT', 'Lithuania', 'GDP/GDP per capita'),
+    ('SI', 'Slovenia', 'GDP/GDP per capita'),
+    ('UY', 'Uruguay', 'GDP/GDP per capita'),
+    ('LK', 'Sri Lanka', 'GDP'),
+    ('TZ', 'Tanzania', 'GDP'),
+    ('GH', 'Ghana', 'GDP'),
+    ('CI', 'Ivory Coast', 'GDP'),
+    ('AZ', 'Azerbaijan', 'GDP'),
+    ('LB', 'Lebanon', 'GDP'),
+    ('BY', 'Belarus', 'GDP'),
+    ('MM', 'Myanmar', 'GDP'),
+    ('JO', 'Jordan', 'GDP'),
+    ('TN', 'Tunisia', 'GDP'),
+    ('CM', 'Cameroon', 'GDP'),
+    ('LY', 'Libya', 'GDP'),
+    ('BO', 'Bolivia', 'GDP'),
+    ('PY', 'Paraguay', 'GDP'),
+    ('UG', 'Uganda', 'GDP'),
+    ('KH', 'Cambodia', 'GDP'),
+    ('NP', 'Nepal', 'GDP'),
+    ('SD', 'Sudan', 'GDP'),
+    ('BH', 'Bahrain', 'GDP/GDP per capita'),
+    ('CD', 'DR Congo', 'GDP'),
+    ('MO', 'Macau', 'GDP/GDP per capita'),
+    ('IS', 'Iceland', 'GDP/GDP per capita'),
+    ('CY', 'Cyprus', 'GDP/GDP per capita'),
+    ('LV', 'Latvia', 'GDP/GDP per capita'),
+    ('EE', 'Estonia', 'GDP/GDP per capita'),
+    ('SM', 'San Marino', 'GDP per capita'),
+    ('MT', 'Malta', 'GDP per capita'),
+    ('PR', 'Puerto Rico', 'GDP per capita'),
+    ('BS', 'Bahamas', 'GDP per capita'),
+    ('BN', 'Brunei', 'GDP per capita'),
+    ('SC', 'Seychelles', 'GDP per capita'),
+    ('TT', 'Trinidad and Tobago', 'GDP per capita'),
+    ('MU', 'Mauritius', 'GDP per capita'),
+    ('GY', 'Guyana', 'GDP per capita'),
+    ('LI', 'Liechtenstein', 'GDP per capita'),
+    ('MC', 'Monaco', 'GDP per capita'),
+    ('AD', 'Andorra', 'GDP per capita'),
+]
+
+
 def _globalux():
     """What a first-time visitor (no cookie, not signed in) from each country gets: UI language, live suites, default podcasts per section."""
     chs = _load_ch()["channels"]
     base = [c for c in chs if c.get("owner_id") is None and not str(c.get("id", "")).startswith("pending-")]
-    rows = [(k, v) for k, v in geo_suites.GEOS.items()] + [("other", ("--", "Any other country / unknown", "מדינה אחרת / לא ידועה", "en", "en"))]
+    rows = [(k, v) for k, v in geo_suites.GEOS.items()] + [("x-" + c.lower(), (c, n, "", "en", "en")) for c, n, _b in EXTRA_COUNTRIES if c not in geo_suites.CC2SLUG] + [("other", ("--", "Any other country / unknown", "", "en", "en"))]
+    basis = {"x-" + c.lower(): b for c, _n, b in EXTRA_COUNTRIES}
     out = []
     for slug, v in rows:
-        sel = list(dict.fromkeys([slug if slug != "other" else "us", "us"]))
+        sel = list(dict.fromkeys([slug if slug in geo_suites.GEOS else "us", "us"]))
         eff = geo_suites.effective_set(chs, sel)
-        live_own = slug == "il" or slug == "other" or geo_suites.active(slug, chs)
-        show_he = "il" in eff
+        live_own = slug == "il" or geo_suites.active(slug, chs) if slug in geo_suites.GEOS else False
+        show_he = slug == "il"           # a fresh visitor sees Hebrew content only from Israel (show_il)
         by = {}
         for c in base:
             if not geo_suites.channel_ok(c, chs, sel):
@@ -2995,9 +3099,9 @@ def _globalux():
             if c.get("language") == "he" and not show_he:
                 continue
             g = c.get("geos") or []
-            own = (slug in g) if slug not in ("il", "other") else (not g or "il" in g)
+            own = ((slug in g) if slug != "il" else (not g or "il" in g)) if slug in geo_suites.GEOS else ("us" in g)
             by.setdefault(c.get("vertical") or "-", []).append({"name": c["name"], "language": c.get("language") or "", "own": own, "url": c.get("url") or ""})
-        out.append({"slug": slug, "cc": v[0], "name": v[1], "name_he": v[2], "audio": v[3], "ui": v[4], "suite_live": bool(live_own), "suites": eff,
+        out.append({"slug": slug, "cc": v[0], "name": v[1], "name_he": v[2], "audio": v[3], "ui": v[4], "suite_live": bool(live_own), "extra": slug not in geo_suites.GEOS, "basis": basis.get(slug, ""), "suites": eff,
                     "count": sum(len(x) for x in by.values()), "sections": [{"topic": t, "pods": sorted(by[t], key=lambda p: (not p["own"], p["name"].lower()))} for t in TOPICS if t in by] +
                     [{"topic": t, "pods": by[t]} for t in by if t not in TOPICS]})
     return out
