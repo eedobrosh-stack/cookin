@@ -16,6 +16,7 @@ import urllib.request, urllib.parse
 from collections import Counter
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 import multiuser
+import traffic
 import cands
 import vidsum_articles
 import geo_suites
@@ -451,11 +452,20 @@ DEFAULT = {"members": [], "votes": {}, "decision": None, "tieCounter": None, "hi
 # the public host only (skip onrender.com previews and health checks).
 GA_ID = "G-TFS1NEQBVQ"
 def _ga_snippet(ga_id):
+    """GA loads only for a browser that looks human and shows life: not for webdriver/headless, and only after a first interaction
+    (pointer, key, scroll, touch) or 8 s of visible time. Page loads that never get there (bots, instant bounces) send nothing."""
     return (
-        '<script async src="https://www.googletagmanager.com/gtag/js?id=' + ga_id + '"></script>'
-        "<script>window.dataLayer=window.dataLayer||[];"
-        "function gtag(){dataLayer.push(arguments);}"
-        "gtag('js',new Date());gtag('config','" + ga_id + "');</script>"
+        "<script>(function(){var id='" + ga_id + "';"
+        "if(navigator.webdriver||/HeadlessChrome|Lighthouse|PhantomJS/i.test(navigator.userAgent)||!(navigator.languages&&navigator.languages.length)||!screen.width||!screen.height)return;"
+        "var ev=['pointerdown','keydown','scroll','touchstart','mousemove'],done=0,t;"
+        "function go(){if(done)return;done=1;clearTimeout(t);ev.forEach(function(e){removeEventListener(e,go,true)});"
+        "try{new Image().src='/api/vidsum/eng?'+Date.now()}catch(e){}"
+        "window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};"
+        "var s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);"
+        "gtag('js',new Date());gtag('config',id)}"
+        "ev.forEach(function(e){addEventListener(e,go,{capture:true,passive:true})});"
+        "t=setTimeout(function(){if(document.visibilityState==='visible')go();else document.addEventListener('visibilitychange',function f(){"
+        "if(document.visibilityState==='visible'){document.removeEventListener('visibilitychange',f);setTimeout(go,8000)}})},8000)})();</script>"
     )
 
 
@@ -926,6 +936,8 @@ class Handler(SimpleHTTPRequestHandler):
     def _ga(self, body):
         if not self._inject_ga():
             return body
+        if traffic.is_bot_ua(self.headers.get("User-Agent") or "") or not (self.headers.get("Accept-Language") or ""):
+            return body                                                  # crawlers and scripts get no analytics tag and no consent banner
         st = self._consent()
         if st == "no":
             return body
@@ -944,6 +956,11 @@ class Handler(SimpleHTTPRequestHandler):
         if isinstance(body, str):
             body = body.encode("utf-8")
         body = self._ga(brand_html(body, self._is_pawed_host()))
+        if self._inject_ga():
+            try:
+                traffic.record(self, self.path.split("?")[0], b"googletagmanager" in body or b"gtag" in body)
+            except Exception:
+                pass
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
@@ -1076,13 +1093,13 @@ class Handler(SimpleHTTPRequestHandler):
             return
         host_ = (self.headers.get("Host") or "").split(":")[0].lower()
         if host_ == "cookin.jarcud.com" and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/terms", "/vidsum/privacy", "/vidsum/takedown", "/vidsum/pawed", "/vidsum/cover", "/vidsum/addep", "/vidsum/geo", "/vidsum/globalux", "/vidsum/bookmarks", "/vidsum/stats", "/vidsum/charts", "/vidsum/err", "/vidsum/index", "/a/", "/vidsum/i18n.js", "/api/vidsum/catalog/", "/api/vidsum/admin/"))
-                                             or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/news", "/api/vidsum/charts", "/api/vidsum/charts/options", "/api/vidsum/live", "/api/vidsum/cooking", "/api/vidsum/me", "/api/vidsum/rating", "/api/vidsum/lang", "/api/vidsum/geo", "/api/vidsum/bookmarks", "/api/vidsum/bookmarks/items", "/api/vidsum/links/todo", "/api/vidsum/links/audit",
+                                             or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/news", "/api/vidsum/charts", "/api/vidsum/charts/options", "/api/vidsum/live", "/api/vidsum/cooking", "/api/vidsum/me", "/api/vidsum/rating", "/api/vidsum/lang", "/api/vidsum/geo", "/api/vidsum/eng", "/api/vidsum/bookmarks", "/api/vidsum/bookmarks/items", "/api/vidsum/links/todo", "/api/vidsum/links/audit",
                                                       "/api/vidsum/articles", "/api/vidsum/job")):
             # Google sign-in is registered for cookin.jarcud.com only, so the sources editor is also reachable here
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return
-        if (self._is_main_host() or self._is_pawed_host()) and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/terms", "/vidsum/privacy", "/vidsum/takedown", "/vidsum/pawed", "/vidsum/cover", "/vidsum/addep", "/vidsum/geo", "/vidsum/globalux", "/vidsum/bookmarks", "/vidsum/stats", "/vidsum/charts", "/vidsum/err", "/vidsum/index", "/a/", "/vidsum/i18n.js", "/api/vidsum/catalog/", "/api/vidsum/admin/")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/charts", "/api/vidsum/charts/options", "/api/vidsum/live", "/api/vidsum/cooking", "/api/vidsum/me", "/api/vidsum/rating", "/api/vidsum/lang", "/api/vidsum/geo", "/api/vidsum/bookmarks", "/api/vidsum/bookmarks/items", "/api/vidsum/links/todo", "/api/vidsum/links/audit", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/index", "/api/vidsum/index/entry", "/api/vidsum/relay/queue", "/api/vidsum/relay/sources")):
+        if (self._is_main_host() or self._is_pawed_host()) and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/terms", "/vidsum/privacy", "/vidsum/takedown", "/vidsum/pawed", "/vidsum/cover", "/vidsum/addep", "/vidsum/geo", "/vidsum/globalux", "/vidsum/bookmarks", "/vidsum/stats", "/vidsum/charts", "/vidsum/err", "/vidsum/index", "/a/", "/vidsum/i18n.js", "/api/vidsum/catalog/", "/api/vidsum/admin/")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/charts", "/api/vidsum/charts/options", "/api/vidsum/live", "/api/vidsum/cooking", "/api/vidsum/me", "/api/vidsum/rating", "/api/vidsum/lang", "/api/vidsum/geo", "/api/vidsum/eng", "/api/vidsum/bookmarks", "/api/vidsum/bookmarks/items", "/api/vidsum/links/todo", "/api/vidsum/links/audit", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/index", "/api/vidsum/index/entry", "/api/vidsum/relay/queue", "/api/vidsum/relay/sources")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return

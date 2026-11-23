@@ -3184,7 +3184,7 @@ def _geo_get(handler, path, qs):
         handler._json({"ok": True, "geo": g, "sel": geo_suites.geos(), "explicit": explicit, "effective": geo_suites.effective(chs), "lang": request_lang(handler, qs),
                        "geos": [{"slug": k, "cc": v[0], "name": v[1], "name_he": v[2], "live": k == "il" or geo_suites.active(k, chs)} for k, v in geo_suites.GEOS.items()]})
         return True
-    if not path.startswith(("/api/vidsum/admin/geo", "/vidsum/geo", "/vidsum/globalux", "/api/vidsum/admin/globalux")):
+    if not path.startswith(("/api/vidsum/admin/geo", "/vidsum/geo", "/vidsum/globalux", "/api/vidsum/admin/globalux", "/api/vidsum/admin/traffic")):
         return False
     user = current_user(handler)
     if not (user and user.get("admin")):
@@ -3198,6 +3198,9 @@ def _geo_get(handler, path, qs):
         return True
     if path in ("/vidsum/globalux", "/vidsum/globalux/"):
         _serve(handler, os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "vidsum_globalux.html"))
+    elif path == "/api/vidsum/admin/traffic":
+        import traffic
+        handler._json({"ok": True, **traffic.report(int((qs.get("days") or ["7"])[0] or 7))})
     elif path == "/api/vidsum/admin/globalux":
         handler._json({"ok": True, "countries": _globalux()})
     elif path in ("/vidsum/geo", "/vidsum/geo/"):
@@ -3246,6 +3249,17 @@ def _set_geo_ctx(handler, qs=None):
 
 
 def handle_get(handler, path, qs):
+    if path == "/api/vidsum/eng":                         # beacon: this page load showed real interaction
+        try:
+            import traffic
+            if not traffic.is_bot_ua(handler.headers.get("User-Agent") or ""):
+                traffic.engaged(handler)
+        except Exception:
+            pass
+        handler.send_response(204)
+        handler.send_header("Cache-Control", "no-store")
+        handler.end_headers()
+        return True
     _set_geo_ctx(handler, qs)
     if _geo_get(handler, path, qs):
         return True
