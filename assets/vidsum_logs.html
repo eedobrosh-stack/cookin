@@ -208,6 +208,7 @@
     <div class="bar"><div class="chips" id="chips"></div><span id="stamp"></span></div>
     <div id="scan" class="scan"></div>
     <section class="qbox" id="qbox"></section>
+    <section class="qbox" id="traffic" style="display:none"></section>
     <div class="scroll"><table>
       <thead><tr><th>שעה</th><th>שלב</th><th>סרטון</th><th>פרטים</th></tr></thead>
       <tbody id="rows"><tr><td colspan="4">טוען…</td></tr></tbody>
@@ -290,6 +291,30 @@ function render(){
 async function tick(){ try{ DATA = await (await fetch('/api/vidsum/logs?limit=400')).json(); render(); }catch(e){ $('stamp').textContent='שגיאת רענון'; } }
 $('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 tick(); setInterval(tick, 4000);
+
+let TDAYS=7;
+async function tickTraffic(){
+  let T; try{ const r=await fetch('/api/vidsum/admin/traffic?days='+TDAYS); if(!r.ok) return; T=await r.json(); }catch(e){ return; }
+  if(!T||!T.ok) return;
+  const pct=x=>Math.round((x||0)*100)+'%', tbl=(rows,h1,h2)=>'<table><thead><tr><th>'+h1+'</th><th>'+h2+'</th></tr></thead><tbody>'+(rows.length?rows.map(r=>'<tr><td style="direction:ltr;text-align:left;word-break:break-all">'+esc(r[0])+'</td><td>'+r[1]+'</td></tr>').join(''):'<tr><td colspan="2">אין נתונים עדיין</td></tr>')+'</tbody></table>';
+  const days=[1,7,30].map(d=>'<button data-d="'+d+'" class="'+(d===TDAYS?'on':'')+'">'+(d===1?'יום':d+' ימים')+'</button>').join('');
+  const per=Object.entries(T.per_day||{}).map(([d,v])=>'<tr><td>'+esc(d)+'</td><td>'+v.human+'</td><td>'+v.bot+'</td><td>'+v.engaged+'</td></tr>').join('');
+  $('traffic').style.display='';
+  $('traffic').innerHTML='<h2>תנועה: אנשים מול בוטים</h2><div class="chips" id="tdays" style="margin-bottom:8px">'+days+'</div>'
+    +'<div class="tiles"><div class="tile" style="--c:#2fbf71"><b>'+T.human_loads+'</b><span>טעינות של אנשים</span></div>'
+    +'<div class="tile" style="--c:#d33"><b>'+T.bot_loads+'</b><span>טעינות של בוטים ('+pct(T.bot_share)+')</span></div>'
+    +'<div class="tile" style="--c:#1556d6"><b>'+T.engaged+'</b><span>עם אינטראקציה ('+pct(T.engaged_of_human)+' מהאנשים)</span></div>'
+    +'<div class="tile" style="--c:#8a4fd0"><b>'+T.ga_served+'</b><span>טעינות שקיבלו תג Analytics</span></div></div>'
+    +'<div class="scroll"><table><thead><tr><th>יום (UTC)</th><th>אנשים</th><th>בוטים</th><th>אינטראקציה</th></tr></thead><tbody>'+per+'</tbody></table></div>'
+    +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (אנשים)</h3>'+tbl(T.human_countries,'מדינה','טעינות')
+    +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (בוטים)</h3>'+tbl(T.bot_countries,'מדינה','טעינות')
+    +'<h3 style="margin:14px 0 4px;font-size:14px">מכשיר (אנשים) · עם אינטראקציה</h3>'+tbl(T.device_human.concat(T.device_engaged.map(r=>['engaged: '+r[0],r[1]])),'מכשיר','טעינות')
+    +'<h3 style="margin:14px 0 4px;font-size:14px">כתובות IP של בוטים (מובילות)</h3>'+tbl(T.top_bot_ips,'IP','טעינות')
+    +'<details><summary>User agents מובילים</summary>'+tbl(T.top_uas,'User agent','טעינות')+'</details>'
+    +'<details><summary>עמודים ושעות</summary>'+tbl(T.top_paths,'נתיב','טעינות')+tbl(T.hours_utc.map(r=>[r[0]+':00',r[1]]),'שעה (UTC)','טעינות')+'</details>';
+  $('tdays').querySelectorAll('button').forEach(b=>b.onclick=()=>{TDAYS=+b.dataset.d;tickTraffic();});
+}
+tickTraffic(); setInterval(tickTraffic, 60000);
 </script>
 <script>fetch('/api/vidsum/me').then(function(r){return r.json()}).then(function(j){if(j.signed)document.body.classList.add('authed');if(j.admin)document.body.classList.add('admin')}).catch(function(){});</script>
 
