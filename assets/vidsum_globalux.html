@@ -16,7 +16,10 @@
   .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
   .tab { padding:5px 11px; border-radius:999px; border:1px solid var(--line); background:var(--card); cursor:pointer; font:inherit; color:var(--fg); }
   .tab.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
-  .tab.off { opacity:.6; border-style:dashed; }
+  .tab small { color:var(--mut); } .tab.on small { color:var(--bg); opacity:.7; }
+  .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--ok); margin-inline-end:5px; }
+  select.tab { padding:5px 8px; }
+  label.flt { display:inline-flex; gap:6px; align-items:center; margin-bottom:14px; margin-inline-start:12px; }
   .hd { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:12px; display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
   .hd b { display:block; font-size:12px; color:var(--mut); font-weight:500; }
   .pill { font-size:12px; padding:2px 8px; border-radius:6px; border:1px solid var(--line); }
@@ -38,6 +41,7 @@
   <h1>GlobalUX</h1>
   <p class="sub">What a first-time, non-admin visitor (no cookie, signed out) sees by default; Hebrew content only from Israel, per country. <a href="/vidsum/news">Back to Pawed</a> · <a href="/vidsum/geo">Geo suites</a></p>
   <div class="tabs" id="tabs"></div>
+  <label class="flt"><input type="checkbox" id="loc"> Local sources only (source country = selected country)</label> <span class="sub">● = own suite live</span>
   <div id="view"></div>
   <h2 style="font-size:17px;margin:26px 0 8px">All countries</h2>
   <div style="overflow-x:auto"><table id="sum"></table></div>
@@ -49,10 +53,11 @@ let D=[], cur=location.hash.slice(1)||'il';
 const flag=cc=>cc&&cc.length==2?String.fromCodePoint(...[...cc].map(c=>127397+c.charCodeAt(0))):'🌐';
 const LANG={he:'Hebrew',en:'English',de:'German',fr:'French',it:'Italian',es:'Spanish',pt:'Portuguese',nl:'Dutch',ja:'Japanese',zh:'Chinese',ko:'Korean',sv:'Swedish',no:'Norwegian',fi:'Finnish'};
 function tabs(){ const ex=D.filter(c=>c.extra);
-  $('tabs').innerHTML=D.filter(c=>!c.extra).map(c=>`<button class="tab ${c.slug==cur?'on':''} ${c.suite_live?'':'off'}" data-s="${c.slug}">${flag(c.cc)} ${esc(c.name)} <small>${c.count}</small></button>`).join('')+`<select id="more" class="tab ${(D.find(x=>x.slug==cur)||{}).extra?'on':''}"><option value="">More countries (${ex.length})…</option>${ex.map(c=>`<option value="${c.slug}" ${c.slug==cur?'selected':''}>${esc(c.name)} · ${esc(c.basis)}</option>`).join('')}</select>`;
+  $('tabs').innerHTML=D.filter(c=>!c.extra).map(c=>`<button class="tab ${c.slug==cur?'on':''}" data-s="${c.slug}">${c.suite_live?'<span class="dot" title="own suite live"></span>':''}${flag(c.cc)} ${esc(c.name)} <small>${c.count}</small></button>`).join('')+`<select id="more" class="tab ${(D.find(x=>x.slug==cur)||{}).extra?'on':''}"><option value="">More countries (${ex.length})…</option>${ex.map(c=>`<option value="${c.slug}" ${c.slug==cur?'selected':''}>${esc(c.name)} · ${esc(c.basis)}</option>`).join('')}</select>`;
   $('more').onchange=e=>{ if(e.target.value){cur=e.target.value;location.hash=cur;tabs();view();} };
-  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{cur=b.dataset.s;location.hash=cur;tabs();view();}); }
+  document.querySelectorAll('button.tab').forEach(b=>b.onclick=()=>{cur=b.dataset.s;location.hash=cur;tabs();view();}); }
 function view(){
+  const LOC=$('loc').checked;
   const c=D.find(x=>x.slug==cur)||D[0]; if(!c) return;
   $('view').innerHTML=`<div class="hd">
     <div><b>Country</b>${flag(c.cc)} ${esc(c.name)} (${esc(c.cc)})</div>
@@ -62,9 +67,10 @@ function view(){
     <div><b>Own suite</b><span class="pill ${c.suite_live?'ok':'warn'}">${c.suite_live?'live':(c.extra?'none: US suite, English':'not live: falls back to US')}</span></div>
     <div><b>Suites merged</b>${c.suites.map(esc).join(' + ')}</div>
     <div><b>Podcasts</b>${c.count}</div></div>
-  <div class="grid">${c.sections.map(s=>`<div class="sec"><h3>${esc(s.topic)}<span>${s.pods.length}</span></h3>${s.pods.map(p=>`<div class="p ${p.own?'':'us'}"><span>${esc(p.name)}</span><span class="l">${esc(p.language)}${p.own?'':' · US'}</span></div>`).join('')}</div>`).join('')||'<p class="sub">No podcasts.</p>'}</div>`;
+  <div class="grid">${c.sections.map(s=>({t:s.topic,p:s.pods.filter(p=>!LOC||p.own)})).filter(s=>s.p.length).map(s=>`<div class="sec"><h3>${esc(s.t)}<span>${s.p.length}</span></h3>${s.p.map(p=>`<div class="p ${p.own?'':'us'}"><span>${esc(p.name)}</span><span class="l">${esc(p.language)} · ${esc(p.src=='GB'?'UK':(p.src||'?'))}</span></div>`).join('')}</div>`).join('')||'<p class="sub">No podcasts.</p>'}</div>`;
 }
 function sum(){ $('sum').innerHTML='<tr><th>Country</th><th>UI</th><th>Suite</th><th>Merged with</th><th>Podcasts</th><th>Sections</th></tr>'+D.map(c=>`<tr><td><a href="#${c.slug}" onclick="cur='${c.slug}';tabs();view();">${flag(c.cc)} ${esc(c.name)}</a></td><td>${esc(c.ui)}</td><td><span class="pill ${c.suite_live?'ok':'warn'}">${c.suite_live?'live':(c.extra?'none':'US fallback')}</span></td><td>${c.suites.map(esc).join(' + ')}</td><td>${c.count}</td><td>${c.sections.length}</td></tr>`).join(''); }
+$('loc').onchange=view;
 fetch('/api/vidsum/admin/globalux').then(r=>r.json()).then(j=>{D=j.countries||[];tabs();view();sum();});
 </script>
 </body>

@@ -3080,30 +3080,42 @@ EXTRA_COUNTRIES = [
 ]
 
 
+_GUX = {"t": 0, "v": None}
+TOPIC_EN = {"פוליטיקה": "Politics", "טכנולוגיה": "Tech", "כלכלה": "Economy", "ספורט": "Sports", "תרבות": "Culture", "לייפסטייל": "Lifestyle", "בריאות": "Health",
+            "פשע אמיתי": "True Crime", "היסטוריה": "History", "קומדיה": "Comedy", "הופעות חיות": "Live Shows", "מבשלים": "Cooking"}
+
+
 def _globalux():
-    """What a first-time visitor (no cookie, not signed in) from each country gets: UI language, live suites, default podcasts per section."""
+    """What a first-time visitor (no cookie, not signed in, not admin) from each country gets: UI language, live suites, default podcasts per section.
+    Cached for a minute (one pass over the channels, then per-country set arithmetic)."""
+    if _GUX["v"] is not None and time.time() - _GUX["t"] < 60:
+        return _GUX["v"]
     chs = _load_ch()["channels"]
     base = [c for c in chs if c.get("owner_id") is None and not str(c.get("id", "")).startswith("pending-")]
+    live = {k for k in geo_suites.GEOS if k != "il" and any(k in (c.get("geos") or ()) for c in base)}
+    cc_of = {k: v[0] for k, v in geo_suites.GEOS.items()}
     rows = [(k, v) for k, v in geo_suites.GEOS.items()] + [("x-" + c.lower(), (c, n, "", "en", "en")) for c, n, _b in EXTRA_COUNTRIES if c not in geo_suites.CC2SLUG] + [("other", ("--", "Any other country / unknown", "", "en", "en"))]
     basis = {"x-" + c.lower(): b for c, _n, b in EXTRA_COUNTRIES}
     out = []
     for slug, v in rows:
         sel = list(dict.fromkeys([slug if slug in geo_suites.GEOS else "us", "us"]))
-        eff = geo_suites.effective_set(chs, sel)
-        live_own = slug == "il" or geo_suites.active(slug, chs) if slug in geo_suites.GEOS else False
-        show_he = slug == "il"           # a fresh visitor sees Hebrew content only from Israel (show_il)
+        lv = [g for g in sel if g == "il" or g in live]
+        eff = lv or ["il" if "us" not in live else "us"]           # geo_suites.effective(): own suite, else US, else the Israel roster
+        own_live = slug == "il" or slug in live
         by = {}
         for c in base:
-            if not geo_suites.channel_ok(c, chs, sel):
-                continue
-            if c.get("language") == "he" and not show_he:
-                continue
             g = c.get("geos") or []
-            own = ((slug in g) if slug != "il" else (not g or "il" in g)) if slug in geo_suites.GEOS else ("us" in g)
-            by.setdefault(c.get("vertical") or "-", []).append({"name": c["name"], "language": c.get("language") or "", "own": own, "url": c.get("url") or ""})
-        out.append({"slug": slug, "cc": v[0], "name": v[1], "name_he": v[2], "audio": v[3], "ui": v[4], "suite_live": bool(live_own), "extra": slug not in geo_suites.GEOS, "basis": basis.get(slug, ""), "suites": eff,
-                    "count": sum(len(x) for x in by.values()), "sections": [{"topic": t, "pods": sorted(by[t], key=lambda p: (not p["own"], p["name"].lower()))} for t in TOPICS if t in by] +
-                    [{"topic": t, "pods": by[t]} for t in by if t not in TOPICS]})
+            ok = ("il" in eff and (not g or "il" in g)) or bool((set(eff) - {"il"}) & set(g))
+            if not ok or (c.get("language") == "he" and slug != "il"):          # Hebrew only for visitors in Israel (show_il)
+                continue
+            src = cc_of.get(g[0], "") if g else "IL"
+            own = (src == cc_of.get(slug)) if slug in geo_suites.GEOS else False
+            by.setdefault(c.get("vertical") or "-", []).append({"name": c["name"], "language": (c.get("language") or "").upper(), "src": src, "own": own})
+        order = [t for t in TOPICS if t in by] + [t for t in by if t not in TOPICS]
+        out.append({"slug": slug, "cc": v[0], "name": v[1], "audio": v[3], "ui": v[4], "suite_live": bool(own_live), "extra": slug not in geo_suites.GEOS,
+                    "basis": basis.get(slug, ""), "suites": eff, "count": sum(len(x) for x in by.values()),
+                    "sections": [{"topic": TOPIC_EN.get(t, t), "pods": sorted(by[t], key=lambda p: (not p["own"], p["name"].lower()))} for t in order]})
+    _GUX["t"], _GUX["v"] = time.time(), out
     return out
 
 
