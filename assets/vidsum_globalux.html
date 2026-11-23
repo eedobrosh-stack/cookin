@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pawed GlobalUX</title>
+<style>
+  :root { --bg:#faf8f4; --fg:#1d1b18; --mut:#756f66; --card:#fff; --line:#e4dfd6; --acc:#c2410c; --ok:#15803d; --warn:#b45309; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161412; --fg:#f1ede6; --mut:#a39c90; --card:#211e1b; --line:#38332d; --acc:#fb923c; --ok:#4ade80; --warn:#fbbf24; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 system-ui,-apple-system,sans-serif; }
+  main { max-width:1200px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--mut); margin:0 0 14px; }
+  a { color:var(--acc); }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .tab { padding:5px 11px; border-radius:999px; border:1px solid var(--line); background:var(--card); cursor:pointer; font:inherit; color:var(--fg); }
+  .tab.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
+  .tab.off { opacity:.6; border-style:dashed; }
+  .hd { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:12px; display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
+  .hd b { display:block; font-size:12px; color:var(--mut); font-weight:500; }
+  .pill { font-size:12px; padding:2px 8px; border-radius:6px; border:1px solid var(--line); }
+  .ok { color:var(--ok); border-color:var(--ok); } .warn { color:var(--warn); border-color:var(--warn); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
+  .sec { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 14px; }
+  .sec h3 { margin:0 0 6px; font-size:15px; display:flex; justify-content:space-between; }
+  .sec h3 span { color:var(--mut); font-weight:400; font-size:13px; }
+  .p { padding:4px 0; border-top:1px solid var(--line); display:flex; justify-content:space-between; gap:8px; font-size:14px; }
+  .p:first-of-type { border-top:0; }
+  .l { color:var(--mut); font-size:12px; white-space:nowrap; }
+  .us { opacity:.75; }
+  table { border-collapse:collapse; width:100%; font-size:13px; background:var(--card); border:1px solid var(--line); border-radius:12px; }
+  td, th { padding:6px 10px; border-top:1px solid var(--line); text-align:start; }
+</style>
+</head>
+<body>
+<main>
+  <h1>GlobalUX</h1>
+  <p class="sub">What a first-time visitor (no cookie, signed out) sees by default, per country. <a href="/vidsum/news">Back to Pawed</a> · <a href="/vidsum/geo">Geo suites</a></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="view"></div>
+  <h2 style="font-size:17px;margin:26px 0 8px">All countries</h2>
+  <div style="overflow-x:auto"><table id="sum"></table></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let D=[], cur=location.hash.slice(1)||'il';
+const flag=cc=>cc&&cc.length==2?String.fromCodePoint(...[...cc].map(c=>127397+c.charCodeAt(0))):'🌐';
+const LANG={he:'Hebrew',en:'English',de:'German',fr:'French',it:'Italian',es:'Spanish',pt:'Portuguese',nl:'Dutch',ja:'Japanese',zh:'Chinese',ko:'Korean',sv:'Swedish',no:'Norwegian',fi:'Finnish'};
+function tabs(){ $('tabs').innerHTML=D.map(c=>`<button class="tab ${c.slug==cur?'on':''} ${c.suite_live?'':'off'}" data-s="${c.slug}">${flag(c.cc)} ${esc(c.name)} <small>${c.count}</small></button>`).join('');
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{cur=b.dataset.s;location.hash=cur;tabs();view();}); }
+function view(){
+  const c=D.find(x=>x.slug==cur)||D[0]; if(!c) return;
+  $('view').innerHTML=`<div class="hd">
+    <div><b>Country</b>${flag(c.cc)} ${esc(c.name)} (${esc(c.cc)})</div>
+    <div><b>UI language</b>${esc(LANG[c.ui]||c.ui)}</div>
+    <div><b>Podcast language</b>${esc(LANG[c.audio]||c.audio)}</div>
+    <div><b>Own suite</b><span class="pill ${c.suite_live?'ok':'warn'}">${c.suite_live?'live':'not live: falls back to US'}</span></div>
+    <div><b>Suites merged</b>${c.suites.map(esc).join(' + ')}</div>
+    <div><b>Podcasts</b>${c.count}</div></div>
+  <div class="grid">${c.sections.map(s=>`<div class="sec"><h3>${esc(s.topic)}<span>${s.pods.length}</span></h3>${s.pods.map(p=>`<div class="p ${p.own?'':'us'}"><span>${esc(p.name)}</span><span class="l">${esc(p.language)}${p.own?'':' · US'}</span></div>`).join('')}</div>`).join('')||'<p class="sub">No podcasts.</p>'}</div>`;
+}
+function sum(){ $('sum').innerHTML='<tr><th>Country</th><th>UI</th><th>Suite</th><th>Merged with</th><th>Podcasts</th><th>Sections</th></tr>'+D.map(c=>`<tr><td><a href="#${c.slug}" onclick="cur='${c.slug}';tabs();view();">${flag(c.cc)} ${esc(c.name)}</a></td><td>${esc(c.ui)}</td><td><span class="pill ${c.suite_live?'ok':'warn'}">${c.suite_live?'live':'US fallback'}</span></td><td>${c.suites.map(esc).join(' + ')}</td><td>${c.count}</td><td>${c.sections.length}</td></tr>`).join(''); }
+fetch('/api/vidsum/admin/globalux').then(r=>r.json()).then(j=>{D=j.countries||[];tabs();view();sum();});
+</script>
+</body>
+</html>

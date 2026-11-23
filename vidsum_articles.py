@@ -2977,6 +2977,32 @@ def cooking_today():
 ART_PREFIX = "/vidsum/article/"
 
 
+def _globalux():
+    """What a first-time visitor (no cookie, not signed in) from each country gets: UI language, live suites, default podcasts per section."""
+    chs = _load_ch()["channels"]
+    base = [c for c in chs if c.get("owner_id") is None and not str(c.get("id", "")).startswith("pending-")]
+    rows = [(k, v) for k, v in geo_suites.GEOS.items()] + [("other", ("--", "Any other country / unknown", "מדינה אחרת / לא ידועה", "en", "en"))]
+    out = []
+    for slug, v in rows:
+        sel = list(dict.fromkeys([slug if slug != "other" else "us", "us"]))
+        eff = geo_suites.effective_set(chs, sel)
+        live_own = slug == "il" or slug == "other" or geo_suites.active(slug, chs)
+        show_he = "il" in eff
+        by = {}
+        for c in base:
+            if not geo_suites.channel_ok(c, chs, sel):
+                continue
+            if c.get("language") == "he" and not show_he:
+                continue
+            g = c.get("geos") or []
+            own = (slug in g) if slug not in ("il", "other") else (not g or "il" in g)
+            by.setdefault(c.get("vertical") or "-", []).append({"name": c["name"], "language": c.get("language") or "", "own": own, "url": c.get("url") or ""})
+        out.append({"slug": slug, "cc": v[0], "name": v[1], "name_he": v[2], "audio": v[3], "ui": v[4], "suite_live": bool(live_own), "suites": eff,
+                    "count": sum(len(x) for x in by.values()), "sections": [{"topic": t, "pods": sorted(by[t], key=lambda p: (not p["own"], p["name"].lower()))} for t in TOPICS if t in by] +
+                    [{"topic": t, "pods": by[t]} for t in by if t not in TOPICS]})
+    return out
+
+
 def _geo_get(handler, path, qs):
     """/api/vidsum/geo (public: the visitor's suite) and the admin review of the geo suites."""
     if path == "/api/vidsum/geo":
@@ -2985,7 +3011,7 @@ def _geo_get(handler, path, qs):
         handler._json({"ok": True, "geo": g, "sel": geo_suites.geos(), "explicit": explicit, "effective": geo_suites.effective(chs), "lang": request_lang(handler, qs),
                        "geos": [{"slug": k, "cc": v[0], "name": v[1], "name_he": v[2], "live": k == "il" or geo_suites.active(k, chs)} for k, v in geo_suites.GEOS.items()]})
         return True
-    if not path.startswith(("/api/vidsum/admin/geo", "/vidsum/geo")):
+    if not path.startswith(("/api/vidsum/admin/geo", "/vidsum/geo", "/vidsum/globalux", "/api/vidsum/admin/globalux")):
         return False
     user = current_user(handler)
     if not (user and user.get("admin")):
@@ -2997,7 +3023,11 @@ def _geo_get(handler, path, qs):
             return True
         handler._json({"error": "not found"}, 404)
         return True
-    if path in ("/vidsum/geo", "/vidsum/geo/"):
+    if path in ("/vidsum/globalux", "/vidsum/globalux/"):
+        _serve(handler, os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "vidsum_globalux.html"))
+    elif path == "/api/vidsum/admin/globalux":
+        handler._json({"ok": True, "countries": _globalux()})
+    elif path in ("/vidsum/geo", "/vidsum/geo/"):
         _serve(handler, os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "vidsum_geo.html"))
     elif path == "/api/vidsum/admin/geo/review":
         handler._json({"ok": True, "suites": geo_suites.review(), "topics": TOPICS, "per_topic": geo_suites.PER_TOPIC})
