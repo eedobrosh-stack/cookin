@@ -2056,6 +2056,18 @@ def _load_ch():
 def _save_ch(d):
     d["log"] = d["log"][-60:]
     with _CH_IO:                                   # one writer at a time, each with its own temp file (a shared .tmp lost the registry on 2026-11-07)
+        if not d.pop("_geos_write", False):        # watchers save a snapshot loaded minutes ago: keep the geo tags on disk (only geo_suites sets _geos_write)
+            try:
+                with open(CH_PATH, encoding="utf-8") as f:
+                    cur = {c["id"]: c.get("geos") for c in json.load(f).get("channels", [])}
+                for c in d.get("channels", []):
+                    if c.get("id") in cur:
+                        if cur[c["id"]]:
+                            c["geos"] = cur[c["id"]]
+                        else:
+                            c.pop("geos", None)
+            except (OSError, ValueError):
+                pass
         tmp = f"{CH_PATH}.{os.getpid()}.{threading.get_ident()}.tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(d, f, ensure_ascii=False, indent=1)

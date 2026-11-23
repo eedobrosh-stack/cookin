@@ -309,6 +309,7 @@ def activate(slug):
                         if slug not in g:
                             g.append(slug)
                         c["geos"] = g
+                dd["_geos_write"] = True
                 va._save_ch(dd)
     with LOCK:
         d = _load()
@@ -346,5 +347,6 @@ def retag(dry=True):
                 if not dry:
                     c["geos"] = new
         if not dry and changes:
+            d["_geos_write"] = True
             va._save_ch(d)
     return {"dry": dry, "count": len(changes), "changes": changes}
