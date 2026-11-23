@@ -1577,7 +1577,24 @@ def visible_news_items(handler, qs, user, ul):
     return items
 
 
+_NEWS_C = {"t": 0.0, "items": None}
+_NEWS_LOCK = threading.Lock()
+_NEWS_SEM = threading.BoundedSemaphore(8)          # at most 8 homepage-feed responses being assembled at once (a restart makes every open page re-request it together)
+NEWS_TTL = 30
+
+
 def news_items():
+    """Every article as a feed row. Built once per NEWS_TTL seconds and shared (one build even when many requests arrive together); callers get shallow
+    copies, so popping or replacing keys on a row never touches the cache."""
+    c = _NEWS_C
+    if c["items"] is None or time.time() - c["t"] > NEWS_TTL:
+        with _NEWS_LOCK:
+            if c["items"] is None or time.time() - c["t"] > NEWS_TTL:
+                c["items"], c["t"] = _news_items_build(), time.time()
+    return [dict(i) for i in c["items"]]
+
+
+def _news_items_build():
     nd = vidsum_render.nodash
     chs = _load_ch()["channels"]
     chmap = {c["id"]: c for c in chs}
@@ -3452,40 +3469,41 @@ def handle_get(handler, path, qs):
         handler._json({"ok": True, "lang": ul, "entry": info, "articles": rows, "total": total, "offset": off})
         return True
     if path == "/api/vidsum/news":
-        user = current_user(handler)
-        as_id = (qs.get("as") or [""])[0]
-        if as_id and user and user.get("admin"):                      # admin preview: the homepage exactly as that user gets it
-            with multiuser.db() as c:
-                r = c.execute("SELECT id,email,name FROM users WHERE id=?", (as_id,)).fetchone()
-            if r:
-                user = {"id": r["id"], "email": r["email"], "name": r["name"], "admin": False}
-        items = news_items()
-        ul = request_lang(handler, qs)
-        for i in items:                                  # a de/fr/it/es/pt/nl visitor gets that edition's headline where it exists, English otherwise
-            trs = i.pop("tr", None)
-            if trs and ul in trs:
-                i["title_en"], i["lead_en"] = trs[ul]
-        vis = _visible_source_ids(user)
-        personal = vis is not None and bool(user)
-        if vis is not None:                              # guests and signed-in users: private sources and one-off episodes stay private
-            uid = user["id"] if user else None
-            pr = get_vprefs(uid) if uid else {"hideBase": False, "hiddenBase": []}
-            base_ok = not pr["hideBase"]
-            custom = bool(pr["hideBase"] or pr["hiddenBase"])        # an article we cannot tie to a source is only shown to people on the default roster
-            items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and not i.get("submitted_by") and base_ok and not custom)
-                     or (uid and i.get("submitted_by") == uid)]
-        if vis is None and user and user.get("admin") and user.get("id") != "admin-token":
-            owners = {c["id"]: c.get("owner_id") for c in _load_ch()["channels"]}        # an admin's homepage is the Pawed roster, not other users' private sources
-            items = [i for i in items if not owners.get(i["source_id"]) and not i.get("submitted_by")]
-        if not show_il(handler, qs, user):                # outside Israel and no Israeli flag chosen: no Hebrew-audio content at all
-            items = [i for i in items if i.get("lang") != "he"]
-        gone = removed_topics(user)
-        if gone:                                         # a switched-off section loses its tab and every article filed under it
-            items = [dict(i, topics=[t for t in i["topics"] if t not in gone]) for i in items if i["topic"] not in gone]
-        handler._json({"ok": True, "topics": [t for t in TOPICS if t not in gone], "items": items, "personal": personal,
-                       "me": ({"name": user.get("name") or user.get("email")} if user and user.get("id") != "admin-token" else None),
-                       "platform": viewer_platform(handler, user)})
-        return True
+        with _NEWS_SEM:
+            user = current_user(handler)
+            as_id = (qs.get("as") or [""])[0]
+            if as_id and user and user.get("admin"):                      # admin preview: the homepage exactly as that user gets it
+                with multiuser.db() as c:
+                    r = c.execute("SELECT id,email,name FROM users WHERE id=?", (as_id,)).fetchone()
+                if r:
+                    user = {"id": r["id"], "email": r["email"], "name": r["name"], "admin": False}
+            items = news_items()
+            ul = request_lang(handler, qs)
+            for i in items:                                  # a de/fr/it/es/pt/nl visitor gets that edition's headline where it exists, English otherwise
+                trs = i.pop("tr", None)
+                if trs and ul in trs:
+                    i["title_en"], i["lead_en"] = trs[ul]
+            vis = _visible_source_ids(user)
+            personal = vis is not None and bool(user)
+            if vis is not None:                              # guests and signed-in users: private sources and one-off episodes stay private
+                uid = user["id"] if user else None
+                pr = get_vprefs(uid) if uid else {"hideBase": False, "hiddenBase": []}
+                base_ok = not pr["hideBase"]
+                custom = bool(pr["hideBase"] or pr["hiddenBase"])        # an article we cannot tie to a source is only shown to people on the default roster
+                items = [i for i in items if (i["source_id"] in vis) or (not i["source_id"] and not i.get("submitted_by") and base_ok and not custom)
+                         or (uid and i.get("submitted_by") == uid)]
+            if vis is None and user and user.get("admin") and user.get("id") != "admin-token":
+                owners = {c["id"]: c.get("owner_id") for c in _load_ch()["channels"]}        # an admin's homepage is the Pawed roster, not other users' private sources
+                items = [i for i in items if not owners.get(i["source_id"]) and not i.get("submitted_by")]
+            if not show_il(handler, qs, user):                # outside Israel and no Israeli flag chosen: no Hebrew-audio content at all
+                items = [i for i in items if i.get("lang") != "he"]
+            gone = removed_topics(user)
+            if gone:                                         # a switched-off section loses its tab and every article filed under it
+                items = [dict(i, topics=[t for t in i["topics"] if t not in gone]) for i in items if i["topic"] not in gone]
+            handler._json({"ok": True, "topics": [t for t in TOPICS if t not in gone], "items": items, "personal": personal,
+                           "me": ({"name": user.get("name") or user.get("email")} if user and user.get("id") != "admin-token" else None),
+                           "platform": viewer_platform(handler, user)})
+            return True
     if path == "/api/vidsum/channels":
         user = current_user(handler)
         if not (user and user.get("admin")):
