@@ -99,6 +99,7 @@ def verify(handler, q):
         _bump(r.setdefault("gpu", {}), ("OK " if ok else "NO ") + g[:60])
         _bump(r.setdefault("sizes", {}), ("OK " if ok else "NO ") + ((q.get("sw") or [""])[0])[:12])
         _bump(r.setdefault("eng_device", {}), "mobile" if mobile else "desktop")
+        _bump(r.setdefault("eng_country" if ok else "rej_country", {}), (handler.headers.get("CF-IPCountry") or "?").upper())
         _dirty = True
     _flush()
     return ok, why
@@ -129,7 +130,7 @@ def report(days=7):
     _flush(True)
     ds = sorted(_D)[-days:]
     tot = {"human": 0, "bot": 0, "engaged": 0, "eng_rejected": 0, "ga_served": 0}
-    agg = {k: {} for k in ("country", "bot_country", "device", "eng_device", "ua", "bot_ip", "hours", "paths", "verdict", "gpu", "sizes")}
+    agg = {k: {} for k in ("country", "bot_country", "device", "eng_device", "eng_country", "rej_country", "ua", "bot_ip", "hours", "paths", "verdict", "gpu", "sizes")}
     for d in ds:
         r = _D[d]
         for k in tot:
@@ -142,5 +143,5 @@ def report(days=7):
     return {"days": ds, "loads": loads, "human_loads": tot["human"], "bot_loads": tot["bot"], "bot_share": round(tot["bot"] / loads, 3) if loads else 0,
             "engaged": tot["engaged"], "eng_rejected": tot["eng_rejected"], "engaged_of_human": round(tot["engaged"] / tot["human"], 3) if tot["human"] else 0, "ga_served": tot["ga_served"],
             "per_day": {d: {k: _D[d].get(k, 0) for k in ("human", "bot", "engaged")} for d in ds},
-            "human_countries": top(agg["country"]), "bot_countries": top(agg["bot_country"]), "device_human": top(agg["device"]), "device_engaged": top(agg["eng_device"]),
+            "human_countries": top(agg["country"]), "bot_countries": top(agg["bot_country"]), "device_human": top(agg["device"]), "device_engaged": top(agg["eng_device"]), "eng_countries": top(agg["eng_country"]), "rej_countries": top(agg["rej_country"]),
             "verdicts": top(agg["verdict"]), "gpus": top(agg["gpu"], 20), "screens": top(agg["sizes"], 15), "top_uas": top(agg["ua"], 25), "top_bot_ips": top(agg["bot_ip"], 15), "hours_utc": sorted(agg["hours"].items()), "top_paths": top(agg["paths"], 15)}

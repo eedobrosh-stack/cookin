@@ -307,6 +307,8 @@ async function tickTraffic(){
     +'<div class="tile" style="--c:#8a4fd0"><b>'+T.ga_served+'</b><span>טעינות שקיבלו תג Analytics</span></div></div>'
     +'<div class="scroll"><table><thead><tr><th>יום (UTC)</th><th>אנשים</th><th>בוטים</th><th>אינטראקציה</th></tr></thead><tbody>'+per+'</tbody></table></div>'
     +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (אנשים)</h3>'+tbl(T.human_countries,'מדינה','טעינות')
+    +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (אומתו כבני אדם)</h3>'+tbl(T.eng_countries||[],'מדינה','מספר')
+    +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (נדחו באימות)</h3>'+tbl(T.rej_countries||[],'מדינה','מספר')
     +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (בוטים)</h3>'+tbl(T.bot_countries,'מדינה','טעינות')
     +'<h3 style="margin:14px 0 4px;font-size:14px">מכשיר (אנשים) · עם אינטראקציה</h3>'+tbl(T.device_human.concat(T.device_engaged.map(r=>['engaged: '+r[0],r[1]])),'מכשיר','טעינות')
     +'<h3 style="margin:14px 0 4px;font-size:14px">אימות אנושי: תוצאות ('+T.engaged+' אושרו, '+(T.eng_rejected||0)+' נדחו)</h3>'+tbl(T.verdicts||[],'תוצאה','מספר')
