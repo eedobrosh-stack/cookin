@@ -293,6 +293,14 @@ $('today').textContent = new Date().toLocaleDateString('he-IL',{weekday:'long',d
 tick(); setInterval(tick, 4000);
 
 let TDAYS=7;
+function dayCountry(T){
+  const bd=T.eng_by_day||{}, cs={};
+  Object.values(bd).forEach(m=>Object.entries(m).forEach(([c,n])=>{if(c!=='IL')cs[c]=(cs[c]||0)+n;}));
+  const cols=Object.entries(cs).sort((a,b)=>b[1]-a[1]).slice(0,8).map(x=>x[0]);
+  const rows=Object.keys(bd).reverse().map(d=>{const m=bd[d];const tot=Object.values(m).reduce((a,b)=>a+b,0);
+    return '<tr><td>'+esc(d)+'</td><td>'+tot+'</td><td><b>'+(m.IL||0)+'</b></td>'+cols.map(c=>'<td>'+(m[c]||0)+'</td>').join('')+'</tr>';}).join('');
+  return '<div class="scroll"><table><thead><tr><th>יום (UTC)</th><th>סה"כ</th><th>IL</th>'+cols.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
 async function tickTraffic(){
   let T; try{ const r=await fetch('/api/vidsum/admin/traffic?days='+TDAYS); if(!r.ok) return; T=await r.json(); }catch(e){ return; }
   if(!T||!T.ok) return;
@@ -308,6 +316,7 @@ async function tickTraffic(){
     +'<div class="scroll"><table><thead><tr><th>יום (UTC)</th><th>אנשים</th><th>בוטים</th><th>אינטראקציה</th></tr></thead><tbody>'+per+'</tbody></table></div>'
     +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (אנשים)</h3>'+tbl(T.human_countries,'מדינה','טעינות')
     +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (אומתו כבני אדם)</h3>'+tbl(T.eng_countries||[],'מדינה','מספר')
+    +'<h3 style="margin:14px 0 4px;font-size:14px">אומתו כבני אדם: יום × מדינה (ישראל תמיד בעמודה נפרדת)</h3>'+dayCountry(T)
     +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (נדחו באימות)</h3>'+tbl(T.rej_countries||[],'מדינה','מספר')
     +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (בוטים)</h3>'+tbl(T.bot_countries,'מדינה','טעינות')
     +'<h3 style="margin:14px 0 4px;font-size:14px">מכשיר (אנשים) · עם אינטראקציה</h3>'+tbl(T.device_human.concat(T.device_engaged.map(r=>['engaged: '+r[0],r[1]])),'מכשיר','טעינות')
