@@ -452,24 +452,30 @@ DEFAULT = {"members": [], "votes": {}, "decision": None, "tieCounter": None, "hi
 # the public host only (skip onrender.com previews and health checks).
 GA_ID = "G-TFS1NEQBVQ"
 def _ga_snippet(ga_id):
-    """GA loads only for a browser that looks human and shows life: not for webdriver/headless, and only after a first interaction
-    (pointer, key, scroll, touch) or 8 s of visible time. Page loads that never get there (bots, instant bounces) send nothing."""
+    """The page never contains the GA Measurement ID. After the first TRUSTED interaction (a real pointer/key/scroll/touch event, not a
+    scripted one) the browser sends a few hardware and timing signals to /api/vidsum/eng; the server scores them and returns the ID only to
+    something that looks like a person on a real device. Software-rendered (headless/server) browsers and scrapers never get it."""
     return (
-        "<script>(function(){var id='" + ga_id + "';"
+        "<script>(function(){"
         "if(navigator.webdriver||/HeadlessChrome|Lighthouse|PhantomJS/i.test(navigator.userAgent)||!(navigator.languages&&navigator.languages.length)||!screen.width||!screen.height)return;"
-        "var ev=['pointerdown','keydown','scroll','touchstart','mousemove'],done=0,t;"
-        "function go(){if(done)return;done=1;clearTimeout(t);ev.forEach(function(e){removeEventListener(e,go,true)});"
-        "try{new Image().src='/api/vidsum/eng?'+Date.now()}catch(e){}"
-        "window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};"
-        "var s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);"
-        "gtag('js',new Date());gtag('config',id)}"
-        "ev.forEach(function(e){addEventListener(e,go,{capture:true,passive:true})});"
-        "t=setTimeout(function(){if(document.visibilityState==='visible')go();else document.addEventListener('visibilitychange',function f(){"
-        "if(document.visibilityState==='visible'){document.removeEventListener('visibilitychange',f);setTimeout(go,8000)}})},8000)})();</script>"
+        "var ev=['pointerdown','keydown','scroll','touchstart','mousemove','wheel'],done=0,n=0,t0=performance.now();"
+        "function gpu(){try{var c=document.createElement('canvas'),g=c.getContext('webgl')||c.getContext('experimental-webgl');if(!g)return 'none';"
+        "var x=g.getExtension('WEBGL_debug_renderer_info');return x?g.getParameter(x.UNMASKED_RENDERER_WEBGL):'noext'}catch(e){return 'err'}}"
+        "function go(e){if(!e.isTrusted||done)return;if(e.type==='mousemove'&&++n<3)return;done=1;"
+        "ev.forEach(function(k){removeEventListener(k,go,true)});"
+        "var tz='';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone}catch(x){}"
+        "var q=new URLSearchParams({k:e.type,t:Math.round(performance.now()-t0),g:gpu().slice(0,80),z:tz,sw:screen.width+'x'+screen.height,"
+        "dp:window.devicePixelRatio||0,hc:navigator.hardwareConcurrency||0,dm:navigator.deviceMemory||0,mt:navigator.maxTouchPoints||0,pl:(navigator.plugins||[]).length,"
+        "ow:window.outerWidth+'x'+window.outerHeight,v:document.visibilityState});"
+        "fetch('/api/vidsum/eng?'+q,{cache:'no-store',credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){"
+        "if(!j||!j.id)return;window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};"
+        "var s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id='+j.id;document.head.appendChild(s);"
+        "gtag('js',new Date());gtag('config',j.id)}).catch(function(){})}"
+        "ev.forEach(function(k){addEventListener(k,go,{capture:true,passive:true})})})();</script>"
     )
 
 
-GA_SNIPPET = _ga_snippet(GA_ID)
+GA_SNIPPET = _ga_snippet(GA_ID)          # (the ids themselves live in traffic.GA_IDS and are only served to verified visitors)
 # Visitors from the EEA, the UK and Switzerland get Google Analytics only after they accept it (cookie pawed_consent=1). Everyone else: as before.
 CONSENT_COUNTRIES = {"AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO",
                      "SK", "SI", "ES", "SE", "IS", "LI", "NO", "GB", "CH"}

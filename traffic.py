@@ -8,6 +8,8 @@ import multiuser
 PATH = os.path.join(multiuser.DATA_DIR, "traffic.json")
 LOCK = threading.Lock()
 KEEP_DAYS = 45
+GA_IDS = {"pawed": "G-JHRSTQ084Y", "jarcud": "G-TFS1NEQBVQ"}
+SOFT_GPU = re.compile(r"swiftshader|llvmpipe|softpipe|software|basic render|mesa offscreen|virgl|vmware|svga|virtualbox|parallels|^none$|^err$|^noext$", re.I)
 BOT_RE = re.compile(r"bot|crawl|spider|slurp|preview|headless|phantom|python|curl|wget|httpclient|http-client|go-http|java/|okhttp|libwww|scrapy|"
                     r"monitor|uptime|pingdom|lighthouse|gtmetrix|semrush|ahrefs|mj12|dataforseo|bytespider|petalbot|facebookexternalhit|embedly|"
                     r"whatsapp|telegram|discord|slack|twitterbot|linkedin|pinterest|applebot|duckduck|yandex|baidu|bingpreview|"
@@ -46,7 +48,7 @@ def _day():
 
 
 def _row():
-    r = _D.setdefault(_day(), {"human": 0, "bot": 0, "engaged": 0, "ga_served": 0, "country": {}, "bot_country": {}, "device": {}, "ua": {}, "bot_ip": {}, "hours": {}, "paths": {}})
+    r = _D.setdefault(_day(), {"human": 0, "bot": 0, "engaged": 0, "eng_rejected": 0, "ga_served": 0, "country": {}, "bot_country": {}, "device": {}, "ua": {}, "bot_ip": {}, "hours": {}, "paths": {}})
     return r
 
 
@@ -74,15 +76,32 @@ def record(handler, path, ga_served):
     _flush()
 
 
-def engaged(handler):
-    """The page's script saw a real interaction (pointer, key, scroll, touch) or 8 s of visible time."""
+def verify(handler, q):
+    """Score the signals a browser sent after a trusted interaction. -> (ok, reason). Counts every verdict and the GPU strings seen."""
     global _dirty
+    ua = handler.headers.get("User-Agent") or ""
+    g = (q.get("g") or [""])[0]
+    why = ""
+    if is_bot_ua(ua) or not (handler.headers.get("Accept-Language") or ""):
+        why = "bot_ua"
+    elif SOFT_GPU.search(g or "none"):
+        why = "software_gpu"                      # headless / server browsers render in software: no real graphics card
+    elif (q.get("dp") or ["0"])[0] in ("0", ""):
+        why = "no_dpr"
+    elif (q.get("pl") or ["0"])[0] == "0" and (q.get("mt") or ["0"])[0] == "0" and not re.search(r"Mobi|Android|iPhone|iPad|Firefox|Safari", ua):
+        why = "no_plugins_no_touch"
+    ok = not why
+    mobile = bool(re.search(r"Mobi|Android|iPhone|iPad", ua))
     with LOCK:
         r = _row()
-        _bump(r, "engaged")
-        _bump(r.setdefault("eng_device", {}), "mobile" if re.search(r"Mobi|Android|iPhone|iPad", handler.headers.get("User-Agent") or "") else "desktop")
+        _bump(r, "engaged" if ok else "eng_rejected")
+        _bump(r.setdefault("verdict", {}), "ok" if ok else why)
+        _bump(r.setdefault("gpu", {}), ("OK " if ok else "NO ") + g[:60])
+        _bump(r.setdefault("sizes", {}), ("OK " if ok else "NO ") + ((q.get("sw") or [""])[0])[:12])
+        _bump(r.setdefault("eng_device", {}), "mobile" if mobile else "desktop")
         _dirty = True
     _flush()
+    return ok, why
 
 
 def _flush(force=False):
@@ -93,7 +112,7 @@ def _flush(force=False):
         for d in sorted(_D)[:-KEEP_DAYS]:
             del _D[d]
         for r in _D.values():
-            for k in ("ua", "bot_ip", "paths"):
+            for k in ("ua", "bot_ip", "paths", "gpu", "sizes"):
                 if len(r.get(k, {})) > 60:
                     r[k] = dict(sorted(r[k].items(), key=lambda kv: -kv[1])[:40])
         tmp = PATH + ".tmp"
@@ -109,8 +128,8 @@ def _flush(force=False):
 def report(days=7):
     _flush(True)
     ds = sorted(_D)[-days:]
-    tot = {"human": 0, "bot": 0, "engaged": 0, "ga_served": 0}
-    agg = {k: {} for k in ("country", "bot_country", "device", "eng_device", "ua", "bot_ip", "hours", "paths")}
+    tot = {"human": 0, "bot": 0, "engaged": 0, "eng_rejected": 0, "ga_served": 0}
+    agg = {k: {} for k in ("country", "bot_country", "device", "eng_device", "ua", "bot_ip", "hours", "paths", "verdict", "gpu", "sizes")}
     for d in ds:
         r = _D[d]
         for k in tot:
@@ -121,7 +140,7 @@ def report(days=7):
     top = lambda m, n=15: sorted(m.items(), key=lambda kv: -kv[1])[:n]
     loads = tot["human"] + tot["bot"]
     return {"days": ds, "loads": loads, "human_loads": tot["human"], "bot_loads": tot["bot"], "bot_share": round(tot["bot"] / loads, 3) if loads else 0,
-            "engaged": tot["engaged"], "engaged_of_human": round(tot["engaged"] / tot["human"], 3) if tot["human"] else 0, "ga_served": tot["ga_served"],
+            "engaged": tot["engaged"], "eng_rejected": tot["eng_rejected"], "engaged_of_human": round(tot["engaged"] / tot["human"], 3) if tot["human"] else 0, "ga_served": tot["ga_served"],
             "per_day": {d: {k: _D[d].get(k, 0) for k in ("human", "bot", "engaged")} for d in ds},
             "human_countries": top(agg["country"]), "bot_countries": top(agg["bot_country"]), "device_human": top(agg["device"]), "device_engaged": top(agg["eng_device"]),
-            "top_uas": top(agg["ua"], 25), "top_bot_ips": top(agg["bot_ip"], 15), "hours_utc": sorted(agg["hours"].items()), "top_paths": top(agg["paths"], 15)}
+            "verdicts": top(agg["verdict"]), "gpus": top(agg["gpu"], 20), "screens": top(agg["sizes"], 15), "top_uas": top(agg["ua"], 25), "top_bot_ips": top(agg["bot_ip"], 15), "hours_utc": sorted(agg["hours"].items()), "top_paths": top(agg["paths"], 15)}

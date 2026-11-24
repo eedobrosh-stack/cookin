@@ -3249,16 +3249,17 @@ def _set_geo_ctx(handler, qs=None):
 
 
 def handle_get(handler, path, qs):
-    if path == "/api/vidsum/eng":                         # beacon: this page load showed real interaction
+    if path == "/api/vidsum/eng":                         # a browser proves it is a person; only then does it learn the GA Measurement ID
+        out = {"ok": False}
         try:
             import traffic
-            if not traffic.is_bot_ua(handler.headers.get("User-Agent") or ""):
-                traffic.engaged(handler)
+            if not rate_limited(handler, "eng", (20, 60)) and handler._consent() == "ok":
+                ok, why = traffic.verify(handler, qs)
+                if ok:
+                    out = {"ok": True, "id": traffic.GA_IDS["pawed" if handler._is_pawed_host() else "jarcud"]}
         except Exception:
             pass
-        handler.send_response(204)
-        handler.send_header("Cache-Control", "no-store")
-        handler.end_headers()
+        handler._json(out)
         return True
     _set_geo_ctx(handler, qs)
     if _geo_get(handler, path, qs):

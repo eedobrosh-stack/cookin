@@ -303,12 +303,14 @@ async function tickTraffic(){
   $('traffic').innerHTML='<h2>תנועה: אנשים מול בוטים</h2><div class="chips" id="tdays" style="margin-bottom:8px">'+days+'</div>'
     +'<div class="tiles"><div class="tile" style="--c:#2fbf71"><b>'+T.human_loads+'</b><span>טעינות של אנשים</span></div>'
     +'<div class="tile" style="--c:#d33"><b>'+T.bot_loads+'</b><span>טעינות של בוטים ('+pct(T.bot_share)+')</span></div>'
-    +'<div class="tile" style="--c:#1556d6"><b>'+T.engaged+'</b><span>עם אינטראקציה ('+pct(T.engaged_of_human)+' מהאנשים)</span></div>'
+    +'<div class="tile" style="--c:#1556d6"><b>'+T.engaged+'</b><span>אומתו כבני אדם ('+pct(T.engaged_of_human)+' מהאנשים)</span></div>'
     +'<div class="tile" style="--c:#8a4fd0"><b>'+T.ga_served+'</b><span>טעינות שקיבלו תג Analytics</span></div></div>'
     +'<div class="scroll"><table><thead><tr><th>יום (UTC)</th><th>אנשים</th><th>בוטים</th><th>אינטראקציה</th></tr></thead><tbody>'+per+'</tbody></table></div>'
     +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (אנשים)</h3>'+tbl(T.human_countries,'מדינה','טעינות')
     +'<h3 style="margin:14px 0 4px;font-size:14px">מדינות (בוטים)</h3>'+tbl(T.bot_countries,'מדינה','טעינות')
     +'<h3 style="margin:14px 0 4px;font-size:14px">מכשיר (אנשים) · עם אינטראקציה</h3>'+tbl(T.device_human.concat(T.device_engaged.map(r=>['engaged: '+r[0],r[1]])),'מכשיר','טעינות')
+    +'<h3 style="margin:14px 0 4px;font-size:14px">אימות אנושי: תוצאות ('+T.engaged+' אושרו, '+(T.eng_rejected||0)+' נדחו)</h3>'+tbl(T.verdicts||[],'תוצאה','מספר')
+    +'<details><summary>כרטיס מסך (GPU) ורזולוציות: OK = אושר, NO = נדחה</summary>'+tbl(T.gpus||[],'GPU','מספר')+tbl(T.screens||[],'רזולוציה','מספר')+'</details>'
     +'<h3 style="margin:14px 0 4px;font-size:14px">כתובות IP של בוטים (מובילות)</h3>'+tbl(T.top_bot_ips,'IP','טעינות')
     +'<details><summary>User agents מובילים</summary>'+tbl(T.top_uas,'User agent','טעינות')+'</details>'
     +'<details><summary>עמודים ושעות</summary>'+tbl(T.top_paths,'נתיב','טעינות')+tbl(T.hours_utc.map(r=>[r[0]+':00',r[1]]),'שעה (UTC)','טעינות')+'</details>';
