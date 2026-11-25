@@ -3556,6 +3556,38 @@ def handle_get(handler, path, qs):
                     res["captions"] = {"ok": False, "vid": vid, "error": _scrub(str(e))[:300], "kind": type(e).__name__}
         handler._json({"ok": True, **res})
         return True
+    if path == "/api/vidsum/admin/rss-debug":              # read-only: replay watch_rss's decision for one podcast source on the live data
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "not found"}, 404)
+            return True
+        name = (qs.get("name") or [""])[0]
+        d = _load_ch()
+        ch = next((c for c in d["channels"] if c.get("kind") == "rss" and (c["id"] == name or name in c.get("name", ""))), None)
+        if not ch:
+            handler._json({"ok": False, "error": "no such rss source"})
+            return True
+        out = {"id": ch["id"], "name": ch["name"], "added": ch.get("added"), "seen": len(ch.get("seen") or []), "backfill": bool(ch.get("backfill")),
+               "owner": ch.get("owner_id"), "used_today": _used_today(d, time.strftime("%Y-%m-%d")), "cap": WATCH_DAILY_CAP,
+               "waiting": sum(1 for j in _load_jobs().values() if j.get("status") == "needs_transcript"), "max_waiting": MAX_WAITING}
+        try:
+            t0 = time.time()
+            feed = vidsum_feeds.parse_feed(vidsum_feeds.fetch(ch["feed_url"]))
+            out["fetch_ms"] = int((time.time() - t0) * 1000)
+            out["feed_items"] = len(feed["items"])
+            seen = set(ch.get("seen") or [])
+            jobs = _load_jobs()
+            rows = []
+            for it in sorted([i for i in feed["items"] if i["published_at"]], key=lambda i: i["published_at"], reverse=True)[:6]:
+                e = vidsum_feeds.episode_id(it)
+                a = _find_by_vid(e)
+                rows.append({"eid": e, "pub": it["published_at"], "dur": it["duration"], "title": it["title"][:40], "in_seen": e in seen,
+                             "job": (jobs.get(e) or {}).get("status"), "article": (a or {}).get("slug", "")[:30] if a else None})
+            out["newest"] = rows
+        except Exception as e:
+            out["fetch_error"] = f"{type(e).__name__}: {str(e)[:200]}"
+        handler._json({"ok": True, **out})
+        return True
     if path == "/api/vidsum/admin/tokens":
         user = current_user(handler)
         if not (user and user.get("admin")):
