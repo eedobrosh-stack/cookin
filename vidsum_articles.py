@@ -2046,7 +2046,7 @@ def _can_edit_source(c, user):
 # ------------------------------------------------------- channel watcher ---
 CH_PATH = os.path.join(multiuser.DATA_DIR, "vidsum_channels.json")
 _CH_IO = threading.Lock()
-WATCH_DAILY_CAP = 120
+WATCH_DAILY_CAP = int(os.environ.get("VIDSUM_WATCH_DAILY_CAP", "200"))   # was 120: expected load is ~125/day, so a backlog could never drain
 SERVER_PODCAST_MAX_MIN = int(os.environ.get("VIDSUM_PODCAST_MAX_MIN", "40"))   # podcast episodes longer than this are transcribed by the Mac (Whisper), not Gemini audio
 
 
@@ -2266,10 +2266,17 @@ def _submit_rss(ch, it):
 
 
 def watch_rss():
-    """Podcast-feed sources: queue episodes published after the source was added (the newest one right away on a new source)."""
+    """Podcast-feed sources: queue episodes published after the source was added (the newest one right away on a new source).
+    Fair share: the pass first collects every source's new episodes, then submits them round-robin (one per source per round, newest first),
+    so the daily cap can no longer be eaten by the first prolific shows in the list. The day's count is kept in d["rss_day"] because
+    d["log"] is trimmed to 60 lines and under-counted."""
     d = _load_ch()
     today = time.strftime("%Y-%m-%d")
-    used = _used_today(d, today)
+    cnt = d.get("rss_day") if isinstance(d.get("rss_day"), dict) else {}
+    if cnt.get("day") != today:
+        cnt = {"day": today, "n": 0}
+    used = max(_used_today(d, today), cnt["n"])
+    queues, seens = [], {}
     for ch in d["channels"]:
         if ch.get("kind") != "rss":
             continue
@@ -2281,6 +2288,7 @@ def watch_rss():
         ch["error"] = ""
         ch["checked"] = time.strftime("%Y-%m-%d %H:%M:%S")
         seen = set(ch.setdefault("seen", []))
+        seens[ch["id"]] = (ch, seen)
         items = feed["items"]
         n_latest = int(ch.pop("take_latest", 0) or 0)
         if n_latest and items:                               # new subscription: the latest N episodes (if recent), nothing older
@@ -2289,31 +2297,50 @@ def watch_rss():
             for i in items:
                 if not any(i is f for f in first):
                     seen.add(vidsum_feeds.episode_id(i))
-        else:
-            first = []
-        for it in reversed(items) if not first else first:   # oldest first
-            eid = vidsum_feeds.episode_id(it)
-            if eid in seen and not first:
-                continue
-            if not first:
-                pub = (it["published_at"] or "").replace("T", " ").replace("Z", "")
-                if (pub and pub < ch["added"][:19] and not ch.get("backfill")) or (it["duration"] or 999) < 150:
+            for it in first:                                 # a new source's first episodes never use up the daily caps
+                eid = vidsum_feeds.episode_id(it)
+                if _submit_rss(ch, it):
                     seen.add(eid)
-                    continue
-            is_first = bool(first)                                   # a new source's first episode never uses up the daily caps
-            if not is_first and used >= WATCH_DAILY_CAP:
+                    if not any(e.get("vid") == eid and e.get("day") == today for e in d["log"]):
+                        d["log"].append({"day": today, "kind": "submit", "vid": eid, "channel": ch["name"], "owner": ch.get("owner_id"), "first": True,
+                                         "at": time.strftime("%H:%M:%S")})
+                        log(f"vidsum rss: {ch['name']} -> {it['title'][:60]} ({eid})")
+            continue
+        todo = []
+        for it in items:
+            eid = vidsum_feeds.episode_id(it)
+            if eid in seen:
+                continue
+            pub = (it["published_at"] or "").replace("T", " ").replace("Z", "")
+            if (pub and pub < ch["added"][:19] and not ch.get("backfill")) or (it["duration"] or 999) < 150:
+                seen.add(eid)
+                continue
+            todo.append((pub, eid, it))
+        if todo:
+            todo.sort(key=lambda t: t[0], reverse=True)       # newest first: with a backlog the site catches up from today backwards
+            queues.append((ch, [(eid, it) for _, eid, it in todo]))
+    rnd = 0
+    while used < WATCH_DAILY_CAP and any(len(q) > rnd for _, q in queues):
+        for ch, q in queues:
+            if rnd >= len(q):
+                continue
+            if used >= WATCH_DAILY_CAP:
                 break
-            if not is_first and ch.get("owner_id") and _used_today(d, today, ch["owner_id"]) >= USER_DAILY_VIDEOS:
+            eid, it = q[rnd]
+            if ch.get("owner_id") and _used_today(d, today, ch["owner_id"]) >= USER_DAILY_VIDEOS:
                 continue
             if _submit_rss(ch, it):
-                seen.add(eid)
-                if not is_first:
-                    used += 1
+                seens[ch["id"]][1].add(eid)
+                used += 1
+                cnt["n"] += 1
                 if not any(e.get("vid") == eid and e.get("day") == today for e in d["log"]):
-                    d["log"].append({"day": today, "kind": "submit", "vid": eid, "channel": ch["name"], "owner": ch.get("owner_id"), "first": is_first,
+                    d["log"].append({"day": today, "kind": "submit", "vid": eid, "channel": ch["name"], "owner": ch.get("owner_id"), "first": False,
                                      "at": time.strftime("%H:%M:%S")})
                     log(f"vidsum rss: {ch['name']} -> {it['title'][:60]} ({eid})")
+        rnd += 1
+    for ch, seen in seens.values():
         ch["seen"] = sorted(seen)[-400:]
+    d["rss_day"] = cnt
     _save_ch(d)
 
 
