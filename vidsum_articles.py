@@ -1360,11 +1360,20 @@ import vidsum_feeds
 DISCLAIMER = "הדברים המובאים הם של המרואיינים ולא נבדקו. הכתבה נערכה אוטומטית מתוך תמלול של השיחה."
 
 
-def render_article(a, lang="he", platform=""):
+def render_article(a, lang="he", platform="", admin=False):
     if a.get("blocks"):
         ch = next((c for c in _load_ch()["channels"] if c["id"] == a.get("source_id")), None)
-        return vidsum_render.render(a, news_items(), base="", disclaimer=a.get("disclaimer") or DISCLAIMER, lang=lang, platform=platform,
+        html = vidsum_render.render(a, news_items(), base="", disclaimer=a.get("disclaimer") or DISCLAIMER, lang=lang, platform=platform,
                                     audio=audio_lang(a, ch))
+        if admin and a.get("gems"):                          # Golden moments: admin preview only
+            try:
+                import vidsum_gems
+                sec = vidsum_gems.section_html(a, lang)
+                if sec and '<div class="rate"' in html:
+                    html = html.replace('<div class="rate"', sec + '<div class="rate"', 1)
+            except Exception as e:
+                log(f"gems section failed: {str(e)[:120]}")
+        return html
     return article_html(a)
 
 
@@ -2545,6 +2554,8 @@ def start_background():
     threading.Thread(target=podstt.loop, daemon=True).start()
     import vidsum_translate
     vidsum_translate.start()
+    import vidsum_gems
+    vidsum_gems.start()
     import pawed_index
     pawed_index.start()
 
@@ -3349,7 +3360,8 @@ def handle_get(handler, path, qs):
                 pf = viewer_platform(handler, current_user(handler))
             except Exception:
                 pf = ""
-            handler._html(render_article(a, lang, pf), "no-store")
+            _u = current_user(handler)
+            handler._html(render_article(a, lang, pf, admin=bool(_u and _u.get("admin"))), "no-store")
         return True
     if path in ("/vidsum", "/vidsum/"):
         _serve(handler, NEWS_PAGE, default_lang(handler))
@@ -3523,6 +3535,22 @@ def handle_get(handler, path, qs):
                     handler._json({"error": "no transcript"}, 404)
             else:
                 handler._json(transcripts_report((qs.get("lang") or [""])[0] or None, int((qs.get("limit") or ["0"])[0] or 0)))
+        return True
+    if path == "/api/vidsum/admin/gems":
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+        else:
+            import vidsum_gems
+            sl = (qs.get("slug") or [""])[0]
+            if sl and "/" not in sl and ".." not in sl:
+                try:
+                    a = vidsum_gems._full_article(sl)
+                    handler._json({"ok": True, "slug": sl, "busy": sl in vidsum_gems._BUSY, "gems_at": a.get("gems_at"), "gems": a.get("gems") or []})
+                except Exception:
+                    handler._json({"error": "article not found"}, 404)
+            else:
+                handler._json({"ok": True, "auto": vidsum_gems.GEMS_AUTO, "busy": sorted(vidsum_gems._BUSY), "pending_recent": vidsum_gems.pending_recent(20)})
         return True
     if path == "/api/vidsum/admin/stats":
         user = current_user(handler)
@@ -4378,6 +4406,21 @@ def handle_post(handler, path, req):
             handler._json({"error": "forbidden"}, 403)
         else:
             handler._json({"ok": True, "deleted": delete_article(str(req.get("slug") or ""), req.get("vid"))})
+        return True
+    if path == "/api/vidsum/admin/gems":                  # admin: generate the Golden moments of an article (runs in the background, minutes for long episodes)
+        user = current_user(handler)
+        if not (user and user.get("admin")):
+            handler._json({"error": "forbidden"}, 403)
+            return True
+        import vidsum_gems
+        slugs = [str(x) for x in (req.get("slugs") or ([req.get("slug")] if req.get("slug") else []))][:12]
+        if req.get("recent"):
+            slugs = vidsum_gems.pending_recent(int(req.get("recent") or 5))
+        def _run(ss):
+            for sl in ss:
+                vidsum_gems.extract(sl)
+        threading.Thread(target=_run, args=(slugs,), daemon=True).start()
+        handler._json({"ok": True, "started": slugs})
         return True
     if path == "/api/vidsum/submit":
         user = current_user(handler)
