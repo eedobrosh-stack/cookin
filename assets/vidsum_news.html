@@ -546,7 +546,7 @@ function heroIndex(items){
 function okHero(items, k){ for(let i=0;i<items.length;i++){ const j=(k+i)%items.length; if(!noHead(items[j])) return j; } return k; }
 // One pod (the show / channel an episode comes from) appears at most once per block: the top block, each topic section,
 // each feed batch. Across the page it also prefers pods not shown yet, and only repeats one when nothing else is left.
-const byNewest = (x,y) => (y.released||'').localeCompare(x.released||'');
+const byNewest = (x,y) => (y.rk||y.released||'').localeCompare(x.rk||x.released||'');
 const podOf = a => (a.channel||a.source_id||'').trim();
 const tsOf = a => Date.parse(String(a.released||a.created||'').replace(' ','T').replace(/Z?$/,'Z')) || 0;
 function takeD(list, n, used, blockPods, pagePods){
@@ -585,7 +585,7 @@ const CHUNK_KINDS = [0, 3, 1, 2], CHUNK_SIZE = {0:6, 3:6, 1:7, 2:5};
 let FEED = null;
 function interleave(items, topics){
   const groups = topics.map(t=>items.filter(a=>a.topic===t)).filter(g=>g.length)
-                       .sort((x,y)=>(y[0].released||'').localeCompare(x[0].released||''));
+                       .sort((x,y)=>(y[0].rk||y[0].released||'').localeCompare(x[0].rk||x[0].released||''));
   const out=[]; for(let i=0, more=true; more; i++){ more=false; for(const g of groups){ if(i<g.length){ out.push(g[i]); more=true; } } }
   return out;
 }
@@ -647,7 +647,7 @@ function render(){
   if(FILTER==='all'){
     // topic sections ordered by how fresh their newest remaining story is
     const topics = DATA.topics.map(t=>({t, list: rest.filter(a=>a.topic===t)})).filter(x=>x.list.length)
-                      .sort((x,y)=> (y.list[0].released||'').localeCompare(x.list[0].released||''));
+                      .sort((x,y)=> (y.list[0].rk||y.list[0].released||'').localeCompare(x.list[0].rk||x.list[0].released||''));
     topics.forEach((x,idx)=>{
       const kind = idx%3, n = Math.min(x.list.length, kind===1?7:6);
       const L = takeD(x.list, Math.max(n, 1), used, new Set(), pagePods).sort(byNewest);   // newest at the top of every section

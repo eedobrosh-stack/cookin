@@ -1551,6 +1551,33 @@ def _origin_cc(a, ch):
     return "" if cc == "US" else cc
 
 
+LOCAL_HEAD_START_DAYS = 4
+
+
+def add_local_rank(items):
+    """Local content first: for a visitor whose home suite is not the US, a story from the home suite ranks as if it were LOCAL_HEAD_START_DAYS newer
+    ('rk' = release + head start; the shown date is untouched). The US suite is the filler: a 3-day-old Dutch story beats a fresh US one."""
+    try:
+        home = geo_suites.geos()[0]
+    except Exception:
+        return items
+    if home == "us":
+        return items
+    import datetime as _dt
+    chmap = {c["id"]: c for c in _load_ch()["channels"]}
+    for i in items:
+        rel = i.get("released") or ""
+        g = (chmap.get(i.get("source_id")) or {}).get("geos") or []
+        local = (home in g) or (home == "il" and not g and i.get("lang") == "he")
+        if local and len(rel) == 19:
+            try:
+                t = _dt.datetime.strptime(rel, "%Y-%m-%d %H:%M:%S") + _dt.timedelta(days=LOCAL_HEAD_START_DAYS)
+                i["rk"] = t.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                pass
+    return items
+
+
 def visible_news_items(handler, qs, user, ul):
     """The articles THIS viewer may see (same rules as the homepage feed): private sources stay private, Hebrew-audio hidden outside Israel, switched-off sections removed."""
     items = news_items()
@@ -3816,6 +3843,7 @@ def handle_get(handler, path, qs):
             gone = removed_topics(user)
             if gone:                                         # a switched-off section loses its tab and every article filed under it
                 items = [dict(i, topics=[t for t in i["topics"] if t not in gone]) for i in items if i["topic"] not in gone]
+            items = add_local_rank(items)
             handler._json({"ok": True, "topics": [t for t in TOPICS if t not in gone], "items": items, "personal": personal,
                            "me": ({"name": user.get("name") or user.get("email")} if user and user.get("id") != "admin-token" else None),
                            "platform": viewer_platform(handler, user)})
