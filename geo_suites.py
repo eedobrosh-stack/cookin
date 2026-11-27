@@ -49,6 +49,14 @@ def norm(v):
 
 
 # ------------------------------------------------------------------ visitor geo
+NEIGHBORS = {"us": ["gb", "ca"]}          # US visitors (and unknown countries) also get the UK and Canada suites by default
+
+
+def roster(home):
+    """The default suites for a first-time visitor whose home region is `home`: home, its neighbours, then the US."""
+    return list(dict.fromkeys([home, *NEIGHBORS.get(home, []), "us"]))
+
+
 def resolve(handler, qs=None):
     """-> (slugs, explicit). The content regions the visitor reads: ?geo= (one, for testing), the pawed_geos cookie (several),
     the legacy pawed_geo cookie, else the detected country plus the United States. Unknown country: the US."""
@@ -58,7 +66,7 @@ def resolve(handler, qs=None):
         q = m.group(1) if m else ""
     s = norm(q)
     if s:
-        return list(dict.fromkeys([s, "us"])), True            # ?geo=X previews a visitor from X: their suite plus the US one, like the detected country
+        return roster(s), True                                  # ?geo=X previews a visitor from X: their suite plus the US one, like the detected country
     ck = handler.headers.get("Cookie") or ""
     m = re.search(r"(?:^|;\s*)pawed_geos=([a-z,]{2,60})", ck)
     sel = list(dict.fromkeys(g for g in (norm(x) for x in (m.group(1).split(",") if m else [])) if g))
@@ -70,7 +78,7 @@ def resolve(handler, qs=None):
         return [s], True
     cc = (handler.headers.get("CF-IPCountry") or "").strip().upper()
     home = CC2SLUG.get(cc, "us") if len(cc) == 2 and cc.isalpha() and cc not in ("XX", "T1") else "us"
-    return list(dict.fromkeys([home, "us"])), False
+    return roster(home), False
 
 
 def set_ctx(handler, qs=None):

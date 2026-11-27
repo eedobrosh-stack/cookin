@@ -3182,7 +3182,7 @@ def _globalux():
     basis = {"x-" + c.lower(): b for c, _n, b in EXTRA_COUNTRIES}
     out = []
     for slug, v in rows:
-        sel = list(dict.fromkeys([slug if slug in geo_suites.GEOS else "us", "us"]))
+        sel = geo_suites.roster(slug if slug in geo_suites.GEOS else "us")
         lv = [g for g in sel if g == "il" or g in live]
         eff = lv or ["il" if "us" not in live else "us"]           # geo_suites.effective(): own suite, else US, else the Israel roster
         own_live = slug == "il" or slug in live
