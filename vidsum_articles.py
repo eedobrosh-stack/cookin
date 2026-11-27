@@ -1571,6 +1571,8 @@ def visible_news_items(handler, qs, user, ul):
         items = [i for i in items if not owners.get(i["source_id"]) and not i.get("submitted_by")]
     if not show_il(handler, qs, user):
         items = [i for i in items if i.get("lang") != "he"]
+    if ul != "he":
+        items = [i for i in items if i.get("title_en")]          # no English title yet: do not show a Hebrew headline to a non-Hebrew reader
     gone = removed_topics(user)
     if gone:
         items = [i for i in items if i["topic"] not in gone]
@@ -3809,6 +3811,8 @@ def handle_get(handler, path, qs):
                 items = [i for i in items if not owners.get(i["source_id"]) and not i.get("submitted_by")]
             if not show_il(handler, qs, user):                # outside Israel and no Israeli flag chosen: no Hebrew-audio content at all
                 items = [i for i in items if i.get("lang") != "he"]
+            if ul != "he":                                   # no English title yet: hold it back rather than show a Hebrew headline
+                items = [i for i in items if i.get("title_en")]
             gone = removed_topics(user)
             if gone:                                         # a switched-off section loses its tab and every article filed under it
                 items = [dict(i, topics=[t for t in i["topics"] if t not in gone]) for i in items if i["topic"] not in gone]
