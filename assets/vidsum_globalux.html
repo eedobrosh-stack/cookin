@@ -61,6 +61,7 @@ function view(){
   const c=D.find(x=>x.slug==cur)||D[0]; if(!c) return;
   $('view').innerHTML=`<div class="hd">
     <div><b>Country</b>${flag(c.cc)} ${esc(c.name)} (${esc(c.cc)})</div>
+    <div><b>Preview URL</b><a href="${u(c)}" target="_blank" rel="noopener">${esc(u(c).replace('https://',''))}</a></div>
     <div><b>UI language</b>${esc(LANG[c.ui]||c.ui)}</div>
     <div><b>Podcast language</b>${esc(LANG[c.audio]||c.audio)}</div>
     ${c.basis?`<div><b>Added because</b>${esc(c.basis)} top 100</div>`:''}
@@ -69,7 +70,8 @@ function view(){
     <div><b>Podcasts</b>${c.count}</div></div>
   <div class="grid">${c.sections.map(s=>({t:s.topic,p:s.pods.filter(p=>!LOC||p.own)})).filter(s=>s.p.length).map(s=>`<div class="sec"><h3>${esc(s.t)}<span>${s.p.length}</span></h3>${s.p.map(p=>`<div class="p ${p.own?'':'us'}"><span>${esc(p.name)}</span><span class="l">${esc(p.language)} · ${esc(p.src=='GB'?'UK':(p.src||'?'))}</span></div>`).join('')}</div>`).join('')||'<p class="sub">No podcasts.</p>'}</div>`;
 }
-function sum(){ $('sum').innerHTML='<tr><th>Country</th><th>UI</th><th>Suite</th><th>Merged with</th><th>Podcasts</th><th>Sections</th></tr>'+D.map(c=>`<tr><td><a href="#${c.slug}" onclick="cur='${c.slug}';tabs();view();">${flag(c.cc)} ${esc(c.name)}</a></td><td>${esc(c.ui)}</td><td><span class="pill ${c.suite_live?'ok':'warn'}">${c.suite_live?'live':(c.extra?'none':'US fallback')}</span></td><td>${c.suites.map(esc).join(' + ')}</td><td>${c.count}</td><td>${c.sections.length}</td></tr>`).join(''); }
+function u(c){return 'https://pawed.io/?geo='+encodeURIComponent(c.slug);}
+function sum(){ $('sum').innerHTML='<tr><th>Country</th><th>Preview URL</th><th>UI</th><th>Suite</th><th>Merged with</th><th>Podcasts</th><th>Sections</th></tr>'+D.map(c=>`<tr><td><a href="#${c.slug}" onclick="cur='${c.slug}';tabs();view();">${flag(c.cc)} ${esc(c.name)}</a></td><td><a href="${u(c)}" target="_blank" rel="noopener">${esc(u(c).replace('https://',''))}</a></td><td>${esc(c.ui)}</td><td><span class="pill ${c.suite_live?'ok':'warn'}">${c.suite_live?'live':(c.extra?'none':'US fallback')}</span></td><td>${c.suites.map(esc).join(' + ')}</td><td>${c.count}</td><td>${c.sections.length}</td></tr>`).join(''); }
 $('loc').onchange=view;
 fetch('/api/vidsum/admin/globalux').then(r=>r.json()).then(j=>{D=j.countries||[];tabs();view();sum();});
 </script>
