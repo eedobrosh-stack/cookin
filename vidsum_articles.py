@@ -2934,12 +2934,20 @@ INDEX_PAGE = os.path.join(_ASSETS, "vidsum_index.html")
 LOGS_PAGE = os.path.join(_ASSETS, "vidsum_logs.html")
 
 
-def _serve(handler, path, dflt=None):
+def _geo_preview(qs):
+    """?geo=xx on a page URL (not auto, no explicit ?lang=): the page opens as a visitor from there would see it, UI language included."""
+    g = ((qs or {}).get("geo") or [""])[0].lower()
+    return bool(g) and g != "auto" and not (qs or {}).get("lang")
+
+
+def _serve(handler, path, dflt=None, force=False):
     try:
         with open(path, "rb") as f:
             html = f.read()
         html = html.replace(b"(he|en)/", b"(he|en|de|fr|it|es|pt|nl)/", 1)         # every UI language is a valid cookie value
-        if dflt and dflt != "he":        # visitors outside Israel open their suite's language until they pick one
+        if force and dflt:               # a ?geo= preview also sets the UI language (and its cookie, so the page's API calls agree)
+            html = html.replace(b'l=m?m[1]:"he"', b'l="%s";document.cookie="pawed_lang=%s;path=/;max-age=31536000;samesite=lax"' % (dflt.encode(), dflt.encode()), 1)
+        elif dflt and dflt != "he":      # visitors outside Israel open their suite's language until they pick one
             html = html.replace(b'l=m?m[1]:"he"', b'l=m?m[1]:"%s"' % dflt.encode(), 1)
         handler._html(html, "no-store")
     except OSError:
@@ -3364,7 +3372,7 @@ def handle_get(handler, path, qs):
             handler._html(render_article(a, lang, pf, admin=bool(_u and _u.get("admin"))), "no-store")
         return True
     if path in ("/vidsum", "/vidsum/"):
-        _serve(handler, NEWS_PAGE, default_lang(handler))
+        _serve(handler, NEWS_PAGE, default_lang(handler), _geo_preview(qs))
         return True
     if path in ("/vidsum/news", "/vidsum/news/"):            # old address of the portal
         handler.send_response(302)
@@ -3467,10 +3475,10 @@ def handle_get(handler, path, qs):
         handler._json({"ok": True, "items": [by[k] for k in reversed(want) if k in by]})
         return True
     if path in ("/vidsum/sources", "/vidsum/sources/"):
-        _serve(handler, SOURCES_PAGE, default_lang(handler))
+        _serve(handler, SOURCES_PAGE, default_lang(handler), _geo_preview(qs))
         return True
     if path in ("/vidsum/charts", "/vidsum/charts/"):
-        _serve(handler, CHARTS_PAGE, default_lang(handler))
+        _serve(handler, CHARTS_PAGE, default_lang(handler), _geo_preview(qs))
         return True
     if path in ("/api/vidsum/charts", "/api/vidsum/charts/options"):      # public: no sign-in needed to browse
         import podscanner
