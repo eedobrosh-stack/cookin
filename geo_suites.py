@@ -75,7 +75,7 @@ def resolve(handler, qs=None):
     m = re.search(r"(?:^|;\s*)pawed_geo=([a-z]{2,20})\b", ck)
     s = norm(m.group(1)) if m else ""
     if s:
-        return [s], True
+        return roster(s), True                                  # the cookie ?geo= leaves behind is a preview too: home suite plus the US
     cc = (handler.headers.get("CF-IPCountry") or "").strip().upper()
     home = CC2SLUG.get(cc, "us") if len(cc) == 2 and cc.isalpha() and cc not in ("XX", "T1") else "us"
     return roster(home), False

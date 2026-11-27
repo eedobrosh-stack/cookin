@@ -159,13 +159,26 @@ def want(slug):
             _WANT.append(slug)
 
 
+PRIO_GEOS = {"us", "gb", "ca"}                              # the suites a first-time US visitor reads: their articles are translated first
+
+
+def _prio_first(arts):
+    """Stable reorder of the (newest first) article list: stories from the US / UK / Canada suites before the rest."""
+    try:
+        chs = va._load_ch()["channels"]
+    except Exception:
+        return arts
+    pri = {c["id"] for c in chs if PRIO_GEOS & set(c.get("geos") or []) and not c.get("owner_id")}
+    return sorted(arts, key=lambda a: 0 if a.get("source_id") in pri else 1)
+
+
 def _next():
     with _LOCK:
         while _WANT:
             s = _WANT.pop(0)
             if s not in _BUSY:
                 return s
-    arts = va._article_index()                                # newest release first (slim copies)
+    arts = _prio_first(va._article_index())                                # newest release first (slim copies)
     for a in arts:
         s = a.get("slug")
         if s and not a.get("en") and s not in _BUSY and time.time() - _FAILED.get(s, 0) > 3600:
@@ -335,7 +348,7 @@ def _next_lang():
     chs = va._load_ch()["channels"]
     chmap = {c["id"]: c for c in chs}
     wl = {}
-    for a in va._article_index():                             # newest first; the English edition must exist (it is the source)
+    for a in _prio_first(va._article_index()):                             # newest first; the English edition must exist (it is the source)
         if not _eligible(a) or not a.get("en"):
             continue
         sid = a.get("source_id")
@@ -374,7 +387,7 @@ def headline_pending(langs=None):
     langs = langs or pawed_i18n.ORDER
     lane = _lane(langs)
     out = []
-    for a in va._article_index():                          # newest first
+    for a in _prio_first(va._article_index()):                          # newest first
         if not a.get("slug") or not (a.get("title") or "").strip():
             continue
         have = set(a.get("trh") or {}) | set((a.get("tr") or {}))
