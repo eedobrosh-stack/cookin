@@ -12,7 +12,7 @@ import vidsum_articles as va
 
 GEMS_AUTO = os.environ.get("VIDSUM_GEMS_AUTO", "0") == "1"
 GEMS_DAILY_CAP = int(os.environ.get("VIDSUM_GEMS_DAILY_CAP", "40"))
-CHUNK_SEC = 30 * 60                      # long episodes are read in 30 minute windows so the gems spread over the whole conversation
+CHUNK_SEC = 20 * 60                      # long episodes are read in 20 minute windows (LunaRoute returned an empty reply on 30 minute ones) so the gems spread over the whole conversation
 KEEP = 10
 KIND_BONUS = {"debate_exchange": 0.5, "punchline": 0.5, "blunt_claim": 0.3, "story": 0.0, "emotional": 0.0, "sharp_turn": -1.0, "insight": -1.5}
 _BUSY = set()
@@ -135,21 +135,27 @@ def _extract(slug):
         lang_name = langs.get(al, "Hebrew" if al == "he" else "English")
         dur = int(tr.get("duration") or 0)
         chunks = _chunks(tr["transcript"])
-        per = 8 if len(chunks) > 1 else 10
-        allg = []
+        per = 5 if len(chunks) > 1 else 8
+        allg, errs = [], []
         for i, (t0, text) in enumerate(chunks):
-            res, _tok, _stop = va._luna(_prompt(a.get("title") or "", a.get("channel") or "", lang_name, text, per, t0, i == len(chunks) - 1), max_tokens=12000)
+            try:
+                res, _tok, _stop = va._luna(_prompt(a.get("title") or "", a.get("channel") or "", lang_name, text, per, t0, i == len(chunks) - 1), max_tokens=24000)
+            except Exception as e:                              # one bad window does not lose the others
+                errs.append(f"window {i}: {va._scrub(str(e))[:120]}")
+                continue
             for g in (res.get("gems") or []) if isinstance(res, dict) else []:
                 c = _clean(g, dur)
                 if c:
                     allg.append(c)
+        if not allg:
+            return False, "no gems: " + "; ".join(errs)[:300]
         gems = _pick(allg)
         with va.LOCK:
             cur = _full_article(slug)
             cur["gems"] = gems
             cur["gems_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
             va._write_article(cur)
-        return True, f"{len(gems)} gems from {len(allg)} candidates in {len(chunks)} window(s)"
+        return True, f"{len(gems)} gems from {len(allg)} candidates in {len(chunks)} window(s)" + (f"; {len(errs)} window(s) failed" if errs else "")
     except Exception as e:
         va.log(f"vidsum gems failed for {slug}: {va._scrub(str(e))[:200]}")
         return False, str(e)[:200]
