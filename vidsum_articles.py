@@ -3546,7 +3546,7 @@ def handle_get(handler, path, qs):
             if sl and "/" not in sl and ".." not in sl:
                 try:
                     a = vidsum_gems._full_article(sl)
-                    handler._json({"ok": True, "slug": sl, "busy": sl in vidsum_gems._BUSY, "gems_at": a.get("gems_at"), "gems": a.get("gems") or []})
+                    handler._json({"ok": True, "slug": sl, "busy": sl in vidsum_gems._BUSY, "last": vidsum_gems._LAST.get(sl), "gems_at": a.get("gems_at"), "gems": a.get("gems") or []})
                 except Exception:
                     handler._json({"error": "article not found"}, 404)
             else:

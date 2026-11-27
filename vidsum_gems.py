@@ -16,6 +16,7 @@ CHUNK_SEC = 30 * 60                      # long episodes are read in 30 minute w
 KEEP = 10
 KIND_BONUS = {"debate_exchange": 0.5, "punchline": 0.5, "blunt_claim": 0.3, "story": 0.0, "emotional": 0.0, "sharp_turn": -1.0, "insight": -1.5}
 _BUSY = set()
+_LAST = {}                               # slug -> outcome of the last run (admin endpoint shows it)
 _DAY = {"day": "", "n": 0}
 _LOCK = threading.Lock()
 
@@ -114,6 +115,12 @@ def _full_article(slug):
 
 def extract(slug):
     """Generate and store the gems of one article. -> (ok, message)"""
+    ok, msg = _extract(slug)
+    _LAST[slug] = {"ok": ok, "msg": msg, "at": time.strftime("%Y-%m-%d %H:%M:%S")}
+    return ok, msg
+
+
+def _extract(slug):
     with _LOCK:
         if slug in _BUSY:
             return False, "already running"
