@@ -74,6 +74,8 @@ def _clean(g, dur):
         xs, xe = _ts(g.get("context_start")), _ts(g.get("context_end"))
         if cs is None or ce is None or ce <= cs:
             return None
+        if ce - cs < 10:                                       # a one or two second 'gem' is a transcript artifact, not a clip
+            return None
         xs = cs if xs is None else min(xs, cs)
         xe = ce if xe is None else max(xe, ce)
         if dur and cs > dur + 60:

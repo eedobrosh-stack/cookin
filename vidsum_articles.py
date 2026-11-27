@@ -1560,7 +1560,7 @@ def _origin_cc(a, ch):
     return "" if cc == "US" else cc
 
 
-LOCAL_HEAD_START_DAYS = 4
+LOCAL_HEAD_START_DAYS = 2
 
 
 def add_local_rank(items):
