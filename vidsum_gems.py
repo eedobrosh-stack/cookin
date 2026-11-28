@@ -353,7 +353,10 @@ def card_png(a, n, lang="he"):
     title = nd(g["t"] if he and g.get("t") else (g.get("te") or g.get("t")))
     quote = nd(g.get("ex") or "")
     show = nd(a.get("channel") or "")
-    get_display = _visual
+    from PIL import features
+    raqm = features.check("raqm")                           # Pillow wheels on Linux ship libraqm, which does the bidi itself; without it we reorder ourselves
+    get_display = (lambda s, **k: s) if raqm else _visual
+    kw = {"direction": "rtl", "language": "he"} if (raqm and he) else {}
 
     W, H = 1200, 630
     im = Image.new("RGB", (W, H), "#faf8f3")
@@ -382,7 +385,7 @@ def card_png(a, n, lang="he"):
         for ln in lines:
             vis = get_display(ln, base_dir="R" if he else "L")
             if he:
-                d.text((right - inset, y), vis, font=font, fill=fill, anchor="ra")
+                d.text((right - inset, y), vis, font=font, fill=fill, anchor="ra", **kw)
             else:
                 d.text((pad + inset, y), vis, font=font, fill=fill)
             y += gap
@@ -397,7 +400,7 @@ def card_png(a, n, lang="he"):
     put(qlines, qf, y + 2, "#3d3a35", 44, inset=28)
     foot = _font(28, b"Medium")
     d.text((right if he else pad, H - 52), get_display(show, base_dir="R" if he else "L") + "  |  pawed.io", font=foot, fill="#6b665d",
-           anchor="rs" if he else "ls")
+           anchor="rs" if he else "ls", **kw)
     out = io.BytesIO()
     im.save(out, "PNG", optimize=True)
     return out.getvalue()
