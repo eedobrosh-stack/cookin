@@ -63,6 +63,8 @@ def _prompt(title, channel, lang_name, text, n, t0, last):
         "- kind: one of punchline | debate_exchange | blunt_claim | story | emotional | sharp_turn | insight\n"
         "- speaker_role: host | guest | caller | unknown\n"
         "- score: 1 to 10\n- why: one English sentence\n"
+        f"- sum: ONE plain sentence in {lang_name} (max 25 words) that tells a stranger who has not heard the episode what this moment says and why it matters, so they could decide to watch; no quotation marks, no 'in this clip'.\n"
+        "- sum_en: the same sentence in English\n"
         "- excerpt: the core, verbatim, as written in the transcript\n"
         "- risk: null, or one short English line if it is an accusation about a named person, sensitive, or easy to misread out of context.\n"
         "Include moments from heated or argumentative stretches. Never use the ASCII double quote inside a string value.\n\nTRANSCRIPT:\n" + text)
@@ -85,7 +87,7 @@ def _clean(g, dur):
         s = float(g.get("score") or 5)
         rk = s + KIND_BONUS.get(kind, 0.0)
         return {"cs": cs, "ce": ce, "xs": xs, "xe": min(xe, xs + 150), "t": str(g.get("title") or "")[:140], "te": str(g.get("title_en") or "")[:140],
-                "k": kind, "r": str(g.get("speaker_role") or "unknown"), "s": s, "rk": round(rk, 2), "why": str(g.get("why") or "")[:240],
+                "k": kind, "r": str(g.get("speaker_role") or "unknown"), "s": s, "rk": round(rk, 2), "why": str(g.get("why") or "")[:240], "sum": str(g.get("sum") or "")[:260], "sum_en": str(g.get("sum_en") or "")[:260],
                 "ex": str(g.get("excerpt") or "")[:500], "risk": (str(g["risk"])[:200] if g.get("risk") else None)}
     except (TypeError, ValueError):
         return None
@@ -164,6 +166,47 @@ def _extract(slug):
     finally:
         with _LOCK:
             _BUSY.discard(slug)
+
+
+def summarize(slug):
+    """Add the one sentence summary (sum, sum_en) to the gems of an article that lack it, in one call. -> (ok, message)"""
+    ok, msg = _summarize(slug)
+    _LAST[slug] = {"ok": ok, "msg": "sum: " + msg, "at": time.strftime("%Y-%m-%d %H:%M:%S")}
+    return ok, msg
+
+
+def _summarize(slug):
+    try:
+        a = _full_article(slug)
+        gems = a.get("gems") or []
+        todo = [i for i, g in enumerate(gems) if not g.get("sum")]
+        if not todo:
+            return True, "nothing to do"
+        al = va.audio_lang(a, None) or "he"
+        lang_name = va.LANG_NAMES.get(al, "Hebrew" if al == "he" else "English")
+        items = "\n".join(f"[{i}] ({_fmt(gems[i]['cs'])}, {gems[i]['k']}) {gems[i]['ex']}" for i in todo)
+        prompt = (f"Podcast: {a.get('channel') or ''}\nEpisode: {a.get('title') or ''}\n"
+                  "Below are verbatim moments from the episode (speech recognition, may contain word errors). For each, write ONE plain sentence "
+                  f"in {lang_name} (max 25 words) telling a stranger who has not heard the episode what the speaker says and why it matters, so they could decide to watch. "
+                  "State the claim, do not describe the clip ('here he argues' is fine, 'in this clip' is not). Do not add facts that are not in the text. No quotation marks.\n"
+                  "Return JSON only: {\"items\": [{\"i\": <number>, \"sum\": \"...\", \"sum_en\": \"<same sentence in English>\"}]}\n\nMOMENTS:\n" + items)
+        res, _tok, _stop = va._luna(prompt, max_tokens=8000)
+        got = {int(x["i"]): x for x in (res.get("items") or []) if isinstance(x, dict) and str(x.get("i", "")).lstrip("-").isdigit()} if isinstance(res, dict) else {}
+        if not got:
+            return False, "no sentences returned"
+        with va.LOCK:
+            cur = _full_article(slug)
+            n = 0
+            for i, x in got.items():
+                if 0 <= i < len(cur.get("gems") or []) and x.get("sum"):
+                    cur["gems"][i]["sum"] = str(x["sum"])[:260]
+                    cur["gems"][i]["sum_en"] = str(x.get("sum_en") or "")[:260]
+                    n += 1
+            va._write_article(cur)
+        return True, f"{n} of {len(todo)} sentences"
+    except Exception as e:
+        va.log(f"vidsum gems summarize failed for {slug}: {va._scrub(str(e))[:200]}")
+        return False, str(e)[:200]
 
 
 def _fmt(s):
@@ -259,14 +302,15 @@ def moment_html(a, n, lang="he"):
     else:
         player = f'<p class="lk">At {e(_fmt(cs))} in the episode.</p>'
     sub = a.get("subtitle") or ""
-    desc = nd(g.get("ex") or title)[:200]
+    sent = nd((g.get("sum") if he else (g.get("sum_en") or g.get("sum"))) or "")
+    desc = (sent or nd(g.get("ex") or title))[:200]
     url = f"https://pawed.io/moment/{urllib.parse.quote(a['slug'])}/{n}"
     css = ("<style>:root{--ink:#1c1b19;--muted:#6b665d;--bg:#faf8f3;--card:#fff;--line:#e4dfd3;--ac:#6d3fc9}"
            "@media(prefers-color-scheme:dark){:root{--ink:#ece9e1;--muted:#a39d92;--bg:#171614;--card:#1f1e1b;--line:#35332e;--ac:#a98bf0}}"
            "*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,-apple-system,sans-serif}"
            ".w{max-width:680px;margin:0 auto;padding:20px 16px 48px}.k{font-size:13px;color:var(--muted);margin:0 0 14px}.k a{color:var(--ac);font-weight:700;text-decoration:none}"
            "h1{font-size:28px;line-height:1.25;margin:0 0 6px}.src{color:var(--muted);font-size:15px;margin:0 0 16px}"
-           "blockquote{margin:0 0 18px;padding:14px 18px;background:var(--card);border-inline-start:4px solid var(--ac);border-radius:8px;font-size:19px}"
+           ".lead{font-size:21px;font-weight:600;line-height:1.45;margin:0 0 16px}blockquote{margin:0 0 18px;padding:14px 18px;background:var(--card);border-inline-start:4px solid var(--ac);border-radius:8px;font-size:19px}"
            ".pl{position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden;background:#000}.pl iframe{position:absolute;inset:0;width:100%;height:100%;border:0}"
            ".lk{font-size:14px;margin:8px 0 22px}.lk a{color:var(--ac)}"
            ".sum{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 18px}.sum b{display:block;margin-bottom:4px}"
@@ -280,7 +324,8 @@ def moment_html(a, n, lang="he"):
             f'<meta property="og:type" content="article"><meta property="og:url" content="{e(url)}"><meta property="og:image" content="{e(url)}.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{e(url)}.png">'
             f'{css}</head><body><div class="w">')
     body = (f'<p class="k"><a href="/">Pawed</a> &middot; {e(show)}</p><h1>{e(title)}</h1><p class="src">{e(show)} &middot; {e(ep)}</p>'
-            f'<blockquote dir="auto">{e(nd(g.get("ex") or ""))}</blockquote>{player}'
+            + (f'<p class="lead" dir="auto">{e(sent)}</p>' if sent else "")
+            + f'<blockquote dir="auto">{e(nd(g.get("ex") or ""))}</blockquote>{player}'
             + (f'<div class="sum"><b>{"על מה הפרק" if he else "About the episode"}</b>{e(nd(sub))}</div>' if sub else "")
             + f'<a class="more" href="{e(art)}">{"הסיכום המלא של הפרק" if he else "Read the full episode summary"} &rarr;</a>'
             f'<p class="sh"><button type="button" id="cp" data-u="{e(url)}">{"העתקת קישור" if he else "Copy link"}</button></p>'
@@ -392,12 +437,15 @@ def card_png(a, n, lang="he"):
         return y
 
     d.text((right if he else pad, 46), "Pawed", font=_font(34, b"ExtraBold"), fill="#6d3fc9", anchor="ra" if he else "la")
-    tf, qf = _font(64, b"ExtraBold"), _font(34, b"Regular")
-    y = put(wrap(title, tf, maxw, 3), tf, 118, "#1c1b19", 78)
-    y += 24
-    qlines = wrap(quote, qf, maxw - 40, 5)
-    d.rectangle([(right - 6) if he else pad, y, right if he else pad + 6, y + 44 * len(qlines)], fill="#6d3fc9")
-    put(qlines, qf, y + 2, "#3d3a35", 44, inset=28)
+    sent = nd((g.get("sum") if he else (g.get("sum_en") or g.get("sum"))) or "")
+    tf, sf, qf = _font(56, b"ExtraBold"), _font(38, b"SemiBold"), _font(28, b"Regular")
+    y = put(wrap(title, tf, maxw, 2), tf, 112, "#1c1b19", 68)
+    y += 14
+    if sent:
+        y = put(wrap(sent, sf, maxw, 3), sf, y, "#3d3a35", 52) + 14
+    qlines = wrap(quote, qf, maxw - 40, 2 if sent else 5)
+    d.rectangle([(right - 6) if he else pad, y, right if he else pad + 6, y + 38 * len(qlines)], fill="#6d3fc9")
+    put(qlines, qf, y + 2, "#6b665d" if sent else "#3d3a35", 38, inset=28)
     foot = _font(28, b"Medium")
     d.text((right if he else pad, H - 52), get_display(show, base_dir="R" if he else "L") + "  |  pawed.io", font=foot, fill="#6b665d",
            anchor="rs" if he else "ls", **kw)

@@ -4451,9 +4451,10 @@ def handle_post(handler, path, req):
         slugs = [str(x) for x in (req.get("slugs") or ([req.get("slug")] if req.get("slug") else []))][:12]
         if req.get("recent"):
             slugs = vidsum_gems.pending_recent(int(req.get("recent") or 5))
+        fn = vidsum_gems.summarize if req.get("mode") == "sum" else vidsum_gems.extract
         def _run(ss):
             for sl in ss:
-                vidsum_gems.extract(sl)
+                fn(sl)
         threading.Thread(target=_run, args=(slugs,), daemon=True).start()
         handler._json({"ok": True, "started": slugs})
         return True
