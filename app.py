@@ -1073,7 +1073,7 @@ class Handler(SimpleHTTPRequestHandler):
             if p == "/":
                 if vidsum_articles.handle_get(self, "/vidsum", {}):
                     return
-            if not p.startswith(("/vidsum", "/a/", "/api/vidsum/", "/auth/", "/api/me", "/podscanner", "/api/podscanner/")):
+            if not p.startswith(("/vidsum", "/a/", "/moment/", "/api/vidsum/", "/auth/", "/api/me", "/podscanner", "/api/podscanner/")):
                 self._json({"error": "not found"}, 404); return
         elif secret_flag("PAWED_REDIRECT") and (self._is_main_host() or (self.headers.get("Host") or "").split(":")[0].lower() == "cookin.jarcud.com") \
                 and (p in ("/vidsum", "/vidsum/") or p.startswith(("/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/articles", "/vidsum/article/", "/vidsum/news"))):
@@ -1105,7 +1105,7 @@ class Handler(SimpleHTTPRequestHandler):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return
-        if (self._is_main_host() or self._is_pawed_host()) and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/terms", "/vidsum/privacy", "/vidsum/takedown", "/vidsum/pawed", "/vidsum/cover", "/vidsum/addep", "/vidsum/geo", "/vidsum/globalux", "/vidsum/bookmarks", "/vidsum/stats", "/vidsum/charts", "/vidsum/err", "/vidsum/index", "/a/", "/vidsum/i18n.js", "/api/vidsum/catalog/", "/api/vidsum/admin/")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/charts", "/api/vidsum/charts/options", "/api/vidsum/live", "/api/vidsum/cooking", "/api/vidsum/me", "/api/vidsum/rating", "/api/vidsum/lang", "/api/vidsum/geo", "/api/vidsum/eng", "/api/vidsum/bookmarks", "/api/vidsum/bookmarks/items", "/api/vidsum/links/todo", "/api/vidsum/links/audit", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/index", "/api/vidsum/index/entry", "/api/vidsum/relay/queue", "/api/vidsum/relay/sources")):
+        if (self._is_main_host() or self._is_pawed_host()) and (p.startswith(("/vidsum/art", "/vidsum/news", "/vidsum/v1", "/vidsum/sources", "/vidsum/logs", "/vidsum/terms", "/vidsum/privacy", "/vidsum/takedown", "/vidsum/pawed", "/vidsum/cover", "/vidsum/addep", "/vidsum/geo", "/vidsum/globalux", "/vidsum/bookmarks", "/vidsum/stats", "/vidsum/charts", "/vidsum/err", "/vidsum/index", "/a/", "/moment/", "/vidsum/i18n.js", "/api/vidsum/catalog/", "/api/vidsum/admin/")) or p in ("/vidsum", "/vidsum/", "/api/vidsum/sources", "/api/vidsum/logs", "/api/vidsum/articles", "/api/vidsum/job", "/api/vidsum/news", "/api/vidsum/charts", "/api/vidsum/charts/options", "/api/vidsum/live", "/api/vidsum/cooking", "/api/vidsum/me", "/api/vidsum/rating", "/api/vidsum/lang", "/api/vidsum/geo", "/api/vidsum/eng", "/api/vidsum/bookmarks", "/api/vidsum/bookmarks/items", "/api/vidsum/links/todo", "/api/vidsum/links/audit", "/api/vidsum/channels", "/api/vidsum/diag", "/api/vidsum/index", "/api/vidsum/index/entry", "/api/vidsum/relay/queue", "/api/vidsum/relay/sources")):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if vidsum_articles.handle_get(self, p, qs):
                 return

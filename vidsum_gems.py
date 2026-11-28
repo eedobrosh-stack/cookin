@@ -233,3 +233,55 @@ def _loop():
 def start():
     if GEMS_AUTO:
         threading.Thread(target=_loop, daemon=True).start()
+
+
+def moment_html(a, n, lang="he"):
+    """Public page for one golden moment: headline, verbatim quote, the YouTube player started at the moment (embed, not hosted), the summary, and the way on to the article. -> html or None"""
+    import html as H
+    import urllib.parse
+    gems = a.get("gems") or []
+    if not (0 <= n < len(gems)):
+        return None
+    g = gems[n]
+    e = H.escape
+    nd = va.vidsum_render.nodash
+    yt = a.get("kind") != "rss" and re.fullmatch(r"[\w-]{11}", a.get("vid") or "")
+    he = lang == "he"
+    title = nd(g["t"] if he and g.get("t") else (g.get("te") or g.get("t")))
+    show = a.get("channel") or ""
+    ep = nd(a.get("title") or "")
+    art = "/vidsum/article/" + urllib.parse.quote(a["slug"])
+    cs, ce = g["cs"], g["ce"]
+    if yt:
+        player = (f'<div class="pl"><iframe src="https://www.youtube-nocookie.com/embed/{e(a["vid"])}?start={cs}&amp;end={ce + 8}&amp;rel=0" '
+                  f'title="{e(title)}" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>'
+                  f'<p class="lk"><a href="https://www.youtube.com/watch?v={e(a["vid"])}&amp;t={cs}s" target="_blank" rel="noopener">&#9654; {e(_fmt(cs))} on YouTube</a></p>')
+    else:
+        player = f'<p class="lk">At {e(_fmt(cs))} in the episode.</p>'
+    sub = a.get("subtitle") or ""
+    desc = nd(g.get("ex") or title)[:200]
+    url = f"https://pawed.io/moment/{urllib.parse.quote(a['slug'])}/{n}"
+    css = ("<style>:root{--ink:#1c1b19;--muted:#6b665d;--bg:#faf8f3;--card:#fff;--line:#e4dfd3;--ac:#6d3fc9}"
+           "@media(prefers-color-scheme:dark){:root{--ink:#ece9e1;--muted:#a39d92;--bg:#171614;--card:#1f1e1b;--line:#35332e;--ac:#a98bf0}}"
+           "*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,-apple-system,sans-serif}"
+           ".w{max-width:680px;margin:0 auto;padding:20px 16px 48px}.k{font-size:13px;color:var(--muted);margin:0 0 14px}.k a{color:var(--ac);font-weight:700;text-decoration:none}"
+           "h1{font-size:28px;line-height:1.25;margin:0 0 6px}.src{color:var(--muted);font-size:15px;margin:0 0 16px}"
+           "blockquote{margin:0 0 18px;padding:14px 18px;background:var(--card);border-inline-start:4px solid var(--ac);border-radius:8px;font-size:19px}"
+           ".pl{position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden;background:#000}.pl iframe{position:absolute;inset:0;width:100%;height:100%;border:0}"
+           ".lk{font-size:14px;margin:8px 0 22px}.lk a{color:var(--ac)}"
+           ".sum{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 18px}.sum b{display:block;margin-bottom:4px}"
+           ".more{display:inline-block;background:var(--ac);color:#fff;font-weight:700;padding:11px 20px;border-radius:999px;text-decoration:none}"
+           ".ft{margin-top:28px;font-size:13px;color:var(--muted)}</style>")
+    head = (f'<!doctype html><html lang="{"he" if he else "en"}" dir="{"rtl" if he else "ltr"}"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">'
+            f'<title>{e(title)} | Pawed</title><meta name="description" content="{e(desc)}">'
+            f'<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}">'
+            f'<meta property="og:type" content="article"><meta property="og:url" content="{e(url)}"><meta name="twitter:card" content="summary">'
+            f'{css}</head><body><div class="w">')
+    body = (f'<p class="k"><a href="/">Pawed</a> &middot; {e(show)}</p><h1>{e(title)}</h1><p class="src">{e(show)} &middot; {e(ep)}</p>'
+            f'<blockquote dir="auto">{e(nd(g.get("ex") or ""))}</blockquote>{player}'
+            + (f'<div class="sum"><b>{"על מה הפרק" if he else "About the episode"}</b>{e(nd(sub))}</div>' if sub else "")
+            + f'<a class="more" href="{e(art)}">{"הסיכום המלא של הפרק" if he else "Read the full episode summary"} &rarr;</a>'
+            f'<p class="ft">{"המקטע נבחר אוטומטית ולא נבדק. הציטוט מתומלל אוטומטית ועלול להכיל שגיאות. הקול והווידאו שייכים ליוצרי הפודקאסט." if he else "This moment was picked automatically and not checked. The quote is machine transcribed and may contain errors. The audio and video belong to the podcast creators."}</p>'
+            '</div></body></html>')
+    return head + body

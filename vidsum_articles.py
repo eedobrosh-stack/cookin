@@ -3342,6 +3342,23 @@ def handle_get(handler, path, qs):
     if path in ("/vidsum/articles", "/vidsum/articles/"):
         handler._html(index_html(), "no-store")
         return True
+    if path.startswith("/moment/"):                       # one golden moment as its own shareable page
+        mm = re.fullmatch(r"/moment/([^/]+)/(\d{1,2})/?", path)
+        pg = None
+        if mm:
+            try:
+                import vidsum_gems
+                slug_m = urllib.parse.unquote(mm.group(1))
+                if ".." not in slug_m:
+                    with open(os.path.join(ART_DIR, slug_m + ".json"), encoding="utf-8") as f:
+                        pg = vidsum_gems.moment_html(json.load(f), int(mm.group(2)), request_lang(handler, qs))
+            except Exception:
+                pg = None
+        if pg:
+            handler._html(pg, "no-store")
+        else:
+            handler._json({"error": "moment not found"}, 404)
+        return True
     if path.startswith(ART_PREFIX):
         slug = urllib.parse.unquote(path[len(ART_PREFIX):]).strip("/")
         mp_ = re.search(r"~([0-9a-z]{8})$", slug)
