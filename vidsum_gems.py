@@ -291,6 +291,42 @@ def moment_html(a, n, lang="he"):
     return head + body
 
 
+_MIRROR = str.maketrans("()[]{}<>", ")(][}{><")
+
+
+def _visual(s, base_dir="R"):
+    """Logical text -> the order PIL must draw left to right. Right-to-left paragraphs only: Hebrew runs are reversed, Latin and number runs
+    stay as they are, and the runs are laid out right to left. No library, so it behaves the same on every host."""
+    if base_dir != "R":
+        return s
+    def cls(c):
+        if "\u0590" <= c <= "\u05ff":
+            return "R"
+        return "L" if c.isalnum() else "N"
+    cl = [cls(c) for c in s]
+    for i, c in enumerate(cl):                              # neutrals take the direction around them when both sides agree, else the paragraph's (R);
+        if c == "N":                                        # a separator inside a number (3,000 / 1.5 / 48-) stays with the number
+            j = i - 1
+            while j >= 0 and cl[j] == "N":
+                j -= 1
+            k = i + 1
+            while k < len(cl) and cl[k] == "N":
+                k += 1
+            a, b = (cl[j] if j >= 0 else "R"), (cl[k] if k < len(cl) else "R")
+            digits = j >= 0 and k < len(cl) and s[j].isdigit() and s[k].isdigit() and s[i] in ",.:/"
+            cl[i] = "L" if (a == b == "L" and (digits or s[i] == " " and False)) else ("L" if a == b == "L" and s[i] != " " else ("R" if a != b or a == "R" else "L"))
+    runs, cur, d = [], "", None
+    for ch, c in zip(s, cl):
+        if c != d and cur:
+            runs.append((d, cur))
+            cur = ""
+        d = c
+        cur += ch
+    if cur:
+        runs.append((d, cur))
+    return "".join((r[::-1].translate(_MIRROR) if dd == "R" else r) for dd, r in reversed(runs))
+
+
 _FONT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "fonts", "Heebo.ttf")
 
 
@@ -317,10 +353,7 @@ def card_png(a, n, lang="he"):
     title = nd(g["t"] if he and g.get("t") else (g.get("te") or g.get("t")))
     quote = nd(g.get("ex") or "")
     show = nd(a.get("channel") or "")
-    try:
-        from bidi.algorithm import get_display
-    except Exception:
-        get_display = lambda s, **k: s                      # no bidi library: text still renders, possibly in logical order
+    get_display = _visual
 
     W, H = 1200, 630
     im = Image.new("RGB", (W, H), "#faf8f3")
