@@ -271,17 +271,100 @@ def moment_html(a, n, lang="he"):
            ".lk{font-size:14px;margin:8px 0 22px}.lk a{color:var(--ac)}"
            ".sum{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 18px}.sum b{display:block;margin-bottom:4px}"
            ".more{display:inline-block;background:var(--ac);color:#fff;font-weight:700;padding:11px 20px;border-radius:999px;text-decoration:none}"
+           ".sh{margin:18px 0 0}.sh button{font:inherit;font-size:15px;background:none;color:var(--ac);border:1px solid var(--ac);border-radius:999px;padding:8px 18px;cursor:pointer}"
            ".ft{margin-top:28px;font-size:13px;color:var(--muted)}</style>")
     head = (f'<!doctype html><html lang="{"he" if he else "en"}" dir="{"rtl" if he else "ltr"}"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">'
             f'<title>{e(title)} | Pawed</title><meta name="description" content="{e(desc)}">'
             f'<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}">'
-            f'<meta property="og:type" content="article"><meta property="og:url" content="{e(url)}"><meta name="twitter:card" content="summary">'
+            f'<meta property="og:type" content="article"><meta property="og:url" content="{e(url)}"><meta property="og:image" content="{e(url)}.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{e(url)}.png">'
             f'{css}</head><body><div class="w">')
     body = (f'<p class="k"><a href="/">Pawed</a> &middot; {e(show)}</p><h1>{e(title)}</h1><p class="src">{e(show)} &middot; {e(ep)}</p>'
             f'<blockquote dir="auto">{e(nd(g.get("ex") or ""))}</blockquote>{player}'
             + (f'<div class="sum"><b>{"על מה הפרק" if he else "About the episode"}</b>{e(nd(sub))}</div>' if sub else "")
             + f'<a class="more" href="{e(art)}">{"הסיכום המלא של הפרק" if he else "Read the full episode summary"} &rarr;</a>'
+            f'<p class="sh"><button type="button" id="cp" data-u="{e(url)}">{"העתקת קישור" if he else "Copy link"}</button></p>'
             f'<p class="ft">{"המקטע נבחר אוטומטית ולא נבדק. הציטוט מתומלל אוטומטית ועלול להכיל שגיאות. הקול והווידאו שייכים ליוצרי הפודקאסט." if he else "This moment was picked automatically and not checked. The quote is machine transcribed and may contain errors. The audio and video belong to the podcast creators."}</p>'
-            '</div></body></html>')
+            '</div><script>document.getElementById("cp").onclick=function(){var b=this,u=b.dataset.u;'
+            'if(navigator.share){navigator.share({url:u}).catch(function(){});return}'
+            'try{navigator.clipboard.writeText(u).then(function(){b.textContent="\\u2713"})}catch(e){prompt("",u)}}</script></body></html>')
     return head + body
+
+
+_FONT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "fonts", "Heebo.ttf")
+
+
+def _font(size, weight=b"Bold"):
+    from PIL import ImageFont
+    f = ImageFont.truetype(_FONT, size)
+    try:
+        f.set_variation_by_name(weight)
+    except Exception:
+        pass
+    return f
+
+
+def card_png(a, n, lang="he"):
+    """1200x630 share image for one moment (headline, quote, show). -> PNG bytes or None"""
+    import io
+    from PIL import Image, ImageDraw
+    gems = a.get("gems") or []
+    if not (0 <= n < len(gems)):
+        return None
+    g = gems[n]
+    he = lang == "he"
+    nd = va.vidsum_render.nodash
+    title = nd(g["t"] if he and g.get("t") else (g.get("te") or g.get("t")))
+    quote = nd(g.get("ex") or "")
+    show = nd(a.get("channel") or "")
+    try:
+        from bidi.algorithm import get_display
+    except Exception:
+        get_display = lambda s, **k: s                      # no bidi library: text still renders, possibly in logical order
+
+    W, H = 1200, 630
+    im = Image.new("RGB", (W, H), "#faf8f3")
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 18, H], fill="#6d3fc9")
+    pad, right = 70, W - 70
+    maxw = W - 2 * pad
+
+    def wrap(text, font, limit, lines_max):
+        words, lines, cur = text.split(), [], ""
+        for w in words:
+            t = (cur + " " + w).strip()
+            if d.textlength(t, font=font) <= limit:
+                cur = t
+            else:
+                lines.append(cur)
+                cur = w
+        if cur:
+            lines.append(cur)
+        if len(lines) > lines_max:
+            lines = lines[:lines_max]
+            lines[-1] = lines[-1].rstrip(" ,.;:") + "..."
+        return lines
+
+    def put(lines, font, y, fill, gap, inset=0):
+        for ln in lines:
+            vis = get_display(ln, base_dir="R" if he else "L")
+            if he:
+                d.text((right - inset, y), vis, font=font, fill=fill, anchor="ra")
+            else:
+                d.text((pad + inset, y), vis, font=font, fill=fill)
+            y += gap
+        return y
+
+    d.text((right if he else pad, 46), "Pawed", font=_font(34, b"ExtraBold"), fill="#6d3fc9", anchor="ra" if he else "la")
+    tf, qf = _font(64, b"ExtraBold"), _font(34, b"Regular")
+    y = put(wrap(title, tf, maxw, 3), tf, 118, "#1c1b19", 78)
+    y += 24
+    qlines = wrap(quote, qf, maxw - 40, 5)
+    d.rectangle([(right - 6) if he else pad, y, right if he else pad + 6, y + 44 * len(qlines)], fill="#6d3fc9")
+    put(qlines, qf, y + 2, "#3d3a35", 44, inset=28)
+    foot = _font(28, b"Medium")
+    d.text((right if he else pad, H - 52), get_display(show, base_dir="R" if he else "L") + "  |  pawed.io", font=foot, fill="#6b665d",
+           anchor="rs" if he else "ls")
+    out = io.BytesIO()
+    im.save(out, "PNG", optimize=True)
+    return out.getvalue()

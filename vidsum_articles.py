@@ -3343,18 +3343,28 @@ def handle_get(handler, path, qs):
         handler._html(index_html(), "no-store")
         return True
     if path.startswith("/moment/"):                       # one golden moment as its own shareable page
-        mm = re.fullmatch(r"/moment/([^/]+)/(\d{1,2})/?", path)
-        pg = None
+        mm = re.fullmatch(r"/moment/([^/]+)/(\d{1,2})(\.png|/)?", path)
+        pg, png = None, bool(mm and mm.group(3) == ".png")
         if mm:
             try:
                 import vidsum_gems
                 slug_m = urllib.parse.unquote(mm.group(1))
                 if ".." not in slug_m:
                     with open(os.path.join(ART_DIR, slug_m + ".json"), encoding="utf-8") as f:
-                        pg = vidsum_gems.moment_html(json.load(f), int(mm.group(2)), request_lang(handler, qs))
-            except Exception:
+                        art_m = json.load(f)
+                    lg = request_lang(handler, qs)
+                    pg = vidsum_gems.card_png(art_m, int(mm.group(2)), lg) if png else vidsum_gems.moment_html(art_m, int(mm.group(2)), lg)
+            except Exception as ex:
+                log(f"moment page failed: {_scrub(str(ex))[:160]}")
                 pg = None
-        if pg:
+        if pg and png:
+            handler.send_response(200)
+            handler.send_header("Content-Type", "image/png")
+            handler.send_header("Content-Length", str(len(pg)))
+            handler.send_header("Cache-Control", "public, max-age=3600")
+            handler.end_headers()
+            handler.wfile.write(pg)
+        elif pg:
             handler._html(pg, "no-store")
         else:
             handler._json({"error": "moment not found"}, 404)
